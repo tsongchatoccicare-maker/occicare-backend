@@ -50,7 +50,10 @@
           เข้าสู่ระบบ →
         </button>
       </form>
-      <div class="login-divider">
+      <div id="login-reset-msg" style="display:none;margin-bottom:10px;padding:8px 12px;background:rgba(240,62,88,.12);border:1px solid rgba(240,62,88,.3);border-radius:8px;font-size:12px;color:#FCA5A5">
+      ⚠️ หากเข้าระบบไม่ได้ กด <button onclick="if(confirm('รีเซ็ตข้อมูลทั้งหมด?')){DB.auth.forceReseed&&DB.auth.forceReseed();location.reload();}" style="background:rgba(240,62,88,.3);border:1px solid rgba(240,62,88,.5);color:#FCA5A5;padding:2px 10px;border-radius:5px;cursor:pointer;font-size:12px">รีเซ็ต</button>
+    </div>
+    <div class="login-divider">
         <strong>Demo Accounts</strong>
         <div class="login-accounts">
           <span>admin / admin1234</span><span>sales01 / sales1234</span>
