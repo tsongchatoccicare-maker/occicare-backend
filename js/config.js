@@ -5,7 +5,7 @@
 const API_BASE = (() => {
   if (window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1') {
-    return 'https://occicare-backend.vercel.app';
+    return 'http://localhost:3001';
   }
   // Production: same domain (frontend served by Express /public)
   return '';

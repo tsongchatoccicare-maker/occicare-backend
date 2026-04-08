@@ -21,6 +21,15 @@ const DB={
       return u||null;
     },
     logout(){localStorage.removeItem('mck_session');},
+    forceReseed(){
+      // Clears all DB and reseeds — use if missing users/roles
+      ['auth_db','customer_db','sales_db','operation_db','lab_db','report_db',
+       'billing_db','config_db','quotation_db','files_db'].forEach(db=>{
+        Object.keys(localStorage).filter(k=>k.startsWith(db+'__')).forEach(k=>localStorage.removeItem(k));
+      });
+      DB.seedMockData();
+      console.log('✅ Reseed complete');
+    },
     session(){
       const s=localStorage.getItem('mck_session');
       if(!s)return null;
@@ -399,10 +408,12 @@ const DB={
   },
 
   seedMockData(){
-    if(DB._get('auth_db','users').length>0){DB.examItems.seedDefault();DB.manpowerCost.seedDefault();return;}
-  DB.examItems.seedDefault();
-  DB.manpowerCost.seedDefault();
-    DB._set('auth_db','users',[
+    // Always run defaults regardless of existing data
+    DB.examItems.seedDefault();
+    DB.manpowerCost.seedDefault();
+    // Seed users: add missing users (merge, don't overwrite existing)
+    const existingUsers=DB._get('auth_db','users');
+    const defaultUsers=[
       {id:1,username:'admin',password:'admin1234',name:'ผู้ดูแลระบบ',role:'admin',active:true,created_at:DB._now(),updated_at:DB._now()},
       {id:2,username:'sales01',password:'sales1234',name:'นางสาวพิมพ์ใจ ดีงาม',role:'sales',active:true,created_at:DB._now(),updated_at:DB._now()},
       {id:3,username:'op01',password:'op1234',name:'นายวิชัย สุขใจ',role:'operation',active:true,created_at:DB._now(),updated_at:DB._now()},
@@ -410,12 +421,20 @@ const DB={
       {id:5,username:'report01',password:'rpt1234',name:'นายสมชาย วงศ์ดี',role:'report',active:true,created_at:DB._now(),updated_at:DB._now()},
       {id:6,username:'billing01',password:'bill1234',name:'นางมาลี รักไทย',role:'billing',active:true,created_at:DB._now(),updated_at:DB._now()},
       {id:7,username:'xray01',password:'xray1234',name:'นายอาทิตย์ ฟิล์มทอง',role:'xray',active:true,created_at:DB._now(),updated_at:DB._now()}
-    ]);
+    ];
+    // Merge: add users that don't exist yet (by username)
+    defaultUsers.forEach(u=>{
+      if(!existingUsers.find(e=>e.username===u.username)){
+        u.id=DB._nextId('auth_db','users');
+        existingUsers.push(u);
+      }
+    });
+    DB._set('auth_db','users',existingUsers);
     const viewOnly={view:true,add:false,edit:false,delete:false};
     const full={view:true,add:true,edit:true,delete:true};
     const fullNoDel={view:true,add:true,edit:true,delete:false};
     const none={view:false,add:false,edit:false,delete:false};
-    DB._set('auth_db','role_permissions',[
+    const defaultRoles=[
       {role:'admin',modules:{dashboard:full,customers:full,sales:full,quotation:full,op_prep:full,op_onsite:full,lab:full,report:full,billing:full,config:full},created_at:DB._now(),updated_at:DB._now()},
       {role:'sales',modules:{dashboard:viewOnly,customers:fullNoDel,sales:fullNoDel,quotation:full,op_prep:none,op_onsite:none,lab:none,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
       {role:'operation',modules:{dashboard:viewOnly,customers:viewOnly,sales:viewOnly,op_prep:full,op_onsite:full,lab:none,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
@@ -423,7 +442,10 @@ const DB={
       {role:'xray',modules:{dashboard:viewOnly,customers:none,sales:viewOnly,op_prep:none,op_onsite:viewOnly,lab:none,xray:fullNoDel,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
       {role:'report',modules:{dashboard:viewOnly,customers:viewOnly,sales:fullNoDel,op_prep:viewOnly,op_onsite:viewOnly,lab:viewOnly,report:fullNoDel,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
       {role:'billing',modules:{dashboard:viewOnly,customers:viewOnly,sales:viewOnly,op_prep:none,op_onsite:none,lab:none,report:viewOnly,billing:fullNoDel,config:none},created_at:DB._now(),updated_at:DB._now()}
-    ]);
+    ];
+    const existingRoles=DB._get('auth_db','role_permissions');
+    defaultRoles.forEach(r=>{if(!existingRoles.find(e=>e.role===r.role))existingRoles.push(r);});
+    DB._set('auth_db','role_permissions',existingRoles);
     DB._set('customer_db','customers',[
       {id:1,company_name:'บริษัท ABC Manufacturing จำกัด',address:'123 ถนนอุตสาหกรรม นิคมอมตะ ชลบุรี 20000',phone:'038-123456',email:'hr@abc-mfg.co.th',contact_name:'คุณสมใจ วงศ์ดี',contact_role:'HR Manager',employee_count:480,last_contact:'2025-11-01',note:'ลูกค้าประจำ ตรวจทุกปี',sales_status:'Closed',closed_at:'2025-11-05',created_at:DB._now(),updated_at:DB._now()},
       {id:2,company_name:'บริษัท XYZ Logistics จำกัด',address:'456 ถนนสุขุมวิท บางนา กรุงเทพ 10260',phone:'02-456789',email:'safety@xyz-log.co.th',contact_name:'คุณวิรัตน์ ใจดี',contact_role:'Safety Officer',employee_count:320,last_contact:'2025-11-10',note:'ราคาต่อรอง',sales_status:'Negotiation',closed_at:null,created_at:DB._now(),updated_at:DB._now()},
