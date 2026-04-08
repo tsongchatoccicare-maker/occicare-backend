@@ -13,7 +13,7 @@ const VEHICLES=['รถยนต์กะบะขาว','รถยนต์ก
 const PROFESSIONS=['เจ้าหน้าที่','RN','MT','แพทย์','เจ้าหน้าที่ ใบ Cer','อื่นๆ'];
 const STAFF_TYPES=['ในองค์กร','Part-time','Out Source'];
 const STATUS_FLOW=['Prospect','Closed','Onsite','Lab','Report','Billing','Completed'];
-const MODULES={dashboard:'Dashboard',customers:'CRM',sales:'Sales',quotation:'ใบเสนอราคา',op_prep:'Operation-Prep',op_onsite:'Operation-Onsite',lab:'Lab',xray:'X-Ray',report:'Report',billing:'Billing',config:'Config'};
+const MODULES={dashboard:'Dashboard',customers:'CRM',sales:'Sales',quotation:'ใบเสนอราคา',op_prep:'Operation-Prep',op_onsite:'Operation-Onsite',lab:'Lab',report:'Report',billing:'Billing',config:'Config'};
 const QT_APPROVE_ROLES=['admin','sales']; // roles that can approve quotations
 
 /* ===== UTILS ===== */
@@ -56,24 +56,8 @@ const Router={
     if(!DB.auth.can('view',page)&&page!=='calendar'){U.toast('⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้','danger');return;}
     this.current=page;
     document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม'}[page]||page;
-    // Show loading indicator
-    const content = document.getElementById('content');
-    if(content) content.innerHTML = '<div class="empty" style="padding:60px"><div style="font-size:32px;margin-bottom:12px;opacity:.4">⏳</div><p style="color:var(--t-dim)">กำลังโหลด...</p></div>';
-    // Call render (may be async)
-    const renderFn = Pages[page] && Pages[page].render;
-    if(renderFn) {
-      try {
-        const result = renderFn.call(Pages[page]);
-        if(result && typeof result.then === 'function') {
-          result.catch(e => {
-            if(content) content.innerHTML = `<div class="ab danger"><strong>เกิดข้อผิดพลาด:</strong> ${e.message}</div>`;
-          });
-        }
-      } catch(e) {
-        if(content) content.innerHTML = `<div class="ab danger"><strong>เกิดข้อผิดพลาด:</strong> ${e.message}</div>`;
-      }
-    }
+    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist'}[page]||page;
+    Pages[page]&&Pages[page].render();
     updateAlerts();
     window.scrollTo(0,0);
   }
@@ -88,7 +72,6 @@ function showApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   buildNav();
-  updateAlerts();
 }
 function buildNav(){
   const sess=DB.auth.session();
@@ -106,7 +89,6 @@ function buildNav(){
     {page:'op_onsite',icon:'🚑',label:'Onsite',mod:'op_onsite'},
     {section:'ห้องปฏิบัติการ'},
     {page:'lab',icon:'🔬',label:'Lab & TAT',mod:'lab'},
-    {page:'xray',icon:'📡',label:'X-Ray — อ่านฟิล์ม',mod:'xray'},
     {section:'ทีมทำผล (Report)'},
     {page:'report',icon:'📄',label:'Report & Plan',mod:'report'},
     {section:'การเงิน'},
@@ -132,13 +114,10 @@ function buildNav(){
   if(hr)hr.textContent=sess.role;
   if(av)av.textContent=(sess.name||'U').charAt(0).toUpperCase();
 }
-async function updateAlerts(){
-  try {
-    const a=await DB.checkAlerts();
-    const b=document.getElementById('alert-count');
-    if(!b)return;
-    b.textContent=a.length;b.style.display=a.length>0?'inline-block':'none';
-  } catch(e){}
+function updateAlerts(){
+  const a=DB.checkAlerts();
+  const b=document.getElementById('alert-count');
+  b.textContent=a.length;b.style.display=a.length>0?'inline-block':'none';
 }
 
 /* ===== AUTOCOMPLETE HELPERS ===== */
@@ -148,16 +127,15 @@ function acCustomer(inputId,hiddenId){
   const list=document.createElement('div');list.className='ac-list';list.id=inputId+'_list';
   inp.parentElement.style.position='relative';
   inp.parentElement.appendChild(list);
-  inp.addEventListener('input',async ()=>{
+  inp.addEventListener('input',()=>{
     const q=inp.value.toLowerCase();
-    const all=await DB.customer.listCustomers();
-    const custs=(all||[]).filter(c=>c.company_name.toLowerCase().includes(q));
+    const custs=DB.customer.listCustomers().filter(c=>c.company_name.toLowerCase().includes(q));
     if(!q||custs.length===0){list.classList.remove('open');return;}
     list.innerHTML=custs.slice(0,8).map(c=>`<div class="ac-item" data-id="${c.id}" data-name="${U.esc(c.company_name)}"><strong>${U.esc(c.company_name)}</strong><br><span class="t-sm t-muted">${c.contact_name||''} — ${c.phone||''}</span></div>`).join('');
     list.classList.add('open');
-    list.querySelectorAll('.ac-item').forEach(el=>el.addEventListener('click',async ()=>{
+    list.querySelectorAll('.ac-item').forEach(el=>el.addEventListener('click',()=>{
       inp.value=el.dataset.name;hid.value=el.dataset.id;list.classList.remove('open');
-      const c=await DB.customer.getCustomer(parseInt(el.dataset.id));
+      const c=DB.customer.getCustomer(parseInt(el.dataset.id));
       if(c){
         const f=id=>document.getElementById(id);
         if(f('ac_loc'))f('ac_loc').value=c.address||'';
@@ -175,16 +153,16 @@ function acProject(inputId,hiddenId,cb){
   const list=document.createElement('div');list.className='ac-list';list.id=inputId+'_list';
   inp.parentElement.style.position='relative';
   inp.parentElement.appendChild(list);
-  inp.addEventListener('input',async ()=>{
+  inp.addEventListener('input',()=>{
     const q=inp.value.toLowerCase();
-    const all=await DB.sales.listProjects();
-    const projs=(all||[]).filter(p=>p.project_code.toLowerCase().includes(q)||p.company_name.toLowerCase().includes(q));
+    const projs=DB.sales.listProjects().filter(p=>p.project_code.toLowerCase().includes(q)||p.company_name.toLowerCase().includes(q));
     if(!q||projs.length===0){list.classList.remove('open');return;}
     list.innerHTML=projs.slice(0,8).map(p=>`<div class="ac-item" data-id="${p.id}"><strong>${U.esc(p.project_code)}</strong> — ${U.esc(p.company_name)}<br><span class="t-sm t-muted">${U.fmtD(p.onsite_date)} | ${(p.headcount||0).toLocaleString()} คน</span></div>`).join('');
     list.classList.add('open');
-    list.querySelectorAll('.ac-item').forEach(el=>el.addEventListener('click',async ()=>{
-      const p=await DB.sales.getProject(parseInt(el.dataset.id));
-      if(p){inp.value=p.project_code+' — '+p.company_name;hid.value=p.id;list.classList.remove('open');cb&&cb(p);}
+    list.querySelectorAll('.ac-item').forEach(el=>el.addEventListener('click',()=>{
+      const p=DB.sales.getProject(parseInt(el.dataset.id));
+      inp.value=p.project_code+' — '+p.company_name;hid.value=p.id;list.classList.remove('open');
+      cb&&cb(p);
     }));
   });
   document.addEventListener('click',e=>{if(!inp.contains(e.target)&&!list.contains(e.target))list.classList.remove('open');});
@@ -193,215 +171,12 @@ function acProject(inputId,hiddenId,cb){
 /* ===== PAGES ===== */
 const Pages={};
 
-
-/* ══════════════════════════════════════════════════
-   XRAY PAGE — งาน X-Ray อ่านฟิล์ม
-   แสดงเมื่อ Onsite ปิดหน่วยแล้ว
-══════════════════════════════════════════════════ */
-Pages.xray={
-  _STEPS:[
-    {key:'film_sent',      label:'ส่งฟิล์มอ่านผล'},
-    {key:'interpreting',   label:'รอแปลผล'},
-    {key:'report_done',    label:'จัดทำผล'},
-    {key:'approved',       label:'Approve ผล'},
-    {key:'write_cd',       label:'Write CD'},
-    {key:'send_excel',     label:'ส่ง File Excel'},
-    {key:'send_media',     label:'ส่ง CD/DVD/Flash Drive'},
-  ],
-
-  _statusLabel(meta){
-    if(!meta)return{label:'รอรับงาน',cls:'b-draft'};
-    const steps=this._STEPS;
-    // Check all done
-    if(steps.every(s=>meta[s.key])){return{label:'Complete',cls:'b-closed'};}
-    // Find latest done step
-    for(let i=steps.length-1;i>=0;i--){
-      if(meta[steps[i].key]) return{label:steps[i].label,cls:'b-onsite'};
-    }
-    return{label:'รอส่งฟิล์ม',cls:'b-draft'};
-  },
-
-  async render(){
-    const canEdit=DB.auth.can('edit','xray');
-    // Load projects that have closed onsite (status=Lab,Report,Billing,Completed)
-    const allProjs=await DB.sales.listProjects();
-    const projs=(allProjs||[]).filter(p=>['Lab','Report','Billing','Completed'].includes(p.status));
-    // Search
-    const searchQ=(document.getElementById('xr_search_val')||{value:''}).value||'';
-    const statusF=(document.getElementById('xr_status_val')||{value:''}).value||'';
-
-    const mkCk=(pid,key,meta,label)=>{
-      const done=!!(meta&&meta[key]);
-      const dateVal=meta&&meta[key+'_date']||'';
-      if(done){
-        return`<td style="text-align:center;vertical-align:middle;padding:6px 4px" title="${label} — ${U.fmtD(dateVal)}">
-          <div style="display:inline-flex;flex-direction:column;align-items:center;gap:1px">
-            <span style="font-size:16px">✅</span>
-            ${dateVal?`<div style="font-size:9px;color:#6EE7B7">${U.fmtD(dateVal)}</div>`:''}
-          </div>
-        </td>`;
-      }
-      return`<td style="text-align:center;vertical-align:middle;padding:6px 4px">
-        ${canEdit?`<input type="checkbox" style="width:16px;height:16px;accent-color:#0E9F6E;cursor:pointer"
-          onchange="Pages.xray.toggleStep(${pid},'${key}',this.checked)" title="${label}"/>`:'⬜'}
-      </td>`;
-    };
-
-    const rows=await Promise.all(projs.map(async p=>{
-      const meta=await DB.xray.getMeta(p.id);
-      const st=this._statusLabel(meta);
-      const xrFilter=!statusF||(statusF==='complete'&&st.cls==='b-closed')||(statusF==='pending'&&st.cls!=='b-closed');
-      const txtFilter=!searchQ||(p.project_code+' '+p.company_name).toLowerCase().includes(searchQ.toLowerCase());
-      if(!xrFilter||!txtFilter)return null;
-      return`<tr>
-        <td class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${U.esc(p.project_code)}</td>
-        <td class="fw6">${U.esc(p.company_name)}</td>
-        <td>${(p.headcount||0).toLocaleString()}</td>
-        <td>${U.fmtD(p.onsite_date)}</td>
-        ${this._STEPS.map(s=>mkCk(p.id,s.key,meta,s.label)).join('')}
-        <td><span class="badge ${st.cls}" style="font-size:10px">${st.label}</span></td>
-        <td>
-          ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.xray.editMeta(${p.id})">แก้ไข</button>`:''} 
-          <button class="btn btn-out btn-xs" onclick="Pages.xray.attachFile(${p.id})">📎</button>
-        </td>
-      </tr>`;
-    }));
-
-    const filteredRows=rows.filter(Boolean);
-    const hdr=this._STEPS.map(s=>`<th style="text-align:center;font-size:8.5px;max-width:60px;white-space:normal;line-height:1.3">${s.label}</th>`).join('');
-    document.getElementById('content').innerHTML=`
-    <div class="ph">
-      <div><h2>📡 X-Ray — อ่านฟิล์มและรายงานผล</h2><p>ติดตามความคืบหน้างาน X-Ray ต่อ Project</p></div>
-    </div>
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06)">
-        <div style="position:relative;flex:1">
-          <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;opacity:.5">🔍</span>
-          <input id="xr_search_val" placeholder="ค้นหา Project Code, บริษัท..." autocomplete="off"
-            oninput="Pages.xray.render()"
-            onfocus="this.style.borderColor='var(--c-teal)'" onblur="this.style.borderColor='rgba(255,255,255,.1)'"
-            style="width:100%;padding:9px 12px 9px 34px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;font-family:'IBM Plex Sans Thai',sans-serif;outline:none"/>
-        </div>
-        <select id="xr_status_val" onchange="Pages.xray.render()"
-          style="padding:9px 12px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;min-width:130px">
-          <option value="">ทุกสถานะ</option>
-          <option value="pending">กำลังดำเนินการ</option>
-          <option value="complete">Complete</option>
-        </select>
-      </div>
-      <div style="height:8px"></div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th>Project Code</th><th>บริษัท</th><th>จำนวน</th><th>วันตรวจ</th>
-            ${hdr}
-            <th>สถานะ</th><th></th>
-          </tr></thead>
-          <tbody>${filteredRows.join('')||'<tr><td colspan="14" class="empty"><div class="icon">📡</div><p>ยังไม่มีงาน X-Ray (รอ Onsite ปิดหน่วยก่อน)</p></td></tr>'}</tbody>
-        </table>
-      </div>
-    </div>`;
-  },
-
-  async toggleStep(pid,key,val){
-    const meta=await DB.xray.getMeta(pid)||{project_id:pid};
-    meta[key]=val;
-    if(val) meta[key+'_date']=new Date().toISOString().substr(0,10);
-    else delete meta[key+'_date'];
-    await DB.xray.saveMeta(meta);
-    // Update status in project if all done
-    const allDone=this._STEPS.every(s=>meta[s.key]);
-    if(allDone){
-      const p=await DB.sales.getProject(pid);
-      if(p&&p.status==='Onsite') await DB.sales.saveProject({...p,status:'Lab'});
-    }
-    await this.render();
-    U.toast(val?'✅ บันทึกอัตโนมัติ':'↩ ยกเลิก');
-  },
-
-  async editMeta(pid){
-    const meta=await DB.xray.getMeta(pid)||{};
-    const p=await DB.sales.getProject(pid);
-    Modal.open(`
-    <div style="padding:10px 14px;background:var(--s-2);border-radius:9px;margin-bottom:14px">
-      <div class="fw6">${U.esc(p?.project_code||'')} | ${U.esc(p?.company_name||'')}</div>
-    </div>
-    ${this._STEPS.map(s=>`
-    <div class="fr" style="margin-bottom:8px;align-items:center">
-      <label style="flex:1;font-size:13px;color:var(--t-body)">${s.label}</label>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="xr_${s.key}" ${meta[s.key]?'checked':''} style="width:16px;height:16px;accent-color:#0E9F6E"/>
-        <input type="date" id="xr_${s.key}_date" value="${meta[s.key+'_date']||''}"
-          style="padding:5px 8px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:var(--s-3);color:var(--t-bright);font-size:12px"/>
-      </div>
-    </div>`).join('')}
-    <div class="fg mt2"><label>หมายเหตุ</label>
-      <textarea id="xr_note" style="min-height:60px">${U.esc(meta.note||'')}</textarea>
-    </div>`,
-    `แก้ไขงาน X-Ray — ${p?.project_code||pid}`, async ()=>{
-      const newMeta={project_id:pid};
-      this._STEPS.forEach(s=>{
-        const cb=document.getElementById('xr_'+s.key);
-        const dt=document.getElementById('xr_'+s.key+'_date');
-        newMeta[s.key]=cb?.checked?1:0;
-        if(cb?.checked&&dt?.value) newMeta[s.key+'_date']=dt.value;
-      });
-      newMeta.note=document.getElementById('xr_note')?.value||'';
-      await DB.xray.saveMeta(newMeta);
-      Modal.close();await this.render();U.toast('✅ บันทึกแล้ว');
-    });
-  },
-
-  async attachFile(pid){
-    const p=await DB.sales.getProject(pid);
-    Modal.open(`
-    <div class="sec-title">${U.esc(p?.project_code||'')} — แนบไฟล์ X-Ray</div>
-    <div class="file-zone" onclick="document.getElementById('xr_file_inp').click()">
-      <div style="font-size:28px;margin-bottom:6px">📎</div>
-      <p class="t-sm t-muted">คลิกเพื่อเลือกไฟล์ (PDF, JPG, PNG, ZIP, ≤5MB)</p>
-      <input id="xr_file_inp" type="file" accept=".pdf,.jpg,.jpeg,.png,.zip" style="display:none"
-        onchange="Pages.xray._handleFile(${pid},this)"/>
-    </div>
-    <div id="xr_file_list" style="margin-top:10px"></div>`,
-    'แนบไฟล์ X-Ray', null);
-    // Load existing files
-    setTimeout(async ()=>{
-      const files=await DB.files.listByContext('xray_'+pid);
-      const el=document.getElementById('xr_file_list');
-      if(el&&files&&files.length){
-        el.innerHTML='<div class="sec-title">ไฟล์ที่แนบแล้ว</div>'+
-          files.map(f=>`<div class="sr t-sm"><span>📄 ${U.esc(f.file_name||f.name)} <span class="t-muted">(${f.file_size_label||f.size||''})</span></span><button class="btn btn-danger btn-xs" onclick="Pages.xray._delFile(${f.id},${pid})">ลบ</button></div>`).join('');
-      }
-    },100);
-  },
-
-  async _handleFile(pid,inp){
-    const f=inp.files[0];if(!f)return;
-    if(f.size>5*1024*1024){U.toast('ไฟล์ใหญ่เกิน 5MB','danger');return;}
-    U.toast('⏳ กำลังอัปโหลด...');
-    await DB.files.uploadFile('xray_'+pid,f,'xray','X-Ray Film');
-    const el=document.getElementById('xr_file_list');
-    if(el){const files=await DB.files.listByContext('xray_'+pid);
-      el.innerHTML='<div class="sec-title">ไฟล์ที่แนบแล้ว</div>'+
-        files.map(f=>`<div class="sr t-sm"><span>📄 ${U.esc(f.file_name||f.name)}</span><button class="btn btn-danger btn-xs" onclick="Pages.xray._delFile(${f.id},${pid})">ลบ</button></div>`).join('');}
-    U.toast('✅ อัปโหลดแล้ว');
-  },
-
-  async _delFile(fid,pid){
-    if(!U.confirm('ลบไฟล์นี้?'))return;
-    await DB.files.deleteFile(fid);
-    const files=await DB.files.listByContext('xray_'+pid);
-    const el=document.getElementById('xr_file_list');
-    if(el) el.innerHTML='<div class="sec-title">ไฟล์ที่แนบแล้ว</div>'+
-      files.map(f=>`<div class="sr t-sm"><span>📄 ${U.esc(f.file_name||f.name)}</span><button class="btn btn-danger btn-xs" onclick="Pages.xray._delFile(${f.id},${pid})">ลบ</button></div>`).join('');
-  },
-};
 /* ── DASHBOARD ── */
 Pages.dashboard={
   _filter:'all',
-  async render(){
-  const projs=await DB.sales.listProjects();
-  const invs=await DB.billing.listInvoices();
+  render(){
+  const projs=DB.sales.listProjects();
+  const invs=DB.billing.listInvoices();
   const alerts=DB.checkAlerts();
   const rev=invs.reduce((s,i)=>s+(i.revenue||0),0);
   const prf=invs.reduce((s,i)=>s+(i.profit||0),0);
@@ -411,23 +186,21 @@ Pages.dashboard={
   const statusOpts=['all',...STATUS_FLOW].map(s=>`<option value="${s}" ${this._filter===s?'selected':''}>${s==='all'?'ทุกสถานะ':s}</option>`).join('');
   const filtered=this._filter==='all'?projs.slice().reverse():projs.slice().reverse().filter(p=>p.status===this._filter);
   // Build workflow cards
-  const wfCards=await Promise.all(filtered.map(async p=>{
-    const [jo,lp,rp,inv,h] = await Promise.all([
-      DB.operation.getJobOrder(p.id),
-      DB.lab.getLabProject(p.id),
-      DB.report.getPlan(p.id),
-      DB.billing.getInvoice(p.id),
-      DB.sales.getHandover(p.id),
-    ]);
-    const xrayData = await DB.xray ? DB.xray.getByProject(p.id) : null;
-    const cklDone = 0;
+  const wfCards=filtered.map(p=>{
+    const jo=DB.operation.getJobOrder(p.id);
+    const lp=DB.lab.getLabProject(p.id);
+    const rp=DB.report.getPlan(p.id);
+    const inv=DB.billing.getInvoice(p.id);
+    const h=DB.sales.getHandover(p.id);
+    const meta=JSON.parse(localStorage.getItem('rp_meta_'+p.id)||'{}');
+    const ckl=JSON.parse(localStorage.getItem('ckl__'+p.id)||'{}');
+    const cklDone=Object.keys(ckl).filter(k=>!k.endsWith('_note')&&ckl[k]).length;
     const steps=[
       {icon:'💼',label:'Handover',done:!!h&&!!p.handover_sent,role:'Sales'},
       {icon:'📋',label:'ใบแจ้งงาน',done:!!jo&&jo.status!=='Draft',role:'Op'},
       {icon:'✅',label:'Checklist',done:cklDone>=10,role:'Op'},
       {icon:'🚑',label:'Onsite',done:p.status!=='Closed'&&p.status!=='Prospect',role:'Op'},
       {icon:'🔬',label:'ส่ง Lab',done:!!lp,role:'Lab'},
-      {icon:'📡',label:'X-Ray',done:!!(xrayData&&xrayData.film_sent),role:'XRay'},
       {icon:'⏱',label:'TAT',done:lp?.status==='reported',role:'Lab'},
       {icon:'📄',label:'Set Plan',done:!!meta.set_plan,role:'Report'},
       {icon:'📋',label:'ส่งผล',done:rp?.status==='sent',role:'Report'},
@@ -455,8 +228,7 @@ Pages.dashboard={
         </div>`).join('')}
       </div>
     </div>`;
-  }));
-  const wfCardsHtml = wfCards.join('');
+  }).join('');
   document.getElementById('content').innerHTML=`
   <div class="ph"><div><h2>📊 Dashboard</h2><p>OcciCare Mobile Checkup System</p></div>
     <div class="btn-grp">
@@ -500,7 +272,7 @@ Pages.dashboard={
         ${this._filter!=='all'?`<button class="btn btn-out btn-xs" onclick="Pages.dashboard.filterStatus('all')">✕</button>`:''}
       </div>
     </div>
-    ${wfCardsHtml||`<div class="empty"><div class="icon">📋</div><p>ไม่พบ Project${this._filter!=='all'?` สถานะ "${this._filter}"`:''}  <button class="btn btn-out btn-sm" onclick="Pages.sales.addProject()">+ สร้างใหม่</button></p></div>`}
+    ${wfCards||`<div class="empty"><div class="icon">📋</div><p>ไม่พบ Project${this._filter!=='all'?` สถานะ "${this._filter}"`:''}  <button class="btn btn-out btn-sm" onclick="Pages.sales.addProject()">+ สร้างใหม่</button></p></div>`}
   </div>`;
 },
 filterStatus(s){this._filter=s;this._search='';this.render();},
@@ -518,12 +290,12 @@ showAlerts(){
   const html=alerts.map(a=>`<div class="ab ${a.type}" style="margin-bottom:6px">${a.msg}</div>`).join('');
   Modal.open(`<div>${html}</div>`,'การแจ้งเตือนทั้งหมด');
 },
-reset(){U.toast('ฟีเจอร์ Reset ถูกปิดใช้งานใน SQL mode','warning');}
+reset(){if(U.confirm('รีเซ็ต Mock Data ทั้งหมด?')){['auth_db','customer_db','sales_db','operation_db','lab_db','report_db','billing_db'].forEach(db=>{Object.keys(localStorage).filter(k=>k.startsWith(db+'__')).forEach(k=>localStorage.removeItem(k));});DB.seedMockData();buildNav();this.render();U.toast('✅ รีเซ็ตแล้ว');}}
 };
 
 /* ── CUSTOMERS ── */
-Pages.customers={async render(){
-  const custs=await DB.customer.listCustomers();
+Pages.customers={render(){
+  const custs=DB.customer.listCustomers();
   const canAdd=DB.auth.can('add','customers'),canEdit=DB.auth.can('edit','customers'),canDel=DB.auth.can('delete','customers');
   const rows=custs.map(c=>`<tr>
     <td class="fw6">${U.esc(c.company_name)}</td>
@@ -561,7 +333,7 @@ _filter(q){
     tr.style.display=(!q||txt.includes(q))?'':'none';
   });
 },
-async edit(id){
+edit(id){
   const c=id?DB.customer.getCustomer(id):{};
   const f=(k,d='')=>U.esc(c[k]||d);
   const sOpts=U.sel(['Prospect','Follow up','Negotiation','Closed'],f('sales_status'));
@@ -600,10 +372,10 @@ async edit(id){
     <button type="button" class="btn btn-out btn-sm" onclick="const lat2=document.getElementById('fc_lat').value,lng2=document.getElementById('fc_lng').value,addr2=document.getElementById('fc_addr').value;window.open('https://maps.google.com/maps?q='+(lat2&&lng2?lat2+','+lng2:encodeURIComponent(addr2)),'_blank')">🗺 Google Maps</button>
   </div>
   ${lat&&lng?`<div style="border-radius:10px;overflow:hidden;height:150px;border:1px solid var(--bdr)"><iframe src="https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed" style="width:100%;height:100%;border:none" loading="lazy"></iframe></div>`:'<p class="t-sm t-muted">ใส่ Lat/Lng แล้วกด ตำแหน่งปัจจุบัน</p>'}`,
-  id?'แก้ไขข้อมูลลูกค้า':'เพิ่มลูกค้าใหม่',async () =>{
+  id?'แก้ไขข้อมูลลูกค้า':'เพิ่มลูกค้าใหม่',()=>{
     const co=document.getElementById('fc_co').value.trim();
     if(!co)return U.toast('กรุณาใส่ชื่อบริษัท','danger');
-    await DB.customer.saveCustomer({
+    DB.customer.saveCustomer({
       id:id||undefined,
       company_name:co,
       address:document.getElementById('fc_addr').value.trim(),
@@ -622,7 +394,7 @@ async edit(id){
     Modal.close();Pages.customers.render();U.toast(id?'✅ อัปเดตแล้ว':'✅ เพิ่มลูกค้าแล้ว');
   },true);
 },
-async del(id){if(U.confirm('ลบลูกค้านี้?')){await DB.customer.deleteCustomer(id);this.render();U.toast('✅ ลบแล้ว');}},
+del(id){if(U.confirm('ลบลูกค้านี้?')){DB.customer.deleteCustomer(id);this.render();U.toast('✅ ลบแล้ว');}},
 logs(cid){
   const c=DB.customer.getCustomer(cid);
   const logs=DB.customer.listSalesLogs(cid);
@@ -661,8 +433,8 @@ Pages.quotation={
   /* ─── helpers ─── */
   _qBadge(s){const m={draft:'b-draft',pending:'b-pending',approved:'b-completed',rejected:'b-danger',sent:'b-onsite',closed:'b-billing'};const l={draft:'ร่าง',pending:'รออนุมัติ',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ',sent:'ส่งแล้ว',closed:'ปิดการขาย'};return`<span class="badge ${m[s]||'b-draft'}">${l[s]||s}</span>`;},
 
-  async render(){
-    const qts=await DB.quotation.listQuotations() || [];
+  render(){
+    const qts=DB.quotation.listQuotations();
     const canAdd=DB.auth.can('add','sales');
     const canEdit=DB.auth.can('edit','sales');
     const canDel=DB.auth.can('delete','sales');
@@ -739,8 +511,8 @@ Pages.quotation={
   },
 
   /* ─── Step 1: Requirement Gathering ─── */
-  async create(){
-    const custs=await DB.customer.listCustomers();
+  create(){
+    const custs=DB.customer.listCustomers();
     const cOpts='<option value="">-- เลือกลูกค้า --</option>'+custs.map(c=>`<option value="${c.id}">${c.sales_status==='Closed'?'⭐':''} ${U.esc(c.company_name)} (${c.sales_status||'-'})</option>`).join('');
     Modal.open(`
     <div class="ab info mb4"><div class="fw6">📋 ขั้นตอนที่ 1 — เก็บ Customer Requirement</div></div>
@@ -760,9 +532,9 @@ Pages.quotation={
       <textarea id="qt_req" placeholder="เช่น มีพนักงานหญิง 60% ต้องการ Pap Smear..."></textarea>
     </div>
     <div id="qt_suggest_wrap" style="display:none"></div>`,
-    'สร้างใบเสนอราคา',async () =>{
+    'สร้างใบเสนอราคา',()=>{
       const cid=parseInt(document.getElementById('qt_cust').value);
-      const cust=await DB.customer.getCustomer(cid);
+      const cust=DB.customer.getCustomer(cid);
       if(!cid||!cust)return U.toast('กรุณาเลือกลูกค้า','danger');
       const head=parseInt(document.getElementById('qt_head').value)||0;
       if(!head)return U.toast('กรุณาใส่จำนวนพนักงาน','danger');
@@ -890,7 +662,7 @@ Pages.quotation={
         <div style="color:rgba(255,255,255,.5);font-size:11px">กรอกราคาและจำนวนเพื่อดูสรุป...</div>
       </div>
     </div>`,
-    qtId?'แก้ไขใบเสนอราคา':'สร้างใบเสนอราคา',async ()=>{
+    qtId?'แก้ไขใบเสนอราคา':'สร้างใบเสนอราคา',()=>{
       const qty=parseInt(document.getElementById('qt_qty').value)||0;
       if(!qty)return U.toast('กรุณาใส่จำนวนพนักงาน','danger');
       const itemsToSave=[];
@@ -920,7 +692,7 @@ Pages.quotation={
           itemsToSave.push({type:'manpower',code:'MP',name:mpRole,items_detail:'',qty:mpQty,unit_price:mpCost,cost_per_unit:mpCost,discount_per_unit:0,subtotal:mpCost*mpQty});
         }
       });
-      const qt=await DB.quotation.saveQuotation({
+      const qt=DB.quotation.saveQuotation({
         id:qtId||undefined,
         customer_id:cust.id,company_name:cust.company_name,
         headcount:qty,location:loc,budget:parseInt(budget)||0,requirements,
@@ -930,7 +702,7 @@ Pages.quotation={
         note:document.getElementById('qt_note').value,
         status:existing?.status||'draft',
       });
-      await DB.quotation.saveItems(qt.id,itemsToSave);
+      DB.quotation.saveItems(qt.id,itemsToSave);
       Modal.close();Pages.quotation.render();
       U.toast(qtId?`✅ อัปเดต ${qt.qt_no} แล้ว`:`✅ สร้าง ${qt.qt_no} สำเร็จ`);
       if(typeof NavBadges!=='undefined')NavBadges.update();
@@ -1048,9 +820,9 @@ Pages.quotation={
   },
 
   /* ─── Edit existing quotation ─── */
-  async editQt(id){
+  editQt(id){
     const q=DB.quotation.getQuotation(id);if(!q)return;
-    const cust=await DB.customer.getCustomer(q.customer_id)||{id:q.customer_id,company_name:q.company_name,address:q.location};
+    const cust=DB.customer.getCustomer(q.customer_id)||{id:q.customer_id,company_name:q.company_name,address:q.location};
     this._openBuilder(id,cust,q.headcount,q.location,q.budget,q.requirements||q.note);
   },
 
@@ -1114,43 +886,43 @@ Pages.quotation={
     </div>`,`ใบเสนอราคา — ${q.qt_no}`,null,true);
   },
 
-  async submitApproval(id){
+  submitApproval(id){
     if(!U.confirm('ส่งขออนุมัติจาก Manager?'))return;
     const q=DB.quotation.getQuotation(id);if(!q)return;
-    await DB.quotation.saveQuotation({...q,status:'pending'});
+    DB.quotation.saveQuotation({...q,status:'pending'});
     this.render();U.toast('✅ ส่งขออนุมัติแล้ว');
     if(typeof NavBadges!=='undefined')NavBadges.update();
   },
 
-  async approve(id,approved){
+  approve(id,approved){
     const q=DB.quotation.getQuotation(id);if(!q)return;
     Modal.open(`<div class="ab ${approved?'success':'danger'} mb4">${approved?'✅ อนุมัติใบเสนอราคา':'❌ ไม่อนุมัติ — ส่งกลับแก้ไข'}</div>
     <div class="fg"><label>ความคิดเห็น</label><textarea id="ap_comment" placeholder="${approved?'ดีมาก ส่งลูกค้าได้เลย':'เหตุผลที่ไม่อนุมัติ...'}"></textarea></div>`,
-    approved?'อนุมัติ':'ไม่อนุมัติ', async () => {
-      await DB.quotation.saveApproval({quotation_id:id,approved,approver:DB.auth.session()?.name||'Manager',comment:document.getElementById('ap_comment')?.value||'',approved_at:DB._now()});
-      await DB.quotation.saveQuotation({...q,status:approved?'approved':'rejected'});
+    approved?'อนุมัติ':'ไม่อนุมัติ',()=>{
+      DB.quotation.saveApproval({quotation_id:id,approved,approver:DB.auth.session()?.name||'Manager',comment:document.getElementById('ap_comment')?.value||'',approved_at:DB._now()});
+      DB.quotation.saveQuotation({...q,status:approved?'approved':'rejected'});
       Modal.close();this.render();U.toast(approved?'✅ อนุมัติแล้ว':'❌ ส่งกลับแก้ไข');
     });
   },
 
-  async markSent(id){
+  markSent(id){
     const q=DB.quotation.getQuotation(id);if(!q)return;
     if(!U.confirm('ยืนยันว่าส่งใบเสนอราคาให้ลูกค้าแล้ว?'))return;
-    await DB.quotation.saveQuotation({...q,status:'sent',sent_at:DB._now()});
+    DB.quotation.saveQuotation({...q,status:'sent',sent_at:DB._now()});
     this.render();U.toast('✅ บันทึกส่งลูกค้าแล้ว');
   },
 
-  async closeWin(id){
+  closeWin(id){
     const q=DB.quotation.getQuotation(id);if(!q)return;
     if(!U.confirm('ลูกค้าตกลงใช้บริการ — ปิดการขาย?'))return;
-    await DB.quotation.saveQuotation({...q,status:'closed',closed_at:DB._now()});
+    DB.quotation.saveQuotation({...q,status:'closed',closed_at:DB._now()});
     const c=DB.customer.getCustomer(q.customer_id);
-    if(c&&c.sales_status!=='Closed')await DB.customer.saveCustomer({...c,sales_status:'Closed',closed_at:DB._now()});
+    if(c&&c.sales_status!=='Closed')DB.customer.saveCustomer({...c,sales_status:'Closed',closed_at:DB._now()});
     this.render();U.toast('🎉 ปิดการขายสำเร็จ!');
     if(typeof NavBadges!=='undefined')NavBadges.update();
   },
 
-  async _filterTable(q){
+  _filterTable(q){
     const statusSel=document.getElementById('qt_status_filter');
     const statusFilter=statusSel?statusSel.value:'';
     q=(q||'').toLowerCase().trim();
@@ -1158,7 +930,7 @@ Pages.quotation={
     const acList=document.getElementById('qt_ac_list');
     if(acList){
       if(q.length>=1){
-        const qts=await DB.quotation.listQuotations();
+        const qts=DB.quotation.listQuotations();
         const matches=qts.filter(qt=>
           qt.qt_no?.toLowerCase().includes(q)||
           qt.company_name?.toLowerCase().includes(q)
@@ -1184,9 +956,9 @@ Pages.quotation={
       tr.style.display=(matchQ&&matchS)?'':'none';
     });
   },
-  async del(id){
+  del(id){
     if(!U.confirm('ลบใบเสนอราคานี้?'))return;
-    await DB.quotation.deleteQuotation(id);this.render();U.toast('✅ ลบแล้ว');
+    DB.quotation.deleteQuotation(id);this.render();U.toast('✅ ลบแล้ว');
   },
 
   /* ─── Print A4 ─── */
@@ -1236,8 +1008,8 @@ Pages.quotation={
 };
 
 
-Pages.sales={async render(){
-  const projs=await DB.sales.listProjects();
+Pages.sales={render(){
+  const projs=DB.sales.listProjects();
   const canAdd=DB.auth.can('add','sales'),canEdit=DB.auth.can('edit','sales'),canDel=DB.auth.can('delete','sales');
   const rows=projs.slice().reverse().map(p=>{
     const ticked=!!p.handover_sent;
@@ -1278,7 +1050,7 @@ Pages.sales={async render(){
     <div style="height:10px"></div>
     <div class="tbl-wrap"><table id="sales_table"><thead><tr><th>Project Code</th><th>บริษัท</th><th>จำนวน</th><th>วันตรวจ</th><th>กำหนดส่งผล</th><th>สถานะ</th><th style="text-align:center;min-width:90px">เวียนเอกสาร</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="8" class="empty"><div class="icon">💼</div><p>ยังไม่มี Project</p></td></tr>'}</tbody></table></div></div>`;
 },
-async addProject(){
+addProject(){
   const allCusts=DB.customer.listCustomers();
   if(!allCusts.length){U.toast('ยังไม่มีลูกค้า กรุณาเพิ่มลูกค้าใน CRM ก่อน','warning');Router.navigate('customers');return;}
   // Show all, but mark Closed with ⭐
@@ -1315,9 +1087,9 @@ async addProject(){
       <input type="date" id="sp_hw_date" style="padding:6px 10px;font-size:12px"/>
     </div>
   </div>`,
-  'ปิดการขาย / สร้าง Project ใหม่', async () => {
+  'ปิดการขาย / สร้าง Project ใหม่',()=>{
     const cid=parseInt(document.getElementById('sp_cust_sel').value);
-    const cust=await DB.customer.getCustomer(cid);
+    const cust=DB.customer.getCustomer(cid);
     if(!cid||!cust)return U.toast('กรุณาเลือกบริษัท','danger');
     const head=parseInt(document.getElementById('ac_head').value)||0;
     const date=document.getElementById('sp_date').value;
@@ -1325,8 +1097,8 @@ async addProject(){
     if(!head||!date)return U.toast('กรุณากรอกข้อมูลให้ครบ','danger');
     const hwSent=document.getElementById('sp_hw')?.checked||false;
     const hwDate=document.getElementById('sp_hw_date')?.value||null;
-    const proj=await DB.sales.saveProject({customer_id:cid,company_name:cust.company_name,headcount:head,onsite_date:date,due_date:due,onsite_time:document.getElementById('sp_ts').value,onsite_time_end:document.getElementById('sp_te').value,location:document.getElementById('ac_loc').value.trim(),coordinator_name:document.getElementById('ac_coord').value.trim(),coordinator_phone:document.getElementById('ac_cphone').value.trim(),status:'Closed',created_by:document.getElementById('sp_by').value.trim(),handover_sent:hwSent,handover_date:hwDate});
-    await DB.sales.saveHandover({project_id:proj.id,conditions:document.getElementById('sp_cond').value.trim(),sent_at:DB._now()});
+    const proj=DB.sales.saveProject({customer_id:cid,company_name:cust.company_name,headcount:head,onsite_date:date,due_date:due,onsite_time:document.getElementById('sp_ts').value,onsite_time_end:document.getElementById('sp_te').value,location:document.getElementById('ac_loc').value.trim(),coordinator_name:document.getElementById('ac_coord').value.trim(),coordinator_phone:document.getElementById('ac_cphone').value.trim(),status:'Closed',created_by:document.getElementById('sp_by').value.trim(),handover_sent:hwSent,handover_date:hwDate});
+    DB.sales.saveHandover({project_id:proj.id,conditions:document.getElementById('sp_cond').value.trim(),sent_at:DB._now()});
     Modal.close();this.render();U.toast(`✅ สร้าง Project ${proj.project_code} สำเร็จ`);
     if(typeof LineNotify!=='undefined')LineNotify.send(`📋 [MCK] สร้าง Project ใหม่\n${proj.project_code}\n🏢 ${cust.company_name}\n📆 วันตรวจ: ${proj.onsite_date}`);
     if(typeof NavBadges!=='undefined')NavBadges.update();
@@ -1340,8 +1112,8 @@ _fillFromCust(cid){
   if(el('ac_cphone'))el('ac_cphone').value=c.phone||'';
   if(el('ac_head'))el('ac_head').value=c.employee_count||'';
 },
-async editProject(id){
-  const p=await DB.sales.getProject(id);
+editProject(id){
+  const p=DB.sales.getProject(id);
   Modal.open(`<div class="fg"><label>Project Code</label><input value="${p.project_code}" disabled/></div>
   <div class="fr"><div class="fg"><label>จำนวนคน</label><input id="ep_h" type="number" value="${p.headcount}"/></div>
     <div class="fg"><label>วันตรวจ</label><input id="ep_d" type="date" value="${p.onsite_date}"/></div></div>
@@ -1363,15 +1135,15 @@ async editProject(id){
       <input type="date" id="ep_hw_date" value="${p.handover_date||''}" style="padding:6px 10px;font-size:12px"/>
     </div>
   </div>`,
-  'แก้ไข Project', async () => {
+  'แก้ไข Project',()=>{
     const hwS=document.getElementById('ep_hw')?.checked||false;
     const hwD=document.getElementById('ep_hw_date')?.value||null;
-    await DB.sales.saveProject({...p,headcount:parseInt(document.getElementById('ep_h').value)||p.headcount,onsite_date:document.getElementById('ep_d').value,onsite_time:document.getElementById('ep_ts').value,onsite_time_end:document.getElementById('ep_te').value,location:document.getElementById('ep_loc').value,due_date:document.getElementById('ep_due').value,coordinator_name:document.getElementById('ep_co').value,coordinator_phone:document.getElementById('ep_cp').value,handover_sent:hwS,handover_date:hwD});
+    DB.sales.saveProject({...p,headcount:parseInt(document.getElementById('ep_h').value)||p.headcount,onsite_date:document.getElementById('ep_d').value,onsite_time:document.getElementById('ep_ts').value,onsite_time_end:document.getElementById('ep_te').value,location:document.getElementById('ep_loc').value,due_date:document.getElementById('ep_due').value,coordinator_name:document.getElementById('ep_co').value,coordinator_phone:document.getElementById('ep_cp').value,handover_sent:hwS,handover_date:hwD});
     Modal.close();this.render();U.toast('✅ อัปเดต Project แล้ว');
   });
 },
-async viewHandover(id){
-  const p=await DB.sales.getProject(id),h=DB.sales.getHandover(id);
+viewHandover(id){
+  const p=DB.sales.getProject(id),h=DB.sales.getHandover(id);
   Modal.open(`<div class="ab success mb4">📄 Internal Handover Document</div>
   <div class="sr"><span>Project Code</span><span class="fw6">${p.project_code}</span></div>
   <div class="sr"><span>บริษัท</span><span class="fw6">${p.company_name}</span></div>
@@ -1387,22 +1159,22 @@ async viewHandover(id){
   <div class="sr"><span>ใบเสนอราคา</span><span class="tag">${h?.quotation_file||'ยังไม่มี'}</span></div>`,
   'เอกสารเวียนภายใน');
 },
-async tickHandover(id,val){
-  const p=await DB.sales.getProject(id);if(!p)return;
+tickHandover(id,val){
+  const p=DB.sales.getProject(id);if(!p)return;
   const today=new Date().toISOString().substr(0,10);
-  await DB.sales.saveProject({...p,handover_sent:val,handover_date:val?today:null});
+  DB.sales.saveProject({...p,handover_sent:val,handover_date:val?today:null});
   this.render();
   U.toast(val?`✅ บันทึกเวียนเอกสาร — ${new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})}`:'↩ ยกเลิก');
   if(typeof NavBadges!=='undefined')NavBadges.update();
 },
-async deleteProj(id){
+deleteProj(id){
   if(!U.confirm('ลบ Project นี้ทั้งหมด?'))return;
-  await DB.sales.deleteProject(id);this.render();
+  DB.sales.deleteProject(id);this.render();
   U.toast('✅ ลบ Project แล้ว');
   if(typeof NavBadges!=='undefined')NavBadges.update();
 },
-async manageFiles(id){
-  const p=await DB.sales.getProject(id);
+manageFiles(id){
+  const p=DB.sales.getProject(id);
   const cats=[
     {key:'namelist',  label:'ไฟล์รายชื่อ',       icon:'👥'},
     {key:'layout',    label:'Layout',             icon:'🗺'},
@@ -1460,8 +1232,8 @@ _rmFile(fileId,pid){
 
 /* ── OP CHECKLIST (เตรียมงาน) ── */
 Pages.op_checklist={
-  async render(){
-    const projs=await DB.sales.listProjects();
+  render(){
+    const projs=DB.sales.listProjects();
     const canEdit=DB.auth.can('edit','op_prep');
     const pOpts=`<option value="">-- เลือก Project --</option>`+projs.map(p=>`<option value="${p.id}">${p.project_code} — ${p.company_name} (${U.fmtD(p.onsite_date)})</option>`).join('');
     document.getElementById('content').innerHTML=`
@@ -1475,13 +1247,13 @@ Pages.op_checklist={
     </div>
     <div id="ckl_detail"><div class="empty"><div class="icon">📋</div><p>กรุณาเลือก Project เพื่อดู Checklist</p></div></div>`;
   },
-  async loadProject(pid){
+  loadProject(pid){
     if(!pid){document.getElementById('ckl_detail').innerHTML='<div class="empty"><div class="icon">📋</div><p>กรุณาเลือก Project</p></div>';return;}
-    const p=await DB.sales.getProject(pid);
+    const p=DB.sales.getProject(pid);
     if(!p)return;
     document.getElementById('ckl_sel').value=pid;
-    const jo=await DB.operation.getJobOrder(pid);
-    const saved=await DB.checklist.getByProject(pid);
+    const jo=DB.operation.getJobOrder(pid);
+    const saved=this._load(pid);
     const canEdit=DB.auth.can('edit','op_prep');
     // Load items from Config Checklist (with custom items)
     const configItems=Pages.config_checklist?Pages.config_checklist.getActive():[];
@@ -1543,14 +1315,13 @@ Pages.op_checklist={
   _key(pid){return`ckl__${pid}`;},
   _load(pid){try{return JSON.parse(localStorage.getItem(this._key(pid))||'{}')}catch{return{};}},
   _save(pid,data){localStorage.setItem(this._key(pid),JSON.stringify(data));},
-  async toggle(pid,key,val){
+  toggle(pid,key,val){
     // Auto-save immediately on tick — no need to press บันทึก
     const noteEl=document.getElementById('ck_note_'+key);
-    const note=noteEl?noteEl.value:null;
-    // Save to SQL via API
-    const configItems2=Pages.config_checklist?await Pages.config_checklist.list():[];
-    const ci=configItems.find(c=>c.item_key===key)||{item_label:key,item_group:''};
-    await DB.checklist.save(pid,key,ci.item_label||key,ci.item_group||'',val,note);
+    const d=this._load(pid);
+    d[key]=val;
+    if(noteEl)d[key+'_note']=noteEl.value;
+    this._save(pid,d);
     // update icon instantly
     const box=document.getElementById('ck_'+key)?.closest('div[style]');
     if(box){
@@ -1584,9 +1355,9 @@ Pages.op_checklist={
     this.loadProject(pid);
     U.toast('✅ บันทึก Checklist แล้ว');
   },
-  async printChecklist(pid){
-    const p=await DB.sales.getProject(pid);
-    const saved=await DB.checklist.getByProject(pid);
+  printChecklist(pid){
+    const p=DB.sales.getProject(pid);
+    const saved=this._load(pid);
     const ITEMS=[
       {key:'select_company',group:'ก่อนออกหน่วย',label:'เลือกบริษัท / ยืนยันข้อมูลลูกค้า'},
       {key:'job_order',group:'ก่อนออกหน่วย',label:'จัดทำใบแจ้งงาน'},
@@ -1620,8 +1391,8 @@ Pages.op_checklist={
 /* ── OP PREP (ใบแจ้งงาน) ── */
 Pages.op_prep={
   currentJO:null,
-  async render(){
-    const jos=await DB.operation.listJobOrders();
+  render(){
+    const jos=DB.operation.listJobOrders();
     const canAdd=DB.auth.can('add','op_prep'),canEdit=DB.auth.can('edit','op_prep'),canDel=DB.auth.can('delete','op_prep');
     const rows=jos.slice().reverse().map(jo=>{
       const p=DB.sales.getProject(jo.project_id);
@@ -1656,9 +1427,8 @@ Pages.op_prep={
       <div class="tbl-wrap"><table id="op_table"><thead><tr><th>Project</th><th>บริษัท</th><th>วันตรวจ</th><th>จำนวน</th><th>ใบแจ้งงาน</th><th>สถานะเตรียมงาน</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">ยังไม่มีใบแจ้งงาน</td></tr>'}</tbody></table></div>
     </div>`;
   },
-  async createJO(){
-    const _all_projs=await DB.sales.listProjects();
-    const projs=(_all_projs||[]).filter(p=>['Closed','Onsite'].includes(p.status));
+  createJO(){
+    const projs=DB.sales.listProjects().filter(p=>['Closed','Onsite'].includes(p.status));
     if(!projs.length)return U.toast('ไม่มี Project ที่พร้อม','warning');
     const pOpts=U.sel(projs.map(p=>({v:p.id,l:`${p.project_code} — ${p.company_name}`})),'');
     Modal.open(`<div class="ab info mb4">สร้างใบแจ้งงานจาก Project ที่ปิดการขายแล้ว</div>
@@ -1674,10 +1444,10 @@ Pages.op_prep={
     <div class="fr3"><div class="fg"><label>ผู้จัดทำ</label><input id="cjo_s1"/></div>
       <div class="fg"><label>หัวหน้าแผนก</label><input id="cjo_s2"/></div>
       <div class="fg"><label>HR</label><input id="cjo_s3"/></div></div>`,
-    'สร้างใบแจ้งงาน', async () => {
+    'สร้างใบแจ้งงาน',()=>{
       const pid=parseInt(document.getElementById('cjo_p').value);
       if(!pid)return U.toast('กรุณาเลือก Project','danger');
-      const p=await DB.sales.getProject(pid);
+      const p=DB.sales.getProject(pid);
       const jo=DB.operation.saveJobOrder({project_id:pid,company_name:p.company_name,location:p.location||'',onsite_date:p.onsite_date,headcount:p.headcount,depart_time:document.getElementById('cjo_dep').value,start_time:document.getElementById('cjo_st').value,end_time:document.getElementById('cjo_et').value,director:document.getElementById('cjo_dir').value,job_type:document.getElementById('cjo_jt').value,shift:document.getElementById('cjo_sh').value,remark:document.getElementById('cjo_rm').value,signer_creator:document.getElementById('cjo_s1').value,signer_head:document.getElementById('cjo_s2').value,signer_hr:document.getElementById('cjo_s3').value,status:'Draft'});
       Modal.close();this.render();U.toast(`✅ สร้างใบแจ้งงานแล้ว`);
       setTimeout(()=>this.viewJO(jo.id),300);
@@ -1741,7 +1511,7 @@ Pages.op_prep={
       <div class="fg"><label>ชื่อ-สกุล</label><input id="as_name"/></div></div>
     <div class="fr"><div class="fg"><label>ประเภท</label><select id="as_type">${U.sel(STAFF_TYPES,'ในองค์กร')}</select></div>
       <div class="fg"><label>หมายเหตุ</label><input id="as_rm"/></div></div>`,
-    'เพิ่ม Station', async () => {
+    'เพิ่ม Station',()=>{
       const sel=document.getElementById('as_code');
       const code=sel.value,name=sel.options[sel.selectedIndex]?.text.replace(code+' ','');
       DB.operation.saveStation({job_order_id:joid,order_no:nextNo,station_code:code,station_name:name,staff_count:parseInt(document.getElementById('as_cnt').value)||1,profession:document.getElementById('as_prof').value,staff_name:document.getElementById('as_name').value,staff_type:document.getElementById('as_type').value,remark:document.getElementById('as_rm').value});
@@ -1756,22 +1526,22 @@ Pages.op_prep={
     <div class="fr"><div class="fg"><label>ชื่อ-สกุล ผู้รับผิดชอบ</label><input id="av_name"/></div>
       <div class="fg"><label>เบอร์โทร</label><input id="av_ph"/></div></div>
     <div class="fg"><label>หมายเหตุ</label><input id="av_rm"/></div>`,
-    'เพิ่มยานพาหนะ', async () => {
+    'เพิ่มยานพาหนะ',()=>{
       DB.operation.saveVehicle({job_order_id:joid,order_no:nextNo,vehicle_name:document.getElementById('av_veh').value,staff_type:document.getElementById('av_type').value,responsible_name:document.getElementById('av_name').value,phone:document.getElementById('av_ph').value,remark:document.getElementById('av_rm').value});
       Modal.close();this.editJO(joid);U.toast('✅ เพิ่มยานพาหนะแล้ว');
     });
   },
   delVehicle(id,joid){if(U.confirm('ลบ?')){DB.operation.deleteVehicle(id);this.editJO(joid);}},
   delJO(id){if(U.confirm('ลบใบแจ้งงานนี้?')){/* delete stations & vehicles */DB.operation.listStations(id).forEach(s=>DB.operation.deleteStation(s.id));DB.operation.listVehicles(id).forEach(v=>DB.operation.deleteVehicle(v.id));DB._set('operation_db','job_orders',DB._get('operation_db','job_orders').filter(r=>r.id!==id));this.render();U.toast('✅ ลบแล้ว');}},
-  async viewJO(id){
+  viewJO(id){
     const jo=DB.operation.getJobOrderById(id);
-    const p=await DB.sales.getProject(jo.project_id);
+    const p=DB.sales.getProject(jo.project_id);
     Modal.open(`<div class="no-print btn-grp mb4">
       <button class="btn btn-pri" onclick="Pages.op_prep.printJO(${id})">🖨 พิมพ์ A4</button>
       <button class="btn btn-out" onclick="Modal.close();Pages.op_prep.editJO(${id})">✏️ แก้ไข</button>
     </div>
     <div id="jo-preview-wrap" style="background:#fff;border-radius:10px;padding:20px;border:1px solid #E4E9F0;margin-top:4px"></div>`,'ใบแจ้งงาน — ดูตัวอย่าง',null,true);
-    setTimeoutasync (() => {
+    setTimeout(()=>{
       const wrap=document.getElementById('jo-preview-wrap');
       if(wrap)wrap.innerHTML=Pages.op_prep._buildJOHTML(id);
     },50);
@@ -1926,8 +1696,8 @@ Pages.op_prep={
 /* ── OP ONSITE ── */
 Pages.op_onsite={
   currentPid:null,
-  async render(){
-    const projs=await DB.sales.listProjects();
+  render(){
+    const projs=DB.sales.listProjects();
     const canAdd=DB.auth.can('add','op_onsite');
     const pOpts=`<option value="">-- เลือก Project --</option>`+projs.map(p=>`<option value="${p.id}" ${this.currentPid===p.id?'selected':''}>${p.project_code} — ${p.company_name} (${U.fmtD(p.onsite_date)})</option>`).join('');
     document.getElementById('content').innerHTML=`
@@ -2019,8 +1789,8 @@ Pages.op_onsite={
       </div>`:''}
     </div>`;
   },
-  async addLog(pid){
-    const jo=await DB.operation.getJobOrder(pid);
+  addLog(pid){
+    const jo=DB.operation.getJobOrder(pid);
     const sts=jo?DB.operation.listStations(jo.id):[];
     const existCodes=DB.operation.listOnsiteLogs(pid).map(l=>l.station_code);
     const available=sts.length>0
@@ -2036,7 +1806,7 @@ Pages.op_onsite={
     }
     // also allow "รวมทุก Station"
     stOpts=`<option value="รวม">รวมทุก Station</option>`+stOpts;
-    const p=await DB.sales.getProject(pid);
+    const p=DB.sales.getProject(pid);
     Modal.open(`
     <div class="fr">
       <div class="fg"><label class="req">Station</label><select id="ol_st">${stOpts}</select></div>
@@ -2048,7 +1818,7 @@ Pages.op_onsite={
       <div class="fg"><label>ปฏิเสธ</label><input id="ol_ref" type="number" value="0"/></div>
     </div>
     <div class="fg"><label>หมายเหตุ</label><textarea id="ol_nt" placeholder="บันทึกปัญหาหรือเหตุการณ์พิเศษ..."></textarea></div>`,
-    'บันทึกผล Onsite', async () => {
+    'บันทึกผล Onsite',()=>{
       const sel=document.getElementById('ol_st');
       const code=sel.value;
       const stName=code==='รวม'?'รวมทุก Station':sel.options[sel.selectedIndex]?.text.replace(code+' ','').trim()||code;
@@ -2077,7 +1847,7 @@ Pages.op_onsite={
       <div class="fg"><label>ปฏิเสธ</label><input id="el_ref" type="number" value="${l.refused}"/></div>
     </div>
     <div class="fg"><label>หมายเหตุ</label><textarea id="el_nt">${U.esc(l.note||'')}</textarea></div>`,
-    'แก้ไขบันทึก Onsite', async () => {
+    'แก้ไขบันทึก Onsite',()=>{
       DB.operation.saveOnsiteLog({...l,
         total_expected:parseInt(document.getElementById('el_exp').value)||0,
         total_done:parseInt(document.getElementById('el_done').value)||0,
@@ -2117,7 +1887,7 @@ Pages.op_onsite={
     <div class="fg"><label>ผู้จัดทำ / ผู้บันทึก</label><input id="sg_a" value="${U.esc(sg.signer_a||'')}"/></div>
     <div class="fg"><label>ผู้ตรวจสอบ</label><input id="sg_b" value="${U.esc(sg.signer_b||'')}"/></div>
     <div class="fg"><label>หัวหน้างาน / Supervisor</label><input id="sg_c" value="${U.esc(sg.signer_c||'')}"/></div>`,
-    'กำหนดลายเซ็นใบสรุปยอด', async () => {
+    'กำหนดลายเซ็นใบสรุปยอด',()=>{
       localStorage.setItem(key,JSON.stringify({signer_a:document.getElementById('sg_a').value,signer_b:document.getElementById('sg_b').value,signer_c:document.getElementById('sg_c').value}));
       Modal.close();U.toast('✅ บันทึกลายเซ็นแล้ว');
     });
@@ -2285,8 +2055,8 @@ Pages.op_onsite={
 };
 
 /* ── LAB ── */
-Pages.lab={async render(){
-  const lps=await DB.lab.listProjects();const alts=await DB.lab.listAlerts();const unc=alts.filter(a=>!a.acknowledged);
+Pages.lab={render(){
+  const lps=DB.lab.listProjects();const alts=DB.lab.listAlerts();const unc=alts.filter(a=>!a.acknowledged);
   const canAdd=DB.auth.can('add','lab'),canEdit=DB.auth.can('edit','lab');
   const rows=lps.map(lp=>{
     const p=DB.sales.getProject(lp.project_id);
@@ -2330,30 +2100,30 @@ Pages.lab={async render(){
   <div class="tbl-wrap"><table><thead><tr><th>HN</th><th>ชื่อ-สกุล</th><th>รายการ</th><th>ค่าที่พบ</th><th>ค่าปกติ</th><th>หมายเหตุ</th><th>สถานะ</th><th>Actions</th></tr></thead>
   <tbody>${aRows||'<tr><td colspan="8" class="empty">ไม่มีค่าวิกฤต</td></tr>'}</tbody></table></div></div>`;
 },
-async editLab(id){
+editLab(id){
   const lp=DB.lab.listProjects().find(r=>r.id===id);
   Modal.open(`<div class="fr"><div class="fg"><label>วันที่ Approve</label><input id="la_ap" type="date" value="${lp.approved_at?lp.approved_at.substr(0,10):''}"/></div>
     <div class="fg"><label>วันที่รายงานผล</label><input id="la_rp" type="date" value="${lp.reported_at?lp.reported_at.substr(0,10):''}"/></div></div>
   <div class="fg"><label>สถานะ</label><select id="la_st">${U.sel(['analyzing','approved','reported'],lp.status)}</select></div>`,
-  'อัปเดต Lab', async () => {
+  'อัปเดต Lab',()=>{
     const ap=document.getElementById('la_ap').value;const rp=document.getElementById('la_rp').value;const st=document.getElementById('la_st').value;
-    await DB.lab.saveLabProject({...lp,approved_at:ap?new Date(ap).toISOString():lp.approved_at,reported_at:rp?new Date(rp).toISOString():lp.reported_at,status:st});
-    if(st==='reported'){const p=await DB.sales.getProject(lp.project_id);if(p&&p.status==='Lab')await DB.sales.saveProject({...p,status:'Report'});}
+    DB.lab.saveLabProject({...lp,approved_at:ap?new Date(ap).toISOString():lp.approved_at,reported_at:rp?new Date(rp).toISOString():lp.reported_at,status:st});
+    if(st==='reported'){const p=DB.sales.getProject(lp.project_id);if(p&&p.status==='Lab')DB.sales.saveProject({...p,status:'Report'});}
     Modal.close();this.render();U.toast('✅ อัปเดตแล้ว');
   });
 },
-async addCritical(pid){
-  const p=await DB.sales.getProject(pid);
+addCritical(pid){
+  const p=DB.sales.getProject(pid);
   Modal.open(`<div class="ab danger mb4">⚠ กรอกค่าวิกฤต — จะแจ้งเตือน Sales + Report ทันที</div>
   <div class="fr"><div class="fg"><label>HN</label><input id="cv_hn"/></div><div class="fg"><label>ชื่อ-สกุล</label><input id="cv_nm"/></div></div>
   <div class="fr"><div class="fg"><label>รายการตรวจ</label><input id="cv_ts"/></div><div class="fg"><label>ค่าที่พบ</label><input id="cv_vl"/></div></div>
   <div class="fr"><div class="fg"><label>ค่าปกติ</label><input id="cv_nr"/></div><div class="fg"><label>หมายเหตุ</label><input id="cv_nt"/></div></div>`,
-  `Critical Value — ${p?.company_name}`, async () => {
-    await DB.lab.saveAlert({project_id:pid,hn:document.getElementById('cv_hn').value,patient_name:document.getElementById('cv_nm').value,test_name:document.getElementById('cv_ts').value,value:document.getElementById('cv_vl').value,normal_range:document.getElementById('cv_nr').value,note:document.getElementById('cv_nt').value,acknowledged:false,alerted_at:DB._now()});
+  `Critical Value — ${p?.company_name}`,()=>{
+    DB.lab.saveAlert({project_id:pid,hn:document.getElementById('cv_hn').value,patient_name:document.getElementById('cv_nm').value,test_name:document.getElementById('cv_ts').value,value:document.getElementById('cv_vl').value,normal_range:document.getElementById('cv_nr').value,note:document.getElementById('cv_nt').value,acknowledged:false,alerted_at:DB._now()});
     Modal.close();this.render();U.toast('🚨 บันทึก Critical Alert แล้ว','danger');
   });
 },
-async ackAlert(id){await DB.lab.ackAlert(id);this.render();U.toast('✅ รับทราบแล้ว');},
+ackAlert(id){DB.lab.ackAlert(id);this.render();U.toast('✅ รับทราบแล้ว');},
 editAlert(id){
   const a=DB.lab.listAlerts().find(r=>r.id===id);
   if(!a)return;
@@ -2370,7 +2140,7 @@ editAlert(id){
         <option value="true" ${a.acknowledged?'selected':''}>รับทราบแล้ว</option>
       </select></div></div>
   <div class="fg"><label>หมายเหตุ</label><textarea id="ea_nt">${U.esc(a.note||'')}</textarea></div>`,
-  'แก้ไข Critical Alert', async () => {
+  'แก้ไข Critical Alert',()=>{
     const rows=DB.lab.listAlerts();
     const idx=rows.findIndex(r=>r.id===id);
     if(idx<0)return;
@@ -2394,32 +2164,31 @@ delAlert(id){
     this.render();U.toast('✅ ลบแล้ว');
   }
 },
-async addLabProject(){
-  const _all_projs=await DB.sales.listProjects();
-    const projs=(_all_projs||[]).filter(p=>p.status==='Lab');
+addLabProject(){
+  const projs=DB.sales.listProjects().filter(p=>p.status==='Lab');
   const existing=DB.lab.listProjects().map(l=>l.project_id);
   const avail=projs.filter(p=>!existing.includes(p.id));
   if(!avail.length)return U.toast('ไม่มี Project พร้อม','warning');
   const pOpts=U.sel(avail.map(p=>({v:p.id,l:`${p.project_code} — ${p.company_name}`})),'');
   Modal.open(`<div class="fg"><label>Project</label><select id="lp_p">${pOpts}</select></div>
   <div class="fg"><label>วันที่รับตัวอย่าง</label><input id="lp_rv" type="date" value="${new Date().toISOString().substr(0,10)}"/></div>`,
-  'รับ Specimen เข้า Lab', async () => {
+  'รับ Specimen เข้า Lab',()=>{
     const pid=parseInt(document.getElementById('lp_p').value);
-    const p=await DB.sales.getProject(pid);
+    const p=DB.sales.getProject(pid);
     const tat=DB.config.getTAT();const td=(p?.headcount||0)>tat.threshold?tat.large:tat.small;
     const recv=new Date(document.getElementById('lp_rv').value);
     const dd=new Date(recv);dd.setDate(dd.getDate()+td);
-    await DB.lab.saveLabProject({project_id:pid,received_at:recv.toISOString(),headcount:p?.headcount||0,tat_days:td,tat_deadline:dd.toISOString(),status:'analyzing'});
+    DB.lab.saveLabProject({project_id:pid,received_at:recv.toISOString(),headcount:p?.headcount||0,tat_days:td,tat_deadline:dd.toISOString(),status:'analyzing'});
     Modal.close();this.render();U.toast('✅ รับ Specimen เข้า Lab แล้ว');
   });
 }};
 
 /* ── REPORT ── */
-Pages.report={async render(){
+Pages.report={render(){
   const plans=DB.report.listPlans();
   const canAdd=DB.auth.can('add','report'),canEdit=DB.auth.can('edit','report');
   /* Project & Handover section */
-  const projs=await DB.sales.listProjects();
+  const projs=DB.sales.listProjects();
   const projRows=projs.slice().reverse().map(p=>`<tr><td class="fw6">${p.project_code}</td><td>${p.company_name}</td><td>${(p.headcount||0).toLocaleString()}</td><td>${U.fmtD(p.onsite_date)}</td><td>${U.badge(p.status)}</td><td>
     ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.sales.editProject(${p.id})">แก้ไข</button>`:''}
     <button class="btn btn-out btn-xs" onclick="Pages.sales.viewHandover(${p.id})">เอกสาร</button>
@@ -2428,7 +2197,7 @@ Pages.report={async render(){
     const p=DB.sales.getProject(rp.project_id);
     const meta=JSON.parse(localStorage.getItem('rp_meta_'+rp.project_id)||'{}');
     const canEditRp=canEdit;
-    const mkCk=async (key,title) => {
+    const mkCk=(key,title)=>{
       const done=!!meta[key];
       const dateVal=meta[key+'_date']||'';
       const dateLabel=dateVal?`<div style="font-size:9px;color:#6EE7B7;margin-top:1px">${U.fmtD(dateVal)}</div>`:'';
@@ -2504,10 +2273,10 @@ viewPlan(pid){
   <div class="sr"><span>วันที่ส่งผล</span><span>${U.fmtD(rp.sent_at)||'ยังไม่ส่ง'}</span></div>`,
   'Project Plan Details');
 },
-async editPlan(id){
+editPlan(id){
   const rp=DB.report.listPlans().find(r=>r.id===id);
   const meta=JSON.parse(localStorage.getItem('rp_meta_'+rp.project_id)||'{}');
-  const mkCk2=async (key,label) => {
+  const mkCk2=(key,label)=>{
     const done=!!meta[key];
     const dateVal=meta[key+'_date']||'';
     return`<label style="display:flex;align-items:center;gap:9px;padding:9px 13px;background:${done?'#F0FDF4':'var(--surf2)'};border:1.5px solid ${done?'#86EFAC':'var(--bdr)'};border-radius:9px;cursor:pointer;font-size:13px;transition:all .2s" id="ep2_lbl_${key}">
@@ -2535,12 +2304,12 @@ async editPlan(id){
     ${mkCk2('receive_raw','📥 รับผลดิบ')}
     ${mkCk2('key_raw','⌨️ คีย์ผลดิบ')}
   </div>`,
-  'แก้ไข Project Plan', async () => {
+  'แก้ไข Project Plan',()=>{
     const st=document.getElementById('rv_st').value;
     const ta_d=document.getElementById('rv_tat').value;
     const rv_d=document.getElementById('rv_sla').value;
-    await DB.report.savePlan({...rp,verified_by:document.getElementById('rv_vf').value,status:st,tat_deadline:ta_d?new Date(ta_d).toISOString():rp.tat_deadline,sla_deadline:rv_d?new Date(rv_d).toISOString():rp.sla_deadline,sent_at:st==='sent'?(document.getElementById('rv_st_d').value?new Date(document.getElementById('rv_st_d').value).toISOString():DB._now()):rp.sent_at});
-    if(st==='sent'){const p=await DB.sales.getProject(rp.project_id);if(p)await DB.sales.saveProject({...p,status:'Billing'});}
+    DB.report.savePlan({...rp,verified_by:document.getElementById('rv_vf').value,status:st,tat_deadline:ta_d?new Date(ta_d).toISOString():rp.tat_deadline,sla_deadline:rv_d?new Date(rv_d).toISOString():rp.sla_deadline,sent_at:st==='sent'?(document.getElementById('rv_st_d').value?new Date(document.getElementById('rv_st_d').value).toISOString():DB._now()):rp.sent_at});
+    if(st==='sent'){const p=DB.sales.getProject(rp.project_id);if(p)DB.sales.saveProject({...p,status:'Billing'});}
     const m=JSON.parse(localStorage.getItem('rp_meta_'+rp.project_id)||'{}');
     ['set_plan','send_doc','receive_raw','key_raw'].forEach(k=>{
       const el=document.getElementById('ep2_'+k);
@@ -2564,9 +2333,9 @@ addPlan(){
   Modal.open(`<div class="fg"><label>Project</label><select id="np_p">${pOpts}</select></div>
   <div class="fr"><div class="fg"><label>สร้างโดย</label><input id="np_cb"/></div><div class="fg"><label>ตรวจสอบโดย (คนละคน!)</label><input id="np_vb"/></div></div>
   <div class="fr"><div class="fg"><label>TAT Deadline</label><input id="np_tat" type="date"/></div><div class="fg"><label>SLA Deadline</label><input id="np_sla" type="date"/></div></div>`,
-  'สร้าง Project Plan', async () => {
-    const pid=parseInt(document.getElementById('np_p').value);const p=await DB.sales.getProject(pid);
-    await DB.report.savePlan({project_id:pid,program_code:p.package_code,headcount:p.headcount,onsite_date:p.onsite_date,created_by:document.getElementById('np_cb').value,verified_by:document.getElementById('np_vb').value,tat_deadline:new Date(document.getElementById('np_tat').value).toISOString(),sla_deadline:new Date(document.getElementById('np_sla').value).toISOString(),status:'pending'});
+  'สร้าง Project Plan',()=>{
+    const pid=parseInt(document.getElementById('np_p').value);const p=DB.sales.getProject(pid);
+    DB.report.savePlan({project_id:pid,program_code:p.package_code,headcount:p.headcount,onsite_date:p.onsite_date,created_by:document.getElementById('np_cb').value,verified_by:document.getElementById('np_vb').value,tat_deadline:new Date(document.getElementById('np_tat').value).toISOString(),sla_deadline:new Date(document.getElementById('np_sla').value).toISOString(),status:'pending'});
     Modal.close();this.render();U.toast('✅ สร้าง Plan แล้ว');
   });
 },
@@ -2603,8 +2372,8 @@ Pages.config_checklist={
   ],
   _load(){try{return JSON.parse(localStorage.getItem(this._KEY)||'null')||this._defaults;}catch{return this._defaults;}},
   _save(items){localStorage.setItem(this._KEY,JSON.stringify(items));},
-  async render(){
-    const items=await this.list();
+  render(){
+    const items=this._load();
     const canEdit=DB.auth.can('edit','config');
     const groups=[...new Set(items.map(i=>i.group))];
     let html=`<div class="ph"><div><h2>📋 ตั้งค่า Checklist เตรียมงาน</h2><p>กำหนดรายการที่จะแสดงใน Operation — เตรียมงาน (Checklist)</p></div>${canEdit?`<button class="btn btn-pri btn-sm" onclick="Pages.config_checklist.addItem()">+ เพิ่มรายการ</button>`:''}</div>
@@ -2685,12 +2454,12 @@ Pages.config_checklist={
     }
     U.toast(active?'✅ เปิดใช้งาน':'⬜ ปิดใช้งาน');
   },
-  async getActive(){const items=await this.list();return (items||[]).filter(i=>i.is_active!==false&&i.active!==false);}
+  getActive(){return this._load().filter(i=>i.active!==false);}
 };
 
 
-Pages.billing={async render(){
-  const invs=await DB.billing.listInvoices();const canAdd=DB.auth.can('add','billing'),canEdit=DB.auth.can('edit','billing');
+Pages.billing={render(){
+  const invs=DB.billing.listInvoices();const canAdd=DB.auth.can('add','billing'),canEdit=DB.auth.can('edit','billing');
   const rev=invs.reduce((s,i)=>s+(i.revenue||0),0);const prf=invs.reduce((s,i)=>s+(i.profit||0),0);
   const rows=invs.map(inv=>{const p=DB.sales.getProject(inv.project_id);return`<tr><td class="fw6">${inv.invoice_no}</td><td>${p?.project_code||'-'}</td><td>${p?.company_name||'-'}</td><td>฿${U.fmt(inv.revenue)}</td><td>฿${U.fmt(Math.round(inv.total))}</td><td class="t-success fw6">฿${U.fmt(inv.profit)}</td><td>${(inv.margin||0).toFixed(1)}%</td><td>${U.badge(inv.status)}</td><td>
     <button class="btn btn-out btn-xs" onclick="Pages.billing.viewInv(${inv.id})">ดู</button>
@@ -2714,7 +2483,7 @@ Pages.billing={async render(){
     <div class="tbl-wrap"><table id="billing_table"><thead><tr><th>Invoice No.</th><th>Project</th><th>บริษัท</th><th>รายได้</th><th>รวม(VAT)</th><th>กำไร</th><th>Margin</th><th>สถานะ</th><th></th></tr></thead>
     <tbody>${rows||'<tr><td colspan="9" class="empty">ยังไม่มี Invoice</td></tr>'}</tbody></table></div></div>`;
 },
-async createInv(){
+createInv(){
   const allProjs=DB.sales.listProjects().filter(p=>['Report','Billing','Completed'].includes(p.status));
   const exist=DB.billing.listInvoices().map(i=>i.project_id);
   const avail=allProjs.filter(p=>!exist.includes(p.id));
@@ -2755,7 +2524,7 @@ async createInv(){
   </div>
   <div class="fg"><label>หมายเหตุ / เงื่อนไขพิเศษ</label><textarea id="bi_note" placeholder="หมายเหตุท้าย Invoice..."></textarea></div>
   <div id="bi_pv" class="ab info mt4" style="display:none"></div>`,
-  'ออก Invoice ใหม่', async () => {
+  'ออก Invoice ใหม่',()=>{
     const pid=parseInt(document.getElementById('bi_p').value);
     if(!pid)return U.toast('กรุณาเลือก Project','danger');
     const qty=parseInt(document.getElementById('bi_qty').value)||1;
@@ -2765,7 +2534,7 @@ async createInv(){
     if(!rv)return U.toast('กรุณาใส่ราคา','danger');
     const ct=parseFloat(document.getElementById('bi_ct').value)||0;
     const vat=rv*.07;const tot=rv+vat;const prf=rv-ct;const mg=rv>0?(prf/rv*100).toFixed(1):0;
-    const inv=await DB.billing.saveInvoice({
+    const inv=DB.billing.saveInvoice({
       project_id:pid,
       client_name:document.getElementById('bi_cname').value,
       client_address:document.getElementById('bi_caddr').value,
@@ -2777,12 +2546,12 @@ async createInv(){
       issued_date:document.getElementById('bi_date').value,
       status:'Pending',issued_at:DB._now()
     });
-    const p=await DB.sales.getProject(pid);if(p)await DB.sales.saveProject({...p,status:'Billing'});
+    const p=DB.sales.getProject(pid);if(p)DB.sales.saveProject({...p,status:'Billing'});
     Modal.close();this.render();U.toast(`✅ ออก ${inv.invoice_no} สำเร็จ`);
   });
 },
-async _fillFromProj(pid){
-  const p=await DB.sales.getProject(parseInt(pid));if(!p)return;
+_fillFromProj(pid){
+  const p=DB.sales.getProject(parseInt(pid));if(!p)return;
   const cust=p.customer_id?DB.customer.getCustomer(p.customer_id):null;
   const el=id=>document.getElementById(id);
   if(el('bi_cname'))el('bi_cname').value=p.company_name||'';
@@ -2803,8 +2572,8 @@ _calc(){
     pv.textContent=`ราคาก่อน VAT: ฿${U.fmt(rv)} | VAT 7%: ฿${U.fmt(Math.round(vat))} | รวมทั้งสิ้น: ฿${U.fmt(Math.round(tot))} | กำไร: ฿${U.fmt(Math.round(prf))} (${mg}%)`;
   }
 },
-async viewInv(id){
-  const inv=DB.billing.listInvoices().find(i=>i.id===id);const p=await DB.sales.getProject(inv.project_id);
+viewInv(id){
+  const inv=DB.billing.listInvoices().find(i=>i.id===id);const p=DB.sales.getProject(inv.project_id);
   const costs=DB.billing.listCostTracking(inv.project_id);
   const compName=localStorage.getItem('cfg__company_name')||'OcciCare Co., Ltd.';
   const LOGO_URL='https://occicare.com/wp-content/uploads/2025/08/occicare-logo.webp';
@@ -2872,9 +2641,9 @@ async viewInv(id){
     </div>
   </div>`,`Invoice — ${inv.invoice_no}`,null,true);
 },
-async printInv(id){
+printInv(id){
   const inv=DB.billing.listInvoices().find(i=>i.id===id);
-  const p=await DB.sales.getProject(inv.project_id);
+  const p=DB.sales.getProject(inv.project_id);
   const compName=localStorage.getItem('cfg__company_name')||'OcciCare Co., Ltd.';
   const LOGO_URL='https://occicare.com/wp-content/uploads/2025/08/occicare-logo.webp';
   const invDate=inv.issued_date||inv.issued_at?.substr(0,10)||new Date().toISOString().substr(0,10);
@@ -2951,16 +2720,16 @@ async printInv(id){
   </body></html>`);
   w.document.close();
 },
-async editInv(id){
+editInv(id){
   const inv=DB.billing.listInvoices().find(i=>i.id===id);
   Modal.open(`<div class="fr"><div class="fg"><label>สถานะ</label><select id="ei_st">${U.sel(['Pending','Partial','Paid'],inv.status)}</select></div>
     <div class="fg"><label>รายได้จริง</label><input id="ei_rv" type="number" value="${inv.revenue}"/></div></div>
   <div class="fg"><label>ต้นทุนจริง</label><input id="ei_ct" type="number" value="${inv.cost}"/></div>`,
-  'แก้ไข Invoice', async () => {
+  'แก้ไข Invoice',()=>{
     const rv=parseFloat(document.getElementById('ei_rv').value)||inv.revenue;const ct=parseFloat(document.getElementById('ei_ct').value)||inv.cost;
     const st=document.getElementById('ei_st').value;const vat=rv*.07;const tot=rv+vat;const prf=rv-ct;
-    await DB.billing.saveInvoice({...inv,revenue:rv,vat,total:tot,cost:ct,profit:prf,margin:rv>0?prf/rv*100:0,status:st});
-    if(st==='Paid'){const p=await DB.sales.getProject(inv.project_id);if(p)await DB.sales.saveProject({...p,status:'Completed'});}
+    DB.billing.saveInvoice({...inv,revenue:rv,vat,total:tot,cost:ct,profit:prf,margin:rv>0?prf/rv*100:0,status:st});
+    if(st==='Paid'){const p=DB.sales.getProject(inv.project_id);if(p)DB.sales.saveProject({...p,status:'Completed'});}
     Modal.close();this.render();U.toast('✅ อัปเดตแล้ว');
   });
 }};
@@ -3012,8 +2781,8 @@ Pages.calendar={
     </div>`;
     this.draw();
   },
-  async draw(){
-    const projs=await DB.sales.listProjects();
+  draw(){
+    const projs=DB.sales.listProjects();
     const y=this._y,m=this._m;
     const sub=document.getElementById('cal-sub');
     if(sub){sub.textContent=this.MONTHS[m]+' '+(y+543);sub.style.cssText='font-size:18px;font-weight:700;color:#fff;font-family:"Noto Serif Thai",serif;margin-top:4px;text-shadow:0 1px 3px rgba(0,0,0,.2)';}
@@ -3091,12 +2860,12 @@ Pages.calendar={
     if(evs.length===1){this.openProj(evs[0].id);return;}
     Modal.open(evs.map(p=>`<div onclick="Modal.close();Pages.calendar.openProj(${p.id})" style="padding:11px;border:1px solid var(--bdr);border-radius:10px;cursor:pointer;margin-bottom:8px;transition:background .15s" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''"><div class="fw6">${U.esc(p.project_code)}</div><div class="t-sm t-muted">${U.esc(p.company_name)}</div></div>`).join(''),`งานวันที่ ${ds}`);
   },
-  async openProj(id){
-    const p=await DB.sales.getProject(id);if(!p)return;
-    const jo=await DB.operation.getJobOrder(p.id);
-    const lp=await DB.lab.getLabProject(p.id);
-    const rp=await DB.report.getPlan(p.id);
-    const inv=await DB.billing.getInvoice(p.id);
+  openProj(id){
+    const p=DB.sales.getProject(id);if(!p)return;
+    const jo=DB.operation.getJobOrder(p.id);
+    const lp=DB.lab.getLabProject(p.id);
+    const rp=DB.report.getPlan(p.id);
+    const inv=DB.billing.getInvoice(p.id);
     const col=this.STATUS_COLORS[p.status]||'#888';
     const dL=p.onsite_date?Math.ceil((new Date(p.onsite_date)-new Date())/86400000):null;
     const steps=[
@@ -3161,8 +2930,8 @@ Pages.exam_config={
     else this._renderManpower(canEdit);
   },
 
-  async _renderExam(canEdit){
-    const items=await DB.examItems.list();
+  _renderExam(canEdit){
+    const items=DB.examItems.list();
     const cats=[...new Set(items.map(it=>it.category))].sort();
     const catOpts=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
     const rows=items.map(it=>{
@@ -3195,7 +2964,7 @@ Pages.exam_config={
     </div>`;
   },
 
-  async _renderManpower(canEdit){
+  _renderManpower(canEdit){
     const items=DB.manpowerCost.list();
     const rows=items.map(it=>`<tr>
       <td class="fw6">${U.esc(it.role)}</td>
@@ -3240,10 +3009,10 @@ Pages.exam_config={
       <div class="fg"><label>หมายเหตุ</label><input id="ex_note" placeholder="ข้อมูลเพิ่มเติม..."/></div>
     </div>
     <div id="ex_margin_preview" class="ab info mt2" style="display:none"></div>`,
-    'เพิ่มรายการตรวจ', async () => {
+    'เพิ่มรายการตรวจ',()=>{
       const name=document.getElementById('ex_name').value.trim();
       if(!name)return U.toast('กรุณาใส่ชื่อรายการตรวจ','danger');
-      await DB.examItems.save({name,category:document.getElementById('ex_cat').value||'อื่นๆ',cost:parseFloat(document.getElementById('ex_cost').value)||0,price:parseFloat(document.getElementById('ex_price').value)||0,unit:document.getElementById('ex_unit').value||'ราย',note:document.getElementById('ex_note').value});
+      DB.examItems.save({name,category:document.getElementById('ex_cat').value||'อื่นๆ',cost:parseFloat(document.getElementById('ex_cost').value)||0,price:parseFloat(document.getElementById('ex_price').value)||0,unit:document.getElementById('ex_unit').value||'ราย',note:document.getElementById('ex_note').value});
       Modal.close();this.render();U.toast('✅ เพิ่มรายการตรวจแล้ว');
     });
   },
@@ -3265,10 +3034,10 @@ Pages.exam_config={
       <div class="fg"><label>หน่วย</label><input id="ex_unit" value="${U.esc(it.unit||'ราย')}"/></div>
     </div>
     <div id="ex_margin_preview" class="ab info mt2"></div>`,
-    'แก้ไขรายการตรวจ', async () => {
+    'แก้ไขรายการตรวจ',()=>{
       const name=document.getElementById('ex_name').value.trim();
       if(!name)return U.toast('กรุณาใส่ชื่อ','danger');
-      await DB.examItems.save({...it,name,category:document.getElementById('ex_cat').value,cost:parseFloat(document.getElementById('ex_cost').value)||0,price:parseFloat(document.getElementById('ex_price').value)||0,unit:document.getElementById('ex_unit').value||'ราย'});
+      DB.examItems.save({...it,name,category:document.getElementById('ex_cat').value,cost:parseFloat(document.getElementById('ex_cost').value)||0,price:parseFloat(document.getElementById('ex_price').value)||0,unit:document.getElementById('ex_unit').value||'ราย'});
       Modal.close();this.render();U.toast('✅ อัปเดตแล้ว');
     });
     setTimeout(()=>this._calcM(),50);
@@ -3288,9 +3057,9 @@ Pages.exam_config={
     } else {el.style.display='none';}
   },
 
-  async delExam(id){
+  delExam(id){
     if(!U.confirm('ลบรายการตรวจนี้?'))return;
-    await DB.examItems.delete(id);this.render();U.toast('✅ ลบแล้ว');
+    DB.examItems.delete(id);this.render();U.toast('✅ ลบแล้ว');
   },
 
   addMP(){
@@ -3307,10 +3076,10 @@ Pages.exam_config={
       <div class="fg"><label>ต้นทุน/ราย (บาท)</label><input id="mp_head" type="number" value="0"/></div>
     </div>
     <div class="fg"><label>หน่วย</label><input id="mp_unit" value="คน/วัน" placeholder="คน/วัน, เที่ยว, ครั้ง"/></div>`,
-    'เพิ่มต้นทุนอัตรากำลัง', async () => {
+    'เพิ่มต้นทุนอัตรากำลัง',()=>{
       const role=document.getElementById('mp_role').value.trim();
       if(!role)return U.toast('กรุณาใส่ชื่อ','danger');
-      await DB.manpowerCost.save({role,type:document.getElementById('mp_type').value,cost_per_day:parseFloat(document.getElementById('mp_day').value)||0,cost_per_head:parseFloat(document.getElementById('mp_head').value)||0,unit:document.getElementById('mp_unit').value||'คน/วัน'});
+      DB.manpowerCost.save({role,type:document.getElementById('mp_type').value,cost_per_day:parseFloat(document.getElementById('mp_day').value)||0,cost_per_head:parseFloat(document.getElementById('mp_head').value)||0,unit:document.getElementById('mp_unit').value||'คน/วัน'});
       Modal.close();this.render();U.toast('✅ เพิ่มแล้ว');
     });
   },
@@ -3330,30 +3099,30 @@ Pages.exam_config={
       <div class="fg"><label>ต้นทุน/ราย (บาท)</label><input id="mp_head" type="number" value="${it.cost_per_head||0}"/></div>
     </div>
     <div class="fg"><label>หน่วย</label><input id="mp_unit" value="${U.esc(it.unit||'คน/วัน')}"/></div>`,
-    'แก้ไขต้นทุนอัตรากำลัง', async () => {
+    'แก้ไขต้นทุนอัตรากำลัง',()=>{
       const role=document.getElementById('mp_role').value.trim();
       if(!role)return U.toast('กรุณาใส่ชื่อ','danger');
-      await DB.manpowerCost.save({...it,role,type:document.getElementById('mp_type').value,cost_per_day:parseFloat(document.getElementById('mp_day').value)||0,cost_per_head:parseFloat(document.getElementById('mp_head').value)||0,unit:document.getElementById('mp_unit').value||'คน/วัน'});
+      DB.manpowerCost.save({...it,role,type:document.getElementById('mp_type').value,cost_per_day:parseFloat(document.getElementById('mp_day').value)||0,cost_per_head:parseFloat(document.getElementById('mp_head').value)||0,unit:document.getElementById('mp_unit').value||'คน/วัน'});
       Modal.close();this.render();U.toast('✅ อัปเดตแล้ว');
     });
   },
 
-  async delMP(id){
+  delMP(id){
     if(!U.confirm('ลบรายการนี้?'))return;
-    await DB.manpowerCost.delete(id);this.render();U.toast('✅ ลบแล้ว');
+    DB.manpowerCost.delete(id);this.render();U.toast('✅ ลบแล้ว');
   },
 };
 
-Pages.config={async render(){
+Pages.config={render(){
   if(!DB.auth.can('view','config'))return;
   const tat=DB.config.getTAT(),sla=DB.config.getSLA(),ad=DB.config.getAlertDays();
-  const users=await DB.auth.listUsers();
+  const users=DB.auth.listUsers();
   const canEditCfg=DB.auth.can('edit','config');
   const uRows=users.map(u=>`<tr><td>${u.username}</td><td>${u.name}</td><td>${U.badge(u.role)}</td><td>${u.active?'<span class="badge b-closed">ใช้งาน</span>':'<span class="badge b-danger">ระงับ</span>'}</td><td>
     ${canEditCfg?`<button class="btn btn-out btn-xs" onclick="Pages.config.editUser(${u.id})">แก้ไข</button>`:''}
     ${DB.auth.can('delete','config')&&u.id!==1?`<button class="btn btn-danger btn-xs" onclick="Pages.config.delUser(${u.id})">ลบ</button>`:''}
   </td></tr>`).join('');
-  const roles=await DB.auth.listRoles();
+  const roles=DB.auth.listRoles();
   const rp=roles.map(r=>{
     const mods=Object.entries(MODULES).map(([k,label])=>{
       const m=r.modules[k]||{};
@@ -3428,17 +3197,17 @@ editUser(id){
   <div class="fr"><div class="fg"><label class="req">ชื่อ-นามสกุล</label><input id="eu_nm" value="${U.esc(u.name||'')}"/></div>
     <div class="fg"><label>Role</label><select id="eu_rl">${rOpts}</select></div></div>
   <div class="fg"><label>สถานะ</label><select id="eu_ac">${U.sel([{v:'true',l:'ใช้งาน'},{v:'false',l:'ระงับ'}],String(u.active!==false))}</select></div>`,
-  id?'แก้ไขผู้ใช้':'เพิ่มผู้ใช้', async () => {
+  id?'แก้ไขผู้ใช้':'เพิ่มผู้ใช้',()=>{
     const pw=document.getElementById('eu_pw').value;
     if(!id&&!pw)return U.toast('กรุณาใส่ Password','danger');
     const d={id:id||undefined,username:document.getElementById('eu_un').value.trim(),name:document.getElementById('eu_nm').value.trim(),role:document.getElementById('eu_rl').value,active:document.getElementById('eu_ac').value==='true'};
     if(pw)d.password=pw;else if(id)d.password=u.password;
     if(!d.username||!d.name)return U.toast('กรุณากรอกข้อมูลให้ครบ','danger');
-    await DB.auth.saveUser(d);Modal.close();this.render();U.toast(id?'✅ แก้ไขแล้ว':'✅ เพิ่มผู้ใช้แล้ว');
+    DB.auth.saveUser(d);Modal.close();this.render();U.toast(id?'✅ แก้ไขแล้ว':'✅ เพิ่มผู้ใช้แล้ว');
   });
 },
 delUser(id){if(U.confirm('ลบผู้ใช้นี้?')){DB.auth.deleteUser(id);this.render();U.toast('✅ ลบแล้ว');}},
-async editRole(role){
+editRole(role){
   const rp=DB.auth.getRolePermission(role)||{role,modules:{}};
   const actions=['view','add','edit','delete'];
   const actionLabel={view:'ดู',add:'เพิ่ม',edit:'แก้ไข',delete:'ลบ'};
@@ -3492,13 +3261,13 @@ async editRole(role){
       </div>
     </label>
   </div>`;
-  Modal.open(html,`แก้ไขสิทธิ์ — ${role}`, async () => {
+  Modal.open(html,`แก้ไขสิทธิ์ — ${role}`,()=>{
     const modules={};
     Object.keys(MODULES).forEach(k=>{modules[k]={};actions.forEach(a=>{modules[k][a]=document.getElementById(`rp_${k}_${a}`)?.checked||false;});});
     // Special: qt_approve
     const qtApprove=document.getElementById('rp_qt_approve')?.checked||false;
     modules['qt_approve']={approve:qtApprove};
-    await DB.auth.saveRolePermission({role,modules});
+    DB.auth.saveRolePermission({role,modules});
     Modal.close();Pages.config.render();U.toast('✅ บันทึกสิทธิ์แล้ว');
   },true);
 },
@@ -3528,9 +3297,9 @@ function switchTab(el,targetId){
 /* ===== INIT ===== */
 
 /* ── Config: Exam Items ── */
-Pages.config.renderExamItems=async function(){
+Pages.config.renderExamItems=function(){
   const wrap=document.getElementById('cfg_t2');if(!wrap)return;
-  const items=await DB.examItems.list();
+  const items=DB.examItems.list();
   const canEdit=DB.auth.can('edit','config');
   const cats=[...new Set(['Lab - เลือด','Lab - ปัสสาวะ','Lab - อุจจาระ','Imaging','Cardio','ประสาทสัมผัส','อาชีวอนามัย','สตรี','ตรวจร่างกาย','โรคติดต่อ',...DB.examItems.getCategories()])];
   const grouped={};cats.forEach(c=>{grouped[c]=items.filter(it=>it.category===c);});
@@ -3564,10 +3333,10 @@ Pages.config.addExamItem=function(id){
     <div class="fg"><label class="req">ราคาตั้ง / List Price (฿)</label><input id="ei_price" type="number" value="${it.list_price||0}" oninput="Pages.config._calcMargin()"/></div></div>
   <div id="ei_margin" class="ab info mt2" style="font-size:13px"></div>
   <div class="fg mt2"><label>หมายเหตุ</label><input id="ei_note" value="${f('note')}"/></div>`,
-  id?'แก้ไขรายการตรวจ':'เพิ่มรายการตรวจ', async () => {
+  id?'แก้ไขรายการตรวจ':'เพิ่มรายการตรวจ',()=>{
     const name=document.getElementById('ei_name').value.trim();const cat=document.getElementById('ei_cat').value;
     if(!name||!cat)return U.toast('กรุณากรอกข้อมูลให้ครบ','danger');
-    await DB.examItems.save({id:id||undefined,name,category:cat,unit:document.getElementById('ei_unit').value||'ครั้ง',cost:parseFloat(document.getElementById('ei_cost').value)||0,list_price:parseFloat(document.getElementById('ei_price').value)||0,note:document.getElementById('ei_note').value});
+    DB.examItems.save({id:id||undefined,name,category:cat,unit:document.getElementById('ei_unit').value||'ครั้ง',cost:parseFloat(document.getElementById('ei_cost').value)||0,list_price:parseFloat(document.getElementById('ei_price').value)||0,note:document.getElementById('ei_note').value});
     Modal.close();Pages.config.renderExamItems();U.toast(id?'✅ อัปเดตแล้ว':'✅ เพิ่มรายการตรวจแล้ว');
   });setTimeout(()=>Pages.config._calcMargin(),50);
 };
@@ -3579,9 +3348,9 @@ Pages.config._calcMargin=function(){
 };
 
 /* ── Config: Manpower Cost ── */
-Pages.config.renderManpower=async function(){
+Pages.config.renderManpower=function(){
   const wrap=document.getElementById('cfg_t3');if(!wrap)return;
-  const mps=await DB.manpowerCost.list();const canEdit=DB.auth.can('edit','config');
+  const mps=DB.manpowerCost.list();const canEdit=DB.auth.can('edit','config');
   const totalDay=mps.reduce((s,m)=>s+(m.cost_per_day||0),0);
   const rows=mps.map(mp=>`<tr><td class="fw6">${U.esc(mp.role)}</td><td>${U.esc(mp.type||'Full-day')}</td><td style="text-align:right;font-weight:600">฿${U.fmt(mp.cost_per_day)}</td><td>${U.esc(mp.unit||'วัน')}</td><td>${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.config.addManpower(${mp.id})">แก้ไข</button><button class="btn btn-danger btn-xs" onclick="Pages.config.delManpower(${mp.id})">ลบ</button>`:''}</td></tr>`).join('');
   wrap.innerHTML=`<div class="ph" style="margin-bottom:16px"><div><h3 style="font-family:'Prompt',sans-serif;font-size:16px;font-weight:700;color:var(--navy)">👥 ต้นทุนอัตรากำลัง (${mps.length} วิชาชีพ)</h3><p class="t-sm t-muted">ต้นทุนค่าแรงต่อวัน ใช้คำนวณ Margin ใบเสนอราคา</p></div>${canEdit?`<button class="btn btn-pri btn-sm" onclick="Pages.config.addManpower()">+ เพิ่มวิชาชีพ</button>`:''}</div>
@@ -3596,51 +3365,26 @@ Pages.config.addManpower=function(id){
     <div class="fg"><label>ประเภท</label><select id="mp_type">${typeOpts}</select></div></div>
   <div class="fr"><div class="fg"><label class="req">ต้นทุน (฿)</label><input id="mp_cost" type="number" value="${mp.cost_per_day||0}"/></div>
     <div class="fg"><label>หน่วย</label><input id="mp_unit" value="${U.esc(mp.unit||'วัน')}" placeholder="วัน/ราย/ครั้ง"/></div></div>`,
-  id?'แก้ไขต้นทุนอัตรากำลัง':'เพิ่มวิชาชีพ', async () => {
+  id?'แก้ไขต้นทุนอัตรากำลัง':'เพิ่มวิชาชีพ',()=>{
     const role=document.getElementById('mp_role').value.trim();if(!role)return U.toast('กรุณาใส่ชื่อวิชาชีพ','danger');
-    await DB.manpowerCost.save({id:id||undefined,role,type:document.getElementById('mp_type').value,cost_per_day:parseFloat(document.getElementById('mp_cost').value)||0,unit:document.getElementById('mp_unit').value||'วัน'});
+    DB.manpowerCost.save({id:id||undefined,role,type:document.getElementById('mp_type').value,cost_per_day:parseFloat(document.getElementById('mp_cost').value)||0,unit:document.getElementById('mp_unit').value||'วัน'});
     Modal.close();Pages.config.renderManpower();U.toast(id?'✅ อัปเดตแล้ว':'✅ เพิ่มแล้ว');
   });
 };
 Pages.config.delManpower=function(id){if(!U.confirm('ลบรายการนี้?'))return;DB.manpowerCost.delete(id);Pages.config.renderManpower();U.toast('✅ ลบแล้ว');};
 
-document.addEventListener('DOMContentLoaded',async ()=>{
-  // Check existing session
-  const sess = DB.auth.session();
-  if(sess && DB.auth.token()){
-    await DB.auth.loadPermissions();
-    showApp();
-    Router.navigate('dashboard');
-  } else {
-    showLogin();
-  }
-
-  // Login form
-  document.getElementById('login-form').addEventListener('submit', async e=>{
+document.addEventListener('DOMContentLoaded',()=>{
+  DB.seedMockData();
+  document.getElementById('login-form').addEventListener('submit',e=>{
     e.preventDefault();
     const u=document.getElementById('l_user').value.trim();
     const p=document.getElementById('l_pass').value;
-    const btn=document.querySelector('.btn-login');
-    if(btn){btn.disabled=true;btn.textContent='กำลังเข้าสู่ระบบ...';}
-    try {
-      const sess=await DB.auth.login(u,p);
-      if(sess){
-        await DB.auth.loadPermissions();
-        showApp();
-        Router.navigate('dashboard');
-      } else {
-        const errEl=document.getElementById('l_err');
-        errEl.style.display='block';
-        errEl.textContent='Username หรือ Password ไม่ถูกต้อง';
-      }
-    } catch(err) {
-      const errEl=document.getElementById('l_err');
-      errEl.style.display='block';
-      errEl.textContent='ไม่สามารถเชื่อมต่อ Server ได้ — '+err.message;
-    }
-    if(btn){btn.disabled=false;btn.textContent='เข้าสู่ระบบ';}
+    const sess=DB.auth.login(u,p);
+    if(sess){showApp();Router.navigate('dashboard');}
+    else{document.getElementById('l_err').style.display='block';document.getElementById('l_err').textContent='Username หรือ Password ไม่ถูกต้อง';}
   });
-
-  // Periodic alert check
-  setInterval(updateAlerts, 30000);
+  const sess=DB.auth.session();
+  if(sess){showApp();Router.navigate('dashboard');}
+  else showLogin();
+  setInterval(updateAlerts,30000);
 });

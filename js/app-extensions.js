@@ -284,10 +284,10 @@ function _loadCkl(pid){ try{ return JSON.parse(localStorage.getItem('ckl__'+pid)
     ${lat&&lng?`<div style="border-radius:10px;overflow:hidden;height:160px;border:1px solid var(--bdr)">
       <iframe src="https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed" style="width:100%;height:100%;border:none" loading="lazy"></iframe>
     </div>`:'<p class="t-sm t-muted">ใส่ Lat/Lng หรือกด "ตำแหน่งปัจจุบัน" เพื่อปักหมุดบนแผนที่</p>'}`,
-    id?'แก้ไขข้อมูลลูกค้า':'เพิ่มลูกค้าใหม่', async () => {
+    id?'แก้ไขข้อมูลลูกค้า':'เพิ่มลูกค้าใหม่', ()=>{
       const co = document.getElementById('fc_co').value.trim();
       if(!co) return U.toast('กรุณาใส่ชื่อบริษัท','danger');
-      await DB.customer.saveCustomer({
+      DB.customer.saveCustomer({
         id:id||undefined,
         company_name: co,
         address:      document.getElementById('fc_addr').value.trim(),
@@ -528,7 +528,7 @@ window.EXT = {
   },
 
   onsite: {
-    async recordForm(pid){
+    recordForm(pid){
       if(!pid){ U.toast('กรุณาเลือก Project ก่อน','warning'); return; }
       const p = DB.sales.getProject(pid); if(!p){ U.toast('ไม่พบข้อมูล Project','warning'); return; }
       const jo = DB.operation.getJobOrder(pid);
@@ -584,7 +584,7 @@ window.EXT = {
         <input value="${U.esc(sess?.name||sess?.username||'-')}" readonly
           style="background:var(--s-3,#1D2B42);opacity:.7;cursor:not-allowed;font-family:'IBM Plex Mono',monospace"/>
       </div>`,
-      'บันทึกงานออกหน่วย', async () => {
+      'บันทึกงานออกหน่วย', ()=>{
         const getQ=(id)=>({
           ans:document.querySelector(`input[name="${id}"]:checked`)?.value||'',
           detail:document.getElementById(id+'_detail')?.value||''
@@ -594,7 +594,7 @@ window.EXT = {
         const answers={};
         for(let i=1;i<=7;i++) answers['q'+i]=getQ('ons_q'+i);
         // Save as onsite summary log
-        await DB.operation.saveOnsiteLog({
+        DB.operation.saveOnsiteLog({
           project_id: pid,
           station_code: 'REPORT',
           station_name: 'สรุปบันทึกงานออกหน่วย',
