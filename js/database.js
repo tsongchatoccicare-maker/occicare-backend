@@ -364,6 +364,17 @@ const DB={
   },
 
 
+  /* ── XRAY ── */
+  xray:{
+    _k(pid){return 'xray_meta_'+pid;},
+    getMeta(pid){try{return JSON.parse(localStorage.getItem(this._k(pid))||'null');}catch{return null;}},
+    saveMeta(d){localStorage.setItem(this._k(d.project_id),JSON.stringify(d));return d;},
+    listAll(){
+      const projs=DB.sales.listProjects();
+      return projs.map(p=>{const m=this.getMeta(p.id);return{...p,xray_meta:m};}).filter(p=>p.xray_meta||['Lab','Report','Billing','Completed'].includes(p.status));
+    },
+  },
+
   checkAlerts(){
     const alerts=[];const today=new Date();
     const ad=DB.config.getAlertDays();
@@ -397,7 +408,8 @@ const DB={
       {id:3,username:'op01',password:'op1234',name:'นายวิชัย สุขใจ',role:'operation',active:true,created_at:DB._now(),updated_at:DB._now()},
       {id:4,username:'lab01',password:'lab1234',name:'นางสาวรัตนา ใจดี',role:'lab',active:true,created_at:DB._now(),updated_at:DB._now()},
       {id:5,username:'report01',password:'rpt1234',name:'นายสมชาย วงศ์ดี',role:'report',active:true,created_at:DB._now(),updated_at:DB._now()},
-      {id:6,username:'billing01',password:'bill1234',name:'นางมาลี รักไทย',role:'billing',active:true,created_at:DB._now(),updated_at:DB._now()}
+      {id:6,username:'billing01',password:'bill1234',name:'นางมาลี รักไทย',role:'billing',active:true,created_at:DB._now(),updated_at:DB._now()},
+      {id:7,username:'xray01',password:'xray1234',name:'นายอาทิตย์ ฟิล์มทอง',role:'xray',active:true,created_at:DB._now(),updated_at:DB._now()}
     ]);
     const viewOnly={view:true,add:false,edit:false,delete:false};
     const full={view:true,add:true,edit:true,delete:true};
@@ -407,7 +419,8 @@ const DB={
       {role:'admin',modules:{dashboard:full,customers:full,sales:full,quotation:full,op_prep:full,op_onsite:full,lab:full,report:full,billing:full,config:full},created_at:DB._now(),updated_at:DB._now()},
       {role:'sales',modules:{dashboard:viewOnly,customers:fullNoDel,sales:fullNoDel,quotation:full,op_prep:none,op_onsite:none,lab:none,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
       {role:'operation',modules:{dashboard:viewOnly,customers:viewOnly,sales:viewOnly,op_prep:full,op_onsite:full,lab:none,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
-      {role:'lab',modules:{dashboard:viewOnly,customers:none,sales:viewOnly,op_prep:viewOnly,op_onsite:viewOnly,lab:fullNoDel,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
+      {role:'lab',modules:{dashboard:viewOnly,customers:none,sales:viewOnly,op_prep:viewOnly,op_onsite:viewOnly,lab:fullNoDel,xray:viewOnly,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
+      {role:'xray',modules:{dashboard:viewOnly,customers:none,sales:viewOnly,op_prep:none,op_onsite:viewOnly,lab:none,xray:fullNoDel,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
       {role:'report',modules:{dashboard:viewOnly,customers:viewOnly,sales:fullNoDel,op_prep:viewOnly,op_onsite:viewOnly,lab:viewOnly,report:fullNoDel,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
       {role:'billing',modules:{dashboard:viewOnly,customers:viewOnly,sales:viewOnly,op_prep:none,op_onsite:none,lab:none,report:viewOnly,billing:fullNoDel,config:none},created_at:DB._now(),updated_at:DB._now()}
     ]);
