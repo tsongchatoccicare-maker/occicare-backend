@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#0D2137"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Mobile Checkup — Health Management System</title>
+<link rel="stylesheet" href="css/style.css"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>"/>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="login-screen">
+  <div class="login-wrap">
+    <!-- Brand Panel -->
+    <div class="login-brand">
+      <div class="brand-logo-wrap">
+        <img src="https://occicare.com/wp-content/uploads/2025/08/occicare-logo.webp" alt="OcciCare" onerror="this.closest('.brand-logo-wrap').innerHTML='<div style=\'font-size:36px;text-align:center;padding:10px\'>🏥</div>'"/>
+      </div>
+      <h1>Mobile Checkup System</h1>
+      <p class="brand-sub">ระบบบริหารจัดการตรวจสุขภาพเคลื่อนที่<br>แบบครบวงจร 5 ทีม</p>
+      <div class="login-feat"><div class="login-feat-dot"></div>CRM ลูกค้า + Project ทุก Workflow</div>
+      <div class="login-feat"><div class="login-feat-dot"></div>ใบแจ้งงาน Station & อัตรากำลัง</div>
+      <div class="login-feat"><div class="login-feat-dot"></div>TAT / SLA / Critical Alert → Line</div>
+      <div class="login-feat"><div class="login-feat-dot"></div>Report, Invoice & วิเคราะห์กำไร</div>
+      <div class="login-feat"><div class="login-feat-dot"></div>Role-based Access Control ทุกทีม</div></div>
+    <!-- Login Form -->
+    <div class="login-card">
+      <div class="login-card-header">
+        <h2>เข้าสู่ระบบ</h2>
+        <p>OcciCare Mobile Checkup Health System</p>
+      </div>
+      <div id="l_err" class="login-error" style="display:none">
+        <span>⚠</span><span id="l_err_msg">Username หรือ Password ไม่ถูกต้อง</span>
+      </div>
+      <form id="login-form">
+        <div class="fg">
+          <label>Username</label>
+          <input id="l_user" placeholder="กรอก Username" autocomplete="username" required/>
+        </div>
+        <div class="fg">
+          <label>Password</label>
+          <input id="l_pass" type="password" placeholder="••••••••" autocomplete="current-password" required/>
+        </div>
+        <button type="submit" class="btn-login">
+          เข้าสู่ระบบ →
+        </button>
+      </form>
+      <div class="login-divider">
+        <strong>Demo Accounts</strong>
+        <div class="login-accounts">
+          <span>admin / admin1234</span><span>sales01 / sales1234</span>
+          <span>op01 / op1234</span><span>lab01 / lab1234</span>
+          <span>report01 / rpt1234</span><span>billing01 / bill1234</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MAIN APP ═══════════ -->
+<div id="app" style="display:none">
+
+  <!-- Mobile sidebar overlay -->
+  <div id="sidebar-overlay" onclick="closeSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150;backdrop-filter:blur(2px)"></div>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-wrap">
+      <div class="logo-img"><img src="https://occicare.com/wp-content/uploads/2025/08/occicare-logo.webp" alt="OcciCare" onerror="this.parentElement.innerHTML='<span style=\'font-size:24px;display:flex;align-items:center;justify-content:center;height:100%\'>🏥</span>'"/></div>
+      <div class="logo-text">
+        <h1>Mobile Checkup</h1>
+        <p>OcciCare Health System</p>
+      </div>
+    </div>
+    </div>
+    <div class="sidebar-nav" id="sidebar-nav"><!-- Built by JS --></div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user-info">
+        <div class="u-name" id="user-name">User</div>
+        <div class="u-role" id="user-role">role</div>
+      </div>
+      <button class="btn-logout" onclick="DB.auth.logout();showLogin()">
+        ↩ ออกจากระบบ
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+    <header id="header">
+      <!-- Hamburger (mobile only) -->
+      <button id="hamburger" onclick="toggleSidebar()" style="display:none;background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:var(--txt-md);margin-right:4px;transition:background .15s" aria-label="เมนู">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div style="flex:1">
+        <div id="pt" class="header-title">Dashboard</div>
+      </div>
+      <div class="header-right">
+        <span id="cloud-badge" style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surf2);border:1px solid var(--bdr);display:none">💾</span>
+        <button class="bell-btn" onclick="Pages.dashboard&&Pages.dashboard.showAlerts&&Pages.dashboard.showAlerts()" title="การแจ้งเตือน">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span id="alert-count" style="display:none;position:absolute;top:-4px;right:-4px;background:#F03E58;color:#fff;border-radius:12px;min-width:18px;height:18px;padding:0 5px;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid var(--s-base,#131D2E);font-family:'IBM Plex Mono',monospace;box-shadow:0 2px 8px rgba(240,62,88,.6)">0</span>
+        </button>
+        <div class="header-user" onclick="Router.navigate('config')">
+          <div class="avatar" id="user-avatar">A</div>
+          <div id="hdr-user-wrap">
+            <div class="header-user-name" id="header-user-name">Admin</div>
+            <div class="header-user-role" id="header-user-role">administrator</div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main id="content" style="padding:24px"></main>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL ═══════════ -->
+<div id="mo" class="mo" onclick="if(event.target===this)Modal.close()">
+  <div class="mo-box">
+    <div class="mo-hd">
+      <h3 id="mo-title">Modal</h3>
+      <button class="close-x" onclick="Modal.close()">✕</button>
+    </div>
+    <div class="mo-bd" id="mo-body"></div>
+    <div class="mo-ft">
+      <button class="btn btn-out" onclick="Modal.close()">ยกเลิก</button>
+      <button class="btn btn-pri" id="mo-save">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile nav helpers -->
+<script>
+function toggleSidebar(){
+  const s=document.getElementById('sidebar');
+  const o=document.getElementById('sidebar-overlay');
+  const isOpen=s.classList.toggle('mobile-open');
+  o.style.display=isOpen?'block':'none';
+  document.body.style.overflow=isOpen?'hidden':'';
+}
+function closeSidebar(){
+  document.getElementById('sidebar')?.classList.remove('mobile-open');
+  const o=document.getElementById('sidebar-overlay');
+  if(o)o.style.display='none';
+  document.body.style.overflow='';
+}
+window._closeSidebar=closeSidebar;
+
+// Responsive: show/hide hamburger
+function checkHamburger(){
+  const btn=document.getElementById('hamburger');
+  const sw=document.getElementById('sidebar');
+  const main=document.getElementById('main');
+  if(!btn||!sw||!main)return;
+  if(window.innerWidth<=900){
+    btn.style.display='inline-flex';
+    sw.style.transform='translateX(-100%)';
+    sw.style.position='fixed';
+    sw.style.boxShadow='none';
+    sw.style.transition='transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s';
+    main.style.marginLeft='0';
+  } else {
+    btn.style.display='none';
+    sw.style.transform='translateX(0)';
+    sw.style.boxShadow='none';
+    main.style.marginLeft='var(--sw,260px)';
+    closeSidebar();
+  }
+}
+// add mobile-open class logic
+document.addEventListener('DOMContentLoaded',()=>{
+  checkHamburger();
+  window.addEventListener('resize',checkHamburger);
+  // Override sidebar open
+  const origToggle=window.toggleSidebar;
+  window.toggleSidebar=function(){
+    const s=document.getElementById('sidebar');
+    const o=document.getElementById('sidebar-overlay');
+    const isOpen=s.classList.contains('mobile-open');
+    if(isOpen){
+      s.classList.remove('mobile-open');
+      s.style.transform='translateX(-100%)';
+      s.style.boxShadow='none';
+      o.style.display='none';
+      document.body.style.overflow='';
+    } else {
+      s.classList.add('mobile-open');
+      s.style.transform='translateX(0)';
+      s.style.boxShadow='0 8px 32px rgba(13,33,55,.3)';
+      o.style.display='block';
+      document.body.style.overflow='hidden';
+    }
+  };
+  window.closeSidebar=function(){
+    const s=document.getElementById('sidebar');
+    if(s){s.classList.remove('mobile-open');s.style.transform='translateX(-100%)';s.style.boxShadow='none';}
+    const o=document.getElementById('sidebar-overlay');
+    if(o)o.style.display='none';
+    document.body.style.overflow='';
+  };
+});
+</script>
+
+<!-- Core scripts — v4 sync database -->
+<script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+<!-- New feature scripts -->
+<script src="js/line-notify.js"></script>
+<script src="js/calendar.js"></script>
+<!-- Main app (v4 base — all menus, roles, seed data intact) -->
+<script src="js/app.js"></script>
+<!-- Extensions — new features layered on top -->
+<script src="js/app-extensions.js"></script>
+</body>
+</html>
