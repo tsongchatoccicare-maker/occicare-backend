@@ -443,73 +443,13 @@ const DB={
     const fullNoDel={view:true,add:true,edit:true,delete:false};
     const none={view:false,add:false,edit:false,delete:false};
     const defaultRoles=[
-      // admin — เข้าถึงได้ทุก navbar ทุก module
-      {role:'admin',modules:{
-        dashboard:full, customers:full, sales:full, quotation:full,
-        op_prep:full, op_onsite:full, op_report:full,
-        lab:full, xray:full, report:full, billing:full,
-        config:full
-      },created_at:DB._now(),updated_at:DB._now()},
-
-      // sales — ทีมขาย: CRM, ใบเสนอราคา, Project & Handover
-      //   เห็น Dashboard, ปฏิทิน
-      //   ไม่เห็น: Operation, Lab, X-Ray, Report, Billing, Config
-      {role:'sales',modules:{
-        dashboard:viewOnly, customers:fullNoDel, sales:fullNoDel, quotation:full,
-        op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:none, billing:none,
-        config:none
-      },created_at:DB._now(),updated_at:DB._now()},
-
-      // operation — ทีมออกหน่วย: Checklist, ใบแจ้งงาน, Onsite, รายงานสรุป
-      //   เห็น Dashboard, ปฏิทิน, Project (view), ลูกค้า (view)
-      //   ไม่เห็น: Sales-create, Quotation, Lab, X-Ray, Report, Billing, Config
-      {role:'operation',modules:{
-        dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
-        op_prep:full, op_onsite:full, op_report:full,
-        lab:none, xray:none, report:none, billing:none,
-        config:none
-      },created_at:DB._now(),updated_at:DB._now()},
-
-      // lab — ห้องปฏิบัติการ: Lab & TAT, X-Ray (view)
-      //   เห็น Dashboard, Project (view), Onsite (view)
-      //   ไม่เห็น: Sales-edit, Quotation, Op-edit, Report, Billing, Config
-      {role:'lab',modules:{
-        dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
-        op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
-        lab:fullNoDel, xray:viewOnly, report:none, billing:none,
-        config:none
-      },created_at:DB._now(),updated_at:DB._now()},
-
-      // xray — เอกซเรย์: X-Ray อ่านฟิล์ม
-      //   เห็น Dashboard, Project (view), Onsite (view)
-      //   ไม่เห็น: Sales-edit, Quotation, Op-edit, Lab, Report, Billing, Config
-      {role:'xray',modules:{
-        dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
-        op_prep:none, op_onsite:viewOnly, op_report:none,
-        lab:none, xray:fullNoDel, report:none, billing:none,
-        config:none
-      },created_at:DB._now(),updated_at:DB._now()},
-
-      // report — ทีมทำผล: Report & Plan
-      //   เห็น Dashboard, ลูกค้า (view), Project, Onsite (view), Lab (view)
-      //   ไม่เห็น: Quotation, Op-edit, X-Ray, Billing, Config
-      {role:'report',modules:{
-        dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
-        op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
-        lab:viewOnly, xray:none, report:fullNoDel, billing:none,
-        config:none
-      },created_at:DB._now(),updated_at:DB._now()},
-
-      // billing — การเงิน: Billing & Invoice
-      //   เห็น Dashboard, Project (view), Report (view)
-      //   ไม่เห็น: Sales-edit, Quotation, Operation, Lab, X-Ray, Config
-      {role:'billing',modules:{
-        dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
-        op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:viewOnly, billing:fullNoDel,
-        config:none
-      },created_at:DB._now(),updated_at:DB._now()}
+      {role:'admin',modules:{dashboard:full,customers:full,sales:full,quotation:full,op_prep:full,op_onsite:full,lab:full,report:full,billing:full,config:full},created_at:DB._now(),updated_at:DB._now()},
+      {role:'sales',modules:{dashboard:viewOnly,customers:fullNoDel,sales:fullNoDel,quotation:full,op_prep:none,op_onsite:none,lab:none,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
+      {role:'operation',modules:{dashboard:viewOnly,customers:viewOnly,sales:viewOnly,op_prep:full,op_onsite:full,lab:none,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
+      {role:'lab',modules:{dashboard:viewOnly,customers:none,sales:viewOnly,op_prep:viewOnly,op_onsite:viewOnly,lab:fullNoDel,xray:viewOnly,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
+      {role:'xray',modules:{dashboard:viewOnly,customers:none,sales:viewOnly,op_prep:none,op_onsite:viewOnly,lab:none,xray:fullNoDel,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
+      {role:'report',modules:{dashboard:viewOnly,customers:viewOnly,sales:fullNoDel,op_prep:viewOnly,op_onsite:viewOnly,lab:viewOnly,report:fullNoDel,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
+      {role:'billing',modules:{dashboard:viewOnly,customers:viewOnly,sales:viewOnly,op_prep:none,op_onsite:none,lab:none,report:viewOnly,billing:fullNoDel,config:none},created_at:DB._now(),updated_at:DB._now()}
     ];
     const existingRoles=DB._get('auth_db','role_permissions');
     defaultRoles.forEach(r=>{if(!existingRoles.find(e=>e.role===r.role))existingRoles.push(r);});
