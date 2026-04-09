@@ -406,60 +406,65 @@ Pages.xray={
 ══════════════════════════════════════════════════ */
 Pages.op_report={
   _sq:'', _sd:'', _ss:'',
+
+  _calcJob(jo){
+    const sts=DB.operation.listStations(jo.id);
+    const eqs=DB.operation.listEquipments(jo.id);
+    // คิดเฉพาะ Part-time — ใช้ wage_per_day ใน station ถ้ามี ไม่งั้น fallback manpowerCost
+    const mp=DB.manpowerCost.list();
+    const parttimeSts=sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part'));
+    let laborCost=0;
+    parttimeSts.forEach(s=>{
+      const wage=s.wage_per_day||(()=>{
+        const r=mp.find(m=>m.role===s.profession||m.role===s.staff_name);
+        return r?r.cost_per_day:0;
+      })();
+      laborCost+=wage*(s.staff_count||1);
+    });
+    const eqCost=eqs.reduce((sum,e)=>sum+(e.price||0),0);
+    return{parttimeSts,laborCost,eqCost,total:laborCost+eqCost};
+  },
+
   render(){
-    const sq=document.getElementById('opr_sq')?.value||this._sq||'';
-    const sd=document.getElementById('opr_sd')?.value||this._sd||'';
-    const ss=document.getElementById('opr_ss')?.value||this._ss||'';
+    const sq=this._sq||'';
+    const sd=this._sd||'';
+    const ss=this._ss||'';
     const jos=DB.operation.listJobOrders();
     const filtered=jos.filter(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
       const txt=(p.project_code||'')+' '+(p.company_name||'')+(jo.company_name||'');
       const matchTxt=!sq||txt.toLowerCase().includes(sq.toLowerCase());
       const matchDate=!sd||(p.onsite_date||'').startsWith(sd);
-      // Status filter: complete = Lab/Report/Billing/Completed
       const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
       const matchStatus=!ss||(ss==='complete'&&isComplete)||(ss==='pending'&&!isComplete);
       return matchTxt&&matchDate&&matchStatus;
     });
     const rows=filtered.map(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const sts=DB.operation.listStations(jo.id);
-      const eqs=DB.operation.listEquipments(jo.id);
-      // คิดเฉพาะ Part-time
-      const parttime=sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part'));
-      const mp=DB.manpowerCost.list();
-      const laborCost=parttime.reduce((sum,s)=>{
-        const rate=mp.find(m=>m.role_name===s.profession||m.role_name===s.staff_name);
-        return sum+(rate?rate.cost_per_day*s.staff_count:0);
-      },0);
-      const eqCost=eqs.reduce((sum,e)=>sum+(e.price||0),0);
-      const total=laborCost+eqCost;
+      const {parttimeSts,laborCost,eqCost,total}=this._calcJob(jo);
       const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
       return`<tr style="cursor:pointer" onclick="Pages.op_report.viewDetail(${jo.id})">
         <td class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${U.esc(p.project_code||'-')}</td>
         <td class="fw6">${U.esc(p.company_name||jo.company_name||'-')}</td>
         <td>${U.fmtD(p.onsite_date)}</td>
-        <td style="text-align:right">${parttime.length} คน</td>
+        <td style="text-align:right">${parttimeSts.length} คน</td>
         <td style="text-align:right">฿${U.fmt(laborCost)}</td>
         <td style="text-align:right">฿${U.fmt(eqCost)}</td>
         <td style="text-align:right;font-weight:700;color:var(--c-gold-lt,#E2C46A)">฿${U.fmt(total)}</td>
         <td><span class="badge ${isComplete?'b-closed':'b-onsite'}" style="font-size:10px">${isComplete?'Complete':'Onsite'}</span></td>
-        <td><button class="btn btn-out btn-xs" onclick="event.stopPropagation();Pages.op_report.viewDetail(${jo.id})">ดู</button></td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-out btn-xs" onclick="event.stopPropagation();Pages.op_report.viewDetail(${jo.id})">ดู</button>
+        </td>
       </tr>`;
     }).join('');
-    const grandTotal=filtered.reduce((sum,jo)=>{
-      const sts=DB.operation.listStations(jo.id);
-      const eqs=DB.operation.listEquipments(jo.id);
-      const mp=DB.manpowerCost.list();
-      const parttime=sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part'));
-      const lab=parttime.reduce((s2,st)=>{const r=mp.find(m=>m.role_name===st.profession||m.role_name===st.staff_name);return s2+(r?r.cost_per_day*st.staff_count:0);},0);
-      const eq=eqs.reduce((s2,e)=>s2+(e.price||0),0);
-      return sum+lab+eq;
-    },0);
+    const grandTotal=filtered.reduce((s,jo)=>s+this._calcJob(jo).total,0);
     document.getElementById('content').innerHTML=`
     <div class="ph">
       <div><h2>📊 Operation — รายงานสรุปค่าใช้จ่าย</h2>
-        <p>คิดเฉพาะ Part-time (ไม่รวมพนักงานในองค์กร)</p></div>
+        <p>คิดเฉพาะ Part-time + เช่าอุปกรณ์ (ไม่รวมพนักงานในองค์กร)</p></div>
+      <div class="btn-grp">
+        <button class="btn btn-gold" onclick="Pages.op_report.exportDialog()">📤 Export PDF / Excel</button>
+      </div>
     </div>
     <div class="card mb4">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0">
@@ -470,9 +475,10 @@ Pages.op_report={
             style="width:100%;padding:9px 12px 9px 34px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;outline:none"/>
         </div>
         <div style="flex:2">
-          <input id="opr_sd" type="date" value="${sd}"
+          <input id="opr_sd" type="month" value="${sd}"
             onchange="Pages.op_report._sd=this.value;Pages.op_report.render()"
-            style="width:100%;padding:9px 10px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;outline:none"/>
+            style="width:100%;padding:9px 10px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;outline:none"
+            title="กรองตามเดือน"/>
         </div>
         <div style="flex:2">
           <select id="opr_ss" onchange="Pages.op_report._ss=this.value;Pages.op_report.render()"
@@ -496,8 +502,8 @@ Pages.op_report={
         </tr></thead>
         <tbody>${rows||'<tr><td colspan="9" class="empty"><div class="icon">📊</div><p>ไม่พบข้อมูล</p></td></tr>'}</tbody>
         ${filtered.length>1?`<tfoot><tr>
-          <td colspan="6" class="fw6">รวมทั้งหมด ${filtered.length} งาน</td>
-          <td style="text-align:right;font-weight:700;color:var(--c-gold-lt,#E2C46A)">฿${U.fmt(grandTotal)}</td>
+          <td colspan="6" class="fw6" style="padding:10px 14px">รวมทั้งหมด ${filtered.length} งาน</td>
+          <td style="text-align:right;font-weight:800;color:var(--c-gold-lt,#E2C46A);padding:10px 14px">฿${U.fmt(grandTotal)}</td>
           <td colspan="2"></td>
         </tr></tfoot>`:''}
       </table></div>
@@ -511,14 +517,12 @@ Pages.op_report={
     const sts=DB.operation.listStations(jo.id);
     const eqs=DB.operation.listEquipments(jo.id);
     const mp=DB.manpowerCost.list();
-    // แยก Part-time vs ในองค์กร
     const parttimeRows=sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part'));
     const inOrgRows=sts.filter(s=>!s.staff_type||!s.staff_type.toLowerCase().includes('part'));
     let laborTotal=0;
     const ptTable=parttimeRows.map(s=>{
-      const rate=mp.find(m=>m.role_name===s.profession||m.role_name===s.staff_name);
-      const dayRate=rate?rate.cost_per_day:0;
-      const cost=dayRate*s.staff_count;
+      const wage=s.wage_per_day||(()=>{const r=mp.find(m=>m.role===s.profession);return r?r.cost_per_day:0;})();
+      const cost=wage*(s.staff_count||1);
       laborTotal+=cost;
       return`<tr>
         <td>${U.esc(s.station_code||'')}</td>
@@ -526,18 +530,13 @@ Pages.op_report={
         <td>${U.esc(s.profession||'-')}</td>
         <td>${U.esc(s.staff_name||'-')}</td>
         <td style="text-align:center">${s.staff_count}</td>
-        <td style="text-align:right">฿${U.fmt(dayRate)}</td>
+        <td style="text-align:right">฿${U.fmt(wage)}</td>
         <td style="text-align:right;font-weight:600">฿${U.fmt(cost)}</td>
       </tr>`;
     }).join('');
     let eqTotal=0;
-    const eqTable=eqs.map(e=>{
-      eqTotal+=(e.price||0);
-      return`<tr>
-        <td colspan="4">${U.esc(e.item_name)}</td>
-        <td colspan="2" style="color:var(--t-muted)">${U.esc(e.remark||'-')}</td>
-        <td style="text-align:right;font-weight:600">฿${U.fmt(e.price||0)}</td>
-      </tr>`;
+    const eqTable=eqs.map(e=>{eqTotal+=(e.price||0);
+      return`<tr><td colspan="4">${U.esc(e.item_name)}</td><td colspan="2" style="color:var(--t-muted)">${U.esc(e.remark||'-')}</td><td style="text-align:right;font-weight:600">฿${U.fmt(e.price||0)}</td></tr>`;
     }).join('');
     const grandTotal=laborTotal+eqTotal;
     const inOrgHtml=inOrgRows.length?`<div style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:var(--t-muted)">
@@ -566,10 +565,203 @@ Pages.op_report={
     </table></div>`:''}
     ${inOrgHtml}
     <div style="margin-top:14px;padding:12px 16px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:9px;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-weight:600;font-size:14px">ยอดรวมทั้งสิ้น (Part-time + เช่าอุปกรณ์)</span>
+      <span style="font-weight:600;font-size:14px">ยอดรวมทั้งสิ้น</span>
       <span style="font-size:22px;font-weight:800;color:var(--c-gold-lt,#E2C46A)">฿${U.fmt(grandTotal)}</span>
     </div>`,
     `รายงานค่าใช้จ่าย — ${p.project_code||''}`, null);
+  },
+
+  exportDialog(){
+    const jos=DB.operation.listJobOrders();
+    const projs=jos.map(jo=>{const p=DB.sales.getProject(jo.project_id)||{};return{id:jo.id,label:`${p.project_code||'-'} — ${p.company_name||jo.company_name||'-'} (${U.fmtD(p.onsite_date)})`,onsite_date:p.onsite_date||''};});
+    const projOpts=projs.map(p=>`<option value="${p.id}">${U.esc(p.label)}</option>`).join('');
+    Modal.open(`
+    <div style="font-size:12px;font-weight:600;color:var(--t-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">เลือกรูปแบบ Export</div>
+    <div class="tabs" style="margin-bottom:16px">
+      <div class="tab active" onclick="switchTab(this,'ex_t1')">📅 ช่วงวันที่</div>
+      <div class="tab" onclick="switchTab(this,'ex_t2')">📋 เลือก Project</div>
+    </div>
+    <div id="ex_t1" class="tp active">
+      <div class="fr">
+        <div class="fg"><label>วันที่เริ่มต้น</label><input id="ex_from" type="date"/></div>
+        <div class="fg"><label>วันที่สิ้นสุด</label><input id="ex_to" type="date" value="${new Date().toISOString().substr(0,10)}"/></div>
+      </div>
+    </div>
+    <div id="ex_t2" class="tp">
+      <div class="fg"><label>เลือก Project / ใบแจ้งงาน</label>
+        <select id="ex_proj" style="font-size:13px">
+          <option value="">-- ทุก Project --</option>
+          ${projOpts}
+        </select>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="btn-grp" style="justify-content:center;gap:12px;padding-top:4px">
+      <button class="btn btn-pri" onclick="Pages.op_report._doExport('pdf')" style="min-width:130px">
+        🖨️ Export PDF (A4)
+      </button>
+      <button class="btn btn-out" onclick="Pages.op_report._doExport('csv')" style="min-width:130px">
+        📊 Export Excel (.csv)
+      </button>
+    </div>`,
+    'Export รายงานสรุปค่าใช้จ่าย', null);
+  },
+
+  _doExport(type){
+    const fromDate=document.getElementById('ex_from')?.value||'';
+    const toDate=document.getElementById('ex_to')?.value||'';
+    const selProj=document.getElementById('ex_proj')?.value||'';
+    const jos=DB.operation.listJobOrders();
+    let filtered=jos;
+    if(selProj){
+      filtered=jos.filter(jo=>String(jo.id)===String(selProj));
+    } else if(fromDate||toDate){
+      filtered=jos.filter(jo=>{
+        const p=DB.sales.getProject(jo.project_id)||{};
+        const d=p.onsite_date||'';
+        if(fromDate&&d<fromDate)return false;
+        if(toDate&&d>toDate)return false;
+        return true;
+      });
+    }
+    if(type==='pdf') this._exportPDF(filtered,fromDate,toDate);
+    else this._exportCSV(filtered,fromDate,toDate);
+  },
+
+  _exportCSV(jos,from,to){
+    let csv='﻿';
+    const title=from||to?`ช่วงวันที่ ${from||'-'} ถึง ${to||'-'}`:'ทุก Project';
+    csv+=`"รายงานสรุปค่าใช้จ่าย Operation — ${title}"
+`;
+    csv+=`"สร้างเมื่อ: ${new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})}"
+
+`;
+    csv+='Project Code,บริษัท,วันตรวจ,Part-time (คน),ค่าแรง (บาท),เช่าอุปกรณ์ (บาท),รวม (บาท),สถานะ\n';    let grand=0;
+    jos.forEach(jo=>{
+      const p=DB.sales.getProject(jo.project_id)||{};
+      const {parttimeSts,laborCost,eqCost,total}=this._calcJob(jo);
+      const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
+      grand+=total;
+      csv+=`"${p.project_code||'-'}","${p.company_name||jo.company_name||'-'}","${p.onsite_date||'-'}",${parttimeSts.length},${laborCost},${eqCost},${total},"${isComplete?'Complete':'Onsite'}"
+`;
+    });
+    csv+=`
+"รวมทั้งหมด",,,,,,"${grand}",""
+`;
+    // Detail rows
+    csv+='\n\"รายละเอียด Part-time ต่อ Project\"\n';
+    csv+='Project,Station,วิชาชีพ,ชื่อ-สกุล,ประเภท,คน,ค่าแรง/วัน (บาท),รวม (บาท)\n';
+    jos.forEach(jo=>{
+      const p=DB.sales.getProject(jo.project_id)||{};
+      const sts=DB.operation.listStations(jo.id);
+      const mp=DB.manpowerCost.list();
+      sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part')).forEach(s=>{
+        const wage=s.wage_per_day||(()=>{const r=mp.find(m=>m.role===s.profession);return r?r.cost_per_day:0;})();
+        csv+=`"${p.project_code||'-'}","${s.station_name}","${s.profession||'-'}","${s.staff_name||'-'}","${s.staff_type}",${s.staff_count},${wage},${wage*(s.staff_count||1)}
+`;
+      });
+    });
+    const a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+    const fn=from?`Report_${from}_${to||'now'}.csv`:'Report_all.csv';
+    a.download=fn; a.click();
+    Modal.close(); U.toast('✅ Export Excel สำเร็จ');
+  },
+
+  _exportPDF(jos,from,to){
+    const mp=DB.manpowerCost.list();
+    const title=from||to?`ช่วงวันที่ ${from||'-'} ถึง ${to||'-'}`:'ทุก Project';
+    const today=new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+    let grandTotal=0;
+    const summaryRows=jos.map(jo=>{
+      const p=DB.sales.getProject(jo.project_id)||{};
+      const {parttimeSts,laborCost,eqCost,total}=this._calcJob(jo);
+      grandTotal+=total;
+      const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
+      return`<tr>
+        <td>${p.project_code||'-'}</td>
+        <td>${p.company_name||jo.company_name||'-'}</td>
+        <td style="text-align:center">${p.onsite_date||'-'}</td>
+        <td style="text-align:center">${parttimeSts.length}</td>
+        <td style="text-align:right">${U.fmt(laborCost)}</td>
+        <td style="text-align:right">${U.fmt(eqCost)}</td>
+        <td style="text-align:right;font-weight:700">${U.fmt(total)}</td>
+        <td style="text-align:center"><span style="font-size:10px;padding:1px 6px;border-radius:3px;background:${isComplete?'#D1FAE5':'#FEF3C7'};color:${isComplete?'#065F46':'#92400E'}">${isComplete?'Complete':'Onsite'}</span></td>
+      </tr>`;
+    }).join('');
+    // Detail section
+    let detailHTML='';
+    jos.forEach(jo=>{
+      const p=DB.sales.getProject(jo.project_id)||{};
+      const sts=DB.operation.listStations(jo.id);
+      const eqs=DB.operation.listEquipments(jo.id);
+      const ptSts=sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part'));
+      if(!ptSts.length&&!eqs.length)return;
+      let labSum=0;
+      const ptRows=ptSts.map(s=>{
+        const wage=s.wage_per_day||(()=>{const r=mp.find(m=>m.role===s.profession);return r?r.cost_per_day:0;})();
+        const cost=wage*(s.staff_count||1); labSum+=cost;
+        return`<tr><td>${s.station_name}</td><td>${s.profession||'-'}</td><td>${s.staff_name||'-'}</td><td style="text-align:center">${s.staff_count}</td><td style="text-align:right">${U.fmt(wage)}</td><td style="text-align:right">${U.fmt(cost)}</td></tr>`;
+      }).join('');
+      let eqSum=0;
+      const eqRows=eqs.map(e=>{eqSum+=(e.price||0);return`<tr><td colspan="4">${e.item_name}</td><td colspan="1" style="color:#6B7280">${e.remark||'-'}</td><td style="text-align:right">${U.fmt(e.price||0)}</td></tr>`;}).join('');
+      detailHTML+=`
+      <div style="margin-top:12px;border:1px solid #E5E7EB;border-radius:6px;overflow:hidden;page-break-inside:avoid">
+        <div style="background:#1E3A5F;color:#fff;padding:6px 12px;font-weight:700;font-size:12px;display:flex;justify-content:space-between">
+          <span>${p.project_code||'-'} — ${p.company_name||'-'}</span>
+          <span>วันตรวจ: ${p.onsite_date||'-'}</span>
+        </div>
+        ${ptSts.length?`<table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr style="background:#F3F4F6"><th style="${TH}">Station</th><th style="${TH}">วิชาชีพ</th><th style="${TH}">ชื่อ-สกุล</th><th style="${TH};text-align:center">คน</th><th style="${TH};text-align:right">ราคา/วัน</th><th style="${TH};text-align:right">รวม</th></tr></thead>
+          <tbody>${ptRows}</tbody>
+          <tfoot><tr style="background:#F9FAFB"><td colspan="5" style="${TD};font-weight:700">รวมค่าแรง</td><td style="${TD};text-align:right;font-weight:700">฿${U.fmt(labSum)}</td></tr></tfoot>
+        </table>`:''}
+        ${eqs.length?`<table style="width:100%;border-collapse:collapse;font-size:11px;border-top:1px solid #E5E7EB">
+          <thead><tr style="background:#F3F4F6"><th colspan="4" style="${TH}">เช่าอุปกรณ์</th><th style="${TH}">หมายเหตุ</th><th style="${TH};text-align:right">ราคา</th></tr></thead>
+          <tbody>${eqRows}</tbody>
+          <tfoot><tr style="background:#F9FAFB"><td colspan="5" style="${TD};font-weight:700">รวมค่าเช่า</td><td style="${TD};text-align:right;font-weight:700">฿${U.fmt(eqSum)}</td></tr></tfoot>
+        </table>`:''}
+      </div>`;
+    });
+    const TH='padding:5px 8px;border:1px solid #E5E7EB;font-weight:600;text-align:left';
+    const TD='padding:5px 8px;border:1px solid #E5E7EB';
+    const html=`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">
+    <title>รายงานค่าใช้จ่าย</title>
+    <style>
+      @page{size:A4 landscape;margin:12mm 10mm 12mm 10mm}
+      body{font-family:'Sarabun','TH Sarabun New',sans-serif;font-size:12px;color:#1A2332;margin:0}
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:5px 8px;border:1px solid #CBD5E1;font-size:11px}
+      thead tr{background:#1E3A5F;color:#fff}
+      tfoot tr{background:#F1F5F9}
+      tr:nth-child(even) td{background:#F8FAFC}
+      .total-box{background:#1E3A5F;color:#fff;padding:10px 16px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+    </style></head><body>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;border-bottom:3px solid #1E3A5F;padding-bottom:8px">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:#1E3A5F">รายงานสรุปค่าใช้จ่าย — Operation</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:2px">${title}</div>
+      </div>
+      <div style="text-align:right;font-size:10px;color:#6B7280">
+        <div>OcciCare Mobile Checkup</div>
+        <div>พิมพ์: ${today}</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Project Code</th><th>บริษัท</th><th style="text-align:center">วันตรวจ</th><th style="text-align:center">Part-time</th><th style="text-align:right">ค่าแรง (฿)</th><th style="text-align:right">เช่าอุปกรณ์ (฿)</th><th style="text-align:right">รวม (฿)</th><th style="text-align:center">สถานะ</th></tr></thead>
+      <tbody>${summaryRows||'<tr><td colspan="8" style="text-align:center;padding:16px;color:#6B7280">ไม่พบข้อมูล</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="6" style="font-weight:800;font-size:13px">รวมทั้งหมด ${jos.length} งาน</td><td style="text-align:right;font-weight:800;font-size:14px">฿${U.fmt(grandTotal)}</td><td></td></tr></tfoot>
+    </table>
+    <div style="margin-top:16px;font-size:12px;font-weight:700;color:#1E3A5F;border-bottom:2px solid #1E3A5F;padding-bottom:4px;margin-bottom:8px">รายละเอียดค่าใช้จ่ายต่อ Project</div>
+    ${detailHTML}
+    <div class="total-box">
+      <span style="font-size:14px;font-weight:700">ยอดรวมทั้งสิ้น (Part-time + เช่าอุปกรณ์)</span>
+      <span style="font-size:22px;font-weight:900">฿${U.fmt(grandTotal)}</span>
+    </div>
+    </body></html>`;
+    const w=window.open('','_blank','width=900,height=700');
+    if(w){w.document.write(html);w.document.close();setTimeout(()=>{w.print();},400);}
+    Modal.close(); U.toast('✅ เปิดหน้า PDF แล้ว กด Ctrl+P เพื่อพิมพ์');
   },
 };
 /* ── DASHBOARD ── */
@@ -1890,14 +2082,31 @@ Pages.op_prep={
   _saveSign(jo){DB.operation.saveJobOrder({...DB.operation.getJobOrderById(jo.id),signer_creator:document.getElementById('jo_s1')?.value||jo.signer_creator,signer_head:document.getElementById('jo_s2')?.value||jo.signer_head,signer_hr:document.getElementById('jo_s3')?.value||jo.signer_hr});},
   _stationTable(joid){
     const sts=DB.operation.listStations(joid);
+    const totalWage=sts.reduce((s,st)=>s+(st.wage_per_day||0)*(st.staff_count||1),0);
     const rows=sts.map((s,i)=>`<tr>
-      <td>${s.order_no}</td><td>${s.station_code} ${s.station_name}</td>
-      <td>${s.staff_count}</td><td>${s.profession}</td><td>${s.staff_name}</td><td>${s.staff_type}</td><td>${s.remark||''}</td>
-      <td><button class="btn btn-danger btn-xs" onclick="Pages.op_prep.delStation(${s.id},${joid})">ลบ</button></td>
+      <td style="text-align:center">${s.order_no}</td>
+      <td><span style="font-family:monospace;font-size:11px;background:rgba(56,189,248,.15);color:#38BDF8;padding:1px 6px;border-radius:4px">${s.station_code}</span> ${s.station_name}</td>
+      <td style="text-align:center">${s.staff_count}</td>
+      <td>${s.profession||'-'}</td>
+      <td>${s.staff_name||'-'}</td>
+      <td><span style="font-size:11px;padding:1px 7px;border-radius:4px;background:${(s.staff_type||'').includes('Part')?'rgba(245,158,11,.15)':'rgba(255,255,255,.08)'};color:${(s.staff_type||'').includes('Part')?'#FCD34D':'var(--t-muted)'}">${s.staff_type||'-'}</span></td>
+      <td style="text-align:right;font-weight:600;color:${s.wage_per_day?'var(--c-gold-lt,#E2C46A)':'var(--t-muted)'}">
+        ${s.wage_per_day?'฿'+U.fmt(s.wage_per_day):'-'}
+      </td>
+      <td style="color:var(--t-muted)">${s.remark||''}</td>
+      <td>
+        <button class="btn btn-out btn-xs" onclick="Pages.op_prep.editStation(${s.id},${joid})" style="margin-right:3px">แก้ไข</button>
+        <button class="btn btn-danger btn-xs" onclick="Pages.op_prep.delStation(${s.id},${joid})">ลบ</button>
+      </td>
     </tr>`).join('');
-    return`<div class="mb4 btn-grp"><button class="btn btn-pri btn-sm" onclick="Pages.op_prep.addStation(${joid})">+ เพิ่ม Station</button></div>
-    <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Station</th><th>คน</th><th>วิชาชีพ</th><th>ชื่อ-สกุล</th><th>ประเภท</th><th>หมายเหตุ</th><th></th></tr></thead>
-    <tbody id="st_tbody">${rows||'<tr><td colspan="8" class="empty t-sm">ยังไม่มี Station</td></tr>'}</tbody></table></div>`;
+    return`<div class="mb4" style="display:flex;justify-content:space-between;align-items:center">
+      <button class="btn btn-pri btn-sm" onclick="Pages.op_prep.addStation(${joid})">+ เพิ่ม Station</button>
+      ${totalWage>0?`<div style="font-weight:700;color:var(--c-gold-lt,#E2C46A);font-size:13px">รวมค่าแรง: ฿${U.fmt(totalWage)}</div>`:''}
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th style="text-align:center">#</th><th>Station</th><th style="text-align:center">คน</th><th>วิชาชีพ</th><th>ชื่อ-สกุล</th><th>ประเภท</th><th style="text-align:right">ค่าแรง/วัน</th><th>หมายเหตุ</th><th></th></tr></thead>
+      <tbody id="st_tbody">${rows||'<tr><td colspan="9" class="empty t-sm">ยังไม่มี Station — กด "+ เพิ่ม Station"</td></tr>'}</tbody>
+    </table></div>`;
   },
   _vehicleTable(joid){
     const vs=DB.operation.listVehicles(joid);
@@ -1910,17 +2119,83 @@ Pages.op_prep={
   addStation(joid){
     const sts=DB.operation.listStations(joid);
     const nextNo=sts.length>0?Math.max(...sts.map(s=>s.order_no))+1:1;
-    Modal.open(`<div class="fr"><div class="fg"><label class="req">Station</label><select id="as_code">${U.stationOpts()}</select></div>
-      <div class="fg"><label>จำนวนคน</label><input id="as_cnt" type="number" value="1"/></div></div>
-    <div class="fr"><div class="fg"><label>วิชาชีพ</label><select id="as_prof">${U.sel(PROFESSIONS,'เจ้าหน้าที่')}</select></div>
-      <div class="fg"><label>ชื่อ-สกุล</label><input id="as_name"/></div></div>
-    <div class="fr"><div class="fg"><label>ประเภท</label><select id="as_type">${U.sel(STAFF_TYPES,'ในองค์กร')}</select></div>
-      <div class="fg"><label>หมายเหตุ</label><input id="as_rm"/></div></div>`,
-    'เพิ่ม Station', async () => {
+    const mp=DB.manpowerCost.list();
+    Modal.open(`
+    <div class="fr">
+      <div class="fg"><label class="req">Station</label><select id="as_code">${U.stationOpts()}</select></div>
+      <div class="fg" style="max-width:90px"><label>จำนวนคน</label><input id="as_cnt" type="number" value="1" min="1"/></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>วิชาชีพ</label>
+        <select id="as_prof" onchange="(function(v){const mp=${JSON.stringify(mp.map(m=>({r:m.role,c:m.cost_per_day})))};const m=mp.find(x=>x.r===v);document.getElementById('as_wage').value=m?m.c:0;})(this.value)">
+          ${U.sel(PROFESSIONS,'เจ้าหน้าที่')}
+        </select>
+      </div>
+      <div class="fg"><label>ชื่อ-สกุล</label><input id="as_name"/></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>ประเภท</label><select id="as_type">${U.sel(STAFF_TYPES,'ในองค์กร')}</select></div>
+      <div class="fg" style="max-width:140px">
+        <label>ราคาจ้าง/ค่าแรง (฿/วัน)</label>
+        <input id="as_wage" type="number" value="0" min="0" placeholder="บาท/วัน"/>
+      </div>
+    </div>
+    <div class="fg"><label>หมายเหตุ</label><input id="as_rm"/></div>`,
+    'เพิ่ม Station', ()=>{
       const sel=document.getElementById('as_code');
-      const code=sel.value,name=sel.options[sel.selectedIndex]?.text.replace(code+' ','');
-      DB.operation.saveStation({job_order_id:joid,order_no:nextNo,station_code:code,station_name:name,staff_count:parseInt(document.getElementById('as_cnt').value)||1,profession:document.getElementById('as_prof').value,staff_name:document.getElementById('as_name').value,staff_type:document.getElementById('as_type').value,remark:document.getElementById('as_rm').value});
+      const stCode=sel.value, stName=sel.options[sel.selectedIndex]?.text.replace(stCode+' ','');
+      DB.operation.saveStation({
+        job_order_id:joid, order_no:nextNo,
+        station_code:stCode, station_name:stName,
+        staff_count:parseInt(document.getElementById('as_cnt').value)||1,
+        profession:document.getElementById('as_prof').value,
+        staff_name:document.getElementById('as_name').value,
+        staff_type:document.getElementById('as_type').value,
+        wage_per_day:parseFloat(document.getElementById('as_wage').value)||0,
+        remark:document.getElementById('as_rm').value,
+      });
       Modal.close();this.editJO(joid);U.toast('✅ เพิ่ม Station แล้ว');
+    });
+  },
+  editStation(sid,joid){
+    const s=DB.operation.listStations(joid).find(x=>x.id===sid);
+    if(!s)return;
+    const mp=DB.manpowerCost.list();
+    Modal.open(`
+    <div class="fr">
+      <div class="fg"><label class="req">Station</label><select id="es_code">${U.stationOpts(s.station_code)}</select></div>
+      <div class="fg" style="max-width:90px"><label>จำนวนคน</label><input id="es_cnt" type="number" value="${s.staff_count||1}" min="1"/></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>วิชาชีพ</label>
+        <select id="es_prof" onchange="(function(v){const mp=${JSON.stringify(mp.map(m=>({r:m.role,c:m.cost_per_day})))};const m=mp.find(x=>x.r===v);if(m)document.getElementById('es_wage').value=m.c;})(this.value)">
+          ${U.sel(PROFESSIONS,s.profession||'เจ้าหน้าที่')}
+        </select>
+      </div>
+      <div class="fg"><label>ชื่อ-สกุล</label><input id="es_name" value="${U.esc(s.staff_name||'')}"/></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>ประเภท</label><select id="es_type">${U.sel(STAFF_TYPES,s.staff_type||'ในองค์กร')}</select></div>
+      <div class="fg" style="max-width:140px">
+        <label>ราคาจ้าง/ค่าแรง (฿/วัน)</label>
+        <input id="es_wage" type="number" value="${s.wage_per_day||0}" min="0"/>
+      </div>
+    </div>
+    <div class="fg"><label>หมายเหตุ</label><input id="es_rm" value="${U.esc(s.remark||'')}"/></div>`,
+    'แก้ไข Station', ()=>{
+      const sel=document.getElementById('es_code');
+      const stCode=sel.value, stName=sel.options[sel.selectedIndex]?.text.replace(stCode+' ','');
+      DB.operation.saveStation({
+        ...s,
+        station_code:stCode, station_name:stName,
+        staff_count:parseInt(document.getElementById('es_cnt').value)||1,
+        profession:document.getElementById('es_prof').value,
+        staff_name:document.getElementById('es_name').value,
+        staff_type:document.getElementById('es_type').value,
+        wage_per_day:parseFloat(document.getElementById('es_wage').value)||0,
+        remark:document.getElementById('es_rm').value,
+      });
+      Modal.close();this.editJO(joid);U.toast('✅ บันทึกแล้ว');
     });
   },
   delStation(id,joid){if(U.confirm('ลบ Station นี้?')){DB.operation.deleteStation(id);this.editJO(joid);}},
@@ -2759,37 +3034,43 @@ Pages.report={async render(){
     ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.sales.editProject(${p.id})">แก้ไข</button>`:''}
     <button class="btn btn-out btn-xs" onclick="Pages.sales.viewHandover(${p.id})">เอกสาร</button>
   </td></tr>`).join('');
+  // mkCk — sync (no async needed, reads DB directly)
+  const mkCk=(rp_id,key,title,done,dateVal)=>{
+    const dateLabel=dateVal?`<div style="font-size:9px;color:#6EE7B7;margin-top:1px">${U.fmtD(dateVal)}</div>`:'';
+    return`<td style="text-align:center;vertical-align:middle;padding:6px 4px">
+      ${done
+        ?`<div style="display:inline-flex;flex-direction:column;align-items:center">
+            <span style="font-size:18px;line-height:1">✅</span>${dateLabel}
+          </div>`
+        :canEdit
+          ?`<input type="checkbox" style="width:16px;height:16px;accent-color:var(--suc);cursor:pointer"
+              onchange="Pages.report._toggleMeta(${rp_id},'${key}',this.checked)" title="${title}" class="rp-ck"/>`
+          :`<span style="color:var(--t-muted);font-size:16px">⬜</span>`
+      }
+    </td>`;
+  };
   const rows=plans.map(rp=>{
     const p=DB.sales.getProject(rp.project_id);
+    // Read progress from rp itself (DB fields) + localStorage fallback
     const meta=JSON.parse(localStorage.getItem('rp_meta_'+rp.project_id)||'{}');
-    const canEditRp=canEdit;
-    const mkCk=async (key,title) => {
-      const done=!!meta[key];
-      const dateVal=meta[key+'_date']||'';
-      const dateLabel=dateVal?`<div style="font-size:9px;color:#6EE7B7;margin-top:1px">${U.fmtD(dateVal)}</div>`:'';
-      return`<td style="text-align:center;vertical-align:middle;padding:6px 4px">
-        ${done
-          ?`<div style="display:inline-flex;flex-direction:column;align-items:center">
-              <span style="font-size:18px;line-height:1">✅</span>
-              ${dateLabel}
-            </div>`
-          :`<input type="checkbox" ${canEditRp?'':'disabled'} style="width:16px;height:16px;accent-color:var(--suc);cursor:${canEditRp?'pointer':'default'}" onchange="Pages.report._toggleMeta(${rp.project_id},'${key}',this.checked)" title="${title}" class="rp-ck"/>`
-        }
-      </td>`;
-    };
+    // Use DB fields first, then meta fallback
+    const sp=!!(rp.set_plan||meta.set_plan);    const spd=rp.set_plan_date||meta.set_plan_date||'';
+    const sd=!!(rp.send_doc||meta.send_doc);     const sdd=rp.send_doc_date||meta.send_doc_date||'';
+    const rr=!!(rp.receive_raw||meta.receive_raw); const rrd=rp.receive_raw_date||meta.receive_raw_date||'';
+    const kr=!!(rp.key_raw||meta.key_raw);       const krd=rp.key_raw_date||meta.key_raw_date||'';
     return`<tr>
-      <td class="fw6 mono">${p?.project_code||'-'}</td>
-      <td>${U.esc(p?.company_name||'-')}</td>
-      <td>${(rp.headcount||0).toLocaleString()}</td>
+      <td class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${p?.project_code||'-'}</td>
+      <td class="fw6">${U.esc(p?.company_name||'-')}</td>
+      <td style="text-align:right">${(rp.headcount||0).toLocaleString()}</td>
       <td>${U.fmtD(rp.onsite_date)}</td>
       <td>${p?.due_date?U.fmtD(p.due_date):'<span class="t-muted t-sm">-</span>'}</td>
-      ${mkCk('set_plan','Set Plan เสร็จแล้ว')}
-      ${mkCk('send_doc','เวียนเอกสารแล้ว')}
-      ${mkCk('receive_raw','รับผลดิบแล้ว')}
-      ${mkCk('key_raw','คีย์ผลดิบแล้ว')}
+      ${mkCk(rp.project_id,'set_plan','Set Plan เสร็จแล้ว',sp,spd)}
+      ${mkCk(rp.project_id,'send_doc','เวียนเอกสารแล้ว',sd,sdd)}
+      ${mkCk(rp.project_id,'receive_raw','รับผลดิบแล้ว',rr,rrd)}
+      ${mkCk(rp.project_id,'key_raw','คีย์ผลดิบแล้ว',kr,krd)}
       <td>${U.tatBadge(rp.sla_deadline)}</td>
       <td>${U.badge(rp.status)}</td>
-      <td>
+      <td style="white-space:nowrap">
         <button class="btn btn-out btn-xs" onclick="Pages.report.viewPlan(${rp.project_id})">ดูแผน</button>
         ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.report.editPlan(${rp.id})">แก้ไข</button>`:''}
         <button class="btn btn-out btn-xs" onclick="Pages.report.viewPatients(${rp.project_id})">รายชื่อ</button>
@@ -2865,10 +3146,10 @@ async editPlan(id){
   <div class="divider"></div>
   <div class="sec-title">ความคืบหน้า</div>
   <div class="g2" style="gap:8px">
-    ${mkCk2('set_plan','✏️ Set Plan')}
-    ${mkCk2('send_doc','📤 เวียนเอกสาร')}
-    ${mkCk2('receive_raw','📥 รับผลดิบ')}
-    ${mkCk2('key_raw','⌨️ คีย์ผลดิบ')}
+    ${await mkCk2('set_plan','✏️ Set Plan')}
+    ${await mkCk2('send_doc','📤 เวียนเอกสาร')}
+    ${await mkCk2('receive_raw','📥 รับผลดิบ')}
+    ${await mkCk2('key_raw','⌨️ คีย์ผลดิบ')}
   </div>`,
   'แก้ไข Project Plan', async () => {
     const st=document.getElementById('rv_st').value;
