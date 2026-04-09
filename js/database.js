@@ -127,6 +127,14 @@ const DB={
       DB._set('operation_db','job_vehicles',rows);return data;
     },
     deleteVehicle(id){DB._set('operation_db','job_vehicles',DB._get('operation_db','job_vehicles').filter(r=>r.id!==id));},
+    listEquipments(joid){return DB._get('operation_db','job_equipments').filter(r=>r.job_order_id===joid);},
+    saveEquipment(data){
+      const rows=DB._get('operation_db','job_equipments');
+      if(data.id){const i=rows.findIndex(r=>r.id===data.id);rows[i]={...rows[i],...data,updated_at:DB._now()};}
+      else{data.id=DB._nextId('operation_db','job_equipments');data.created_at=DB._now();data.updated_at=DB._now();rows.push(data);}
+      DB._set('operation_db','job_equipments',rows);return data;
+    },
+    deleteEquipment(id){DB._set('operation_db','job_equipments',DB._get('operation_db','job_equipments').filter(r=>r.id!==id));},
     listOnsiteLogs(pid){return DB._get('operation_db','onsite_logs').filter(r=>r.project_id===pid);},
     saveOnsiteLog(data){
       const rows=DB._get('operation_db','onsite_logs');

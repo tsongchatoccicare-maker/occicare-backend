@@ -287,7 +287,7 @@ function _loadCkl(pid){ try{ return JSON.parse(localStorage.getItem('ckl__'+pid)
     id?'แก้ไขข้อมูลลูกค้า':'เพิ่มลูกค้าใหม่', async () => {
       const co = document.getElementById('fc_co').value.trim();
       if(!co) return U.toast('กรุณาใส่ชื่อบริษัท','danger');
-      await DB.customer.saveCustomer({
+      DB.customer.saveCustomer({
         id:id||undefined,
         company_name: co,
         address:      document.getElementById('fc_addr').value.trim(),
@@ -594,7 +594,7 @@ window.EXT = {
         const answers={};
         for(let i=1;i<=7;i++) answers['q'+i]=getQ('ons_q'+i);
         // Save as onsite summary log
-        await DB.operation.saveOnsiteLog({
+        DB.operation.saveOnsiteLog({
           project_id: pid,
           station_code: 'REPORT',
           station_name: 'สรุปบันทึกงานออกหน่วย',
