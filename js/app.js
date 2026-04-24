@@ -1,19 +1,36 @@
 /* Mobile Checkup App v2 */
 /* ===== CONSTANTS ===== */
-const STATIONS=[
-  {code:'ST-01',name:'ลงทะเบียน'},{code:'ST-02',name:'ตรวจเพิ่ม'},{code:'ST-03',name:'ชั่งน้ำหนัก & วัดส่วนสูง'},
-  {code:'ST-04',name:'ซักประวัติ & วัดความดัน'},{code:'ST-05',name:'เจาะเลือด'},{code:'ST-06',name:'ฉีดวัคซีน'},
-  {code:'ST-07',name:'ปัสสาวะ/อุจจาระ'},{code:'ST-08',name:'สมรรถภาพการได้ยิน'},{code:'ST-09',name:'สมรรถภาพกล้ามเนื้อมือและแขน'},
-  {code:'ST-10',name:'สมรรถภาพกล้ามเนื้อขาและหลัง'},{code:'ST-11',name:'สมรรถภาพปอด'},{code:'ST-12',name:'คลื่นไฟฟ้าหัวใจ'},
-  {code:'ST-13',name:'ตรวจสายตาคอม/ตาบอดสี'},{code:'ST-14',name:'เอกซเรย์ Digital'},{code:'ST-15',name:'รันคิวแพทย์'},
-  {code:'ST-16',name:'แพทย์ผู้ตรวจ'},{code:'ST-17',name:'คืนเอกสาร'},{code:'ST-18',name:'อื่นๆ'}
+// STATIONS — ดึงจาก Config Stations (localStorage) ถ้ามี / ใช้ defaults ถ้าไม่มี
+const STATION_DEFAULTS=[
+  {code:'ST-01',name:'ลงทะเบียน',active:true},{code:'ST-02',name:'ตรวจเพิ่ม',active:true},{code:'ST-03',name:'ชั่งน้ำหนัก & วัดส่วนสูง',active:true},
+  {code:'ST-04',name:'ซักประวัติ & วัดความดัน',active:true},{code:'ST-05',name:'เจาะเลือด',active:true},{code:'ST-06',name:'ฉีดวัคซีน',active:true},
+  {code:'ST-07',name:'ปัสสาวะ/อุจจาระ',active:true},{code:'ST-08',name:'สมรรถภาพการได้ยิน',active:true},{code:'ST-09',name:'สมรรถภาพกล้ามเนื้อมือและแขน',active:true},
+  {code:'ST-10',name:'สมรรถภาพกล้ามเนื้อขาและหลัง',active:true},{code:'ST-11',name:'สมรรถภาพปอด',active:true},{code:'ST-12',name:'คลื่นไฟฟ้าหัวใจ',active:true},
+  {code:'ST-13',name:'ตรวจสายตาคอม/ตาบอดสี',active:true},{code:'ST-14',name:'เอกซเรย์ Digital',active:true},{code:'ST-15',name:'รันคิวแพทย์',active:true},
+  {code:'ST-16',name:'แพทย์ผู้ตรวจ',active:true},{code:'ST-17',name:'คืนเอกสาร',active:true},{code:'ST-18',name:'อื่นๆ',active:true},
+  {code:'ST-05A',name:'Tube Clot (เจาะเลือด)',active:true},{code:'ST-05B',name:'Tube CBC (เจาะเลือด)',active:true},{code:'ST-05C',name:'Tube FBS (เจาะเลือด)',active:true}
 ];
+// Getter ดึงจาก localStorage ถ้ามี ไม่มีใช้ defaults
+const _STATIONS_KEY='sys_stations_config';
+function getStations(){
+  try{const raw=localStorage.getItem(_STATIONS_KEY);if(raw){const arr=JSON.parse(raw);if(Array.isArray(arr)&&arr.length)return arr;}}catch{}
+  return STATION_DEFAULTS;
+}
+// STATIONS ใช้เป็น proxy เพื่อความเข้ากันได้ — ทุกครั้งที่เรียก .map/.filter จะดึงข้อมูลล่าสุด
+const STATIONS=new Proxy([],{
+  get(target,prop){const s=getStations();if(typeof s[prop]==='function')return s[prop].bind(s);return s[prop];},
+  has(target,key){return key in getStations();},
+  ownKeys(target){return Reflect.ownKeys(getStations());},
+  getOwnPropertyDescriptor(target,key){return Object.getOwnPropertyDescriptor(getStations(),key);}
+});
+// Tube stations auto-prompt เมื่อเลือก ST-05
+const TUBE_STATIONS=['ST-05A','ST-05B','ST-05C'];
 const JOB_TYPES=['ตรวจสุขภาพ','OS XRAY','ตรวจซ้ำ','เก็บอาหาร ตย','อบรม First Aid','Consult','อื่นๆ'];
 const VEHICLES=['รถยนต์กะบะขาว','รถยนต์กะบะทึบ','รถ Xray ขาว','รถ Xray เขียว','รถตรวจการได้ยิน','เช่ารถตู้'];
 const PROFESSIONS=['เจ้าหน้าที่','RN','MT','แพทย์','เจ้าหน้าที่ ใบ Cer','อื่นๆ'];
 const STAFF_TYPES=['ในองค์กร','Part-time','Out Source'];
 const STATUS_FLOW=['Prospect','Closed','Onsite','Lab','Report','Billing','Completed'];
-const MODULES={dashboard:'Dashboard',customers:'CRM',sales:'Sales',quotation:'ใบเสนอราคา',op_prep:'Operation-Prep',op_onsite:'Operation-Onsite',lab:'Lab',xray:'X-Ray',op_report:'รายงานสรุป',report:'Report',billing:'Billing',config:'Config'};
+const MODULES={dashboard:'Dashboard',customers:'CRM',sales:'Sales',quotation:'ใบเสนอราคา',op_prep:'Op-เตรียมงาน/ใบแจ้งงาน',op_onsite:'Op-Onsite',op_report:'Op-รายงานสรุปค่าใช้จ่าย',lab:'Lab & TAT',xray:'เอกซเรย์ X-ray',report:'Report ทีมทำผล',opd:'OPD — ตรวจครบ',billing:'Billing & Invoice',config:'Config ระบบ'};
 const QT_APPROVE_ROLES=['admin','sales']; // roles that can approve quotations
 
 /* ===== UTILS ===== */
@@ -28,7 +45,7 @@ const U={
   confirm:msg=>window.confirm(msg),
   esc:s=>String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
   sel:(opts,val,placeholder='-- เลือก --')=>`<option value="">${placeholder}</option>`+opts.map(o=>typeof o==='object'?`<option value="${o.v}" ${o.v==val?'selected':''}>${o.l}</option>`:`<option ${o==val?'selected':''}>${o}</option>`).join(''),
-  stationOpts:(val='')=>STATIONS.map(s=>`<option value="${s.code}" ${s.code==val?'selected':''}>${s.code} ${s.name}</option>`).join('')
+  stationOpts:(val='')=>getStations().filter(s=>s.active!==false||s.code===val).map(s=>`<option value="${s.code}" ${s.code==val?'selected':''}>${s.code} ${s.name}</option>`).join('')
 };
 
 /* ===== MODAL ===== */
@@ -56,7 +73,7 @@ const Router={
     if(!DB.auth.can('view',page)&&page!=='calendar'&&page!=='op_report'){U.toast('⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้','danger');return;}
     this.current=page;
     document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย'}[page]||page;
+    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station'}[page]||page;
     // Show loading indicator
     const content = document.getElementById('content');
     if(content) content.innerHTML = '<div class="empty" style="padding:60px"><div style="font-size:32px;margin-bottom:12px;opacity:.4">⏳</div><p style="color:var(--t-dim)">กำลังโหลด...</p></div>';
@@ -111,12 +128,15 @@ function buildNav(){
     {page:'xray',icon:'📡',label:'X-Ray — อ่านฟิล์ม',mod:'xray'},
     {section:'ทีมทำผล (Report)'},
     {page:'report',icon:'📄',label:'Report & Plan',mod:'report'},
+    {section:'OPD'},
+    {page:'opd',icon:'🏥',label:'OPD — ตรวจครบ',mod:'opd'},
     {section:'การเงิน'},
     {page:'billing',icon:'💰',label:'Billing & Invoice',mod:'billing'},
     {section:'ระบบ'},
     {page:'exam_config',icon:'🧪',label:'รายการตรวจ',mod:'config'},
     {page:'config',icon:'⚙',label:'ตั้งค่าระบบ',mod:'config'},
-    {page:'config_checklist',icon:'📋',label:'ตั้งค่า Checklist',mod:'config'}
+    {page:'config_checklist',icon:'📋',label:'ตั้งค่า Checklist',mod:'config'},
+    {page:'config_stations',icon:'🩺',label:'ตั้งค่า Station',mod:'config'}
   ];
   let html='';
   items.forEach(it=>{
@@ -277,8 +297,8 @@ Pages.xray={
       <div><h2>📡 X-Ray — อ่านฟิล์มและรายงานผล</h2><p>ติดตามความคืบหน้างาน X-Ray ต่อ Project</p></div>
     </div>
     <div class="card">
-      <div style="display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06)">
-        <div style="position:relative;flex:1">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="position:relative;flex:7">
           <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;opacity:.5">🔍</span>
           <input id="xr_search_val" placeholder="ค้นหา Project Code, บริษัท..." autocomplete="off"
             oninput="Pages.xray.render()"
@@ -286,7 +306,7 @@ Pages.xray={
             style="width:100%;padding:9px 12px 9px 34px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;font-family:'IBM Plex Sans Thai',sans-serif;outline:none"/>
         </div>
         <select id="xr_status_val" onchange="Pages.xray.render()"
-          style="padding:9px 12px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;min-width:130px">
+          style="flex:3;padding:9px 12px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff">
           <option value="">ทุกสถานะ</option>
           <option value="pending">กำลังดำเนินการ</option>
           <option value="complete">Complete</option>
@@ -330,24 +350,27 @@ Pages.xray={
       <div class="fw6">${U.esc(p?.project_code||'')} | ${U.esc(p?.company_name||'')}</div>
     </div>
     ${this._STEPS.map(s=>`
-    <div class="fr" style="margin-bottom:8px;align-items:center">
-      <label style="flex:1;font-size:13px;color:var(--t-body)">${s.label}</label>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="xr_${s.key}" ${meta[s.key]?'checked':''} style="width:16px;height:16px;accent-color:#0E9F6E"/>
-        <input type="date" id="xr_${s.key}_date" value="${meta[s.key+'_date']||''}"
-          style="padding:5px 8px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:var(--s-3);color:var(--t-bright);font-size:12px"/>
-      </div>
-    </div>`).join('')}
+    <label style="display:flex;align-items:center;gap:10px;padding:9px 13px;margin-bottom:6px;background:${meta[s.key]?'rgba(14,159,110,.08)':'var(--s-2,#172236)'};border:1.5px solid ${meta[s.key]?'rgba(14,159,110,.4)':'var(--b-1,rgba(255,255,255,.08))'};border-radius:8px;cursor:pointer;transition:all .15s">
+      <input type="checkbox" id="xr_${s.key}" ${meta[s.key]?'checked':''} style="width:17px;height:17px;accent-color:#0E9F6E;flex-shrink:0"/>
+      <span style="flex:1;font-size:13px;color:${meta[s.key]?'#6EE7B7':'var(--t-body,#C2CEDF)'};font-weight:${meta[s.key]?'600':'500'}">${meta[s.key]?'✅ ':''}${s.label}</span>
+    </label>`).join('')}
     <div class="fg mt2"><label>หมายเหตุ</label>
       <textarea id="xr_note" style="min-height:60px">${U.esc(meta.note||'')}</textarea>
     </div>`,
     `แก้ไขงาน X-Ray — ${p?.project_code||pid}`, async ()=>{
       const newMeta={project_id:pid};
+      const today=new Date().toISOString().substr(0,10);
       this._STEPS.forEach(s=>{
         const cb=document.getElementById('xr_'+s.key);
-        const dt=document.getElementById('xr_'+s.key+'_date');
-        newMeta[s.key]=cb?.checked?1:0;
-        if(cb?.checked&&dt?.value) newMeta[s.key+'_date']=dt.value;
+        const wasChecked=!!meta[s.key];
+        const nowChecked=!!cb?.checked;
+        newMeta[s.key]=nowChecked?1:0;
+        if(nowChecked){
+          // คงวันที่เดิมถ้าเคยติ๊ก, ใช้วันนี้ถ้าเพิ่งติ๊กใหม่
+          newMeta[s.key+'_date']=wasChecked?(meta[s.key+'_date']||today):today;
+        } else {
+          newMeta[s.key+'_date']=null;
+        }
       });
       newMeta.note=document.getElementById('xr_note')?.value||'';
       DB.xray.saveMeta(newMeta);
@@ -407,18 +430,26 @@ Pages.xray={
 Pages.op_report={
   _sq:'', _sd:'', _ss:'',
 
-  _calcJob(jo){
+  _calcJob(jo, selProfs){
+    // selProfs = array of profession strings to include, or null = ทั้งหมด
     const sts=DB.operation.listStations(jo.id);
     const eqs=DB.operation.listEquipments(jo.id);
-    // คิดเฉพาะ Part-time — ใช้ wage_per_day ใน station ถ้ามี ไม่งั้น fallback manpowerCost
     const mp=DB.manpowerCost.list();
-    const parttimeSts=sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part'));
+    // คิดเฉพาะ Part-time และกรองตาม selProfs (ถ้ามี)
+    const parttimeSts=sts.filter(s=>{
+      if(!s.staff_type||!s.staff_type.toLowerCase().includes('part')) return false;
+      if(selProfs&&selProfs.length&&!selProfs.includes(s.profession||'ไม่ระบุ')) return false;
+      return true;
+    });
     let laborCost=0;
     parttimeSts.forEach(s=>{
-      const wage=s.wage_per_day||(()=>{
+      // ใช้ wage_per_day จาก station ก่อน — ถ้าไม่ได้ตั้งค่าเลย (undefined/null) ถึง fallback
+      let wage=s.wage_per_day;
+      if(wage===undefined||wage===null||wage===''){
         const r=mp.find(m=>m.role===s.profession||m.role===s.staff_name);
-        return r?r.cost_per_day:0;
-      })();
+        wage=r?r.cost_per_day:0;
+      }
+      wage=parseFloat(wage)||0;
       laborCost+=wage*(s.staff_count||1);
     });
     const eqCost=eqs.reduce((sum,e)=>sum+(e.price||0),0);
@@ -521,7 +552,7 @@ Pages.op_report={
     const inOrgRows=sts.filter(s=>!s.staff_type||!s.staff_type.toLowerCase().includes('part'));
     let laborTotal=0;
     const ptTable=parttimeRows.map(s=>{
-      const wage=s.wage_per_day||(()=>{const r=mp.find(m=>m.role===s.profession);return r?r.cost_per_day:0;})();
+      const wage=(s.wage_per_day!==undefined&&s.wage_per_day!==null&&s.wage_per_day!=='')?parseFloat(s.wage_per_day)||0:(()=>{const r=mp.find(m=>m.role===s.profession);return r?r.cost_per_day:0;})();
       const cost=wage*(s.staff_count||1);
       laborTotal+=cost;
       return`<tr>
@@ -571,13 +602,37 @@ Pages.op_report={
     `รายงานค่าใช้จ่าย — ${p.project_code||''}`, null);
   },
 
+  _toggleAllProfs(checked){
+    document.querySelectorAll('.ex-prof-cb').forEach(cb=>{
+      cb.checked=checked;
+      Pages.op_report._updateProfStyle(cb);
+    });
+  },
+  _updateProfStyle(cb){
+    const lbl=cb.closest('label');
+    if(!lbl)return;
+    if(cb.checked){
+      lbl.style.borderColor='rgba(14,159,110,.35)';
+      lbl.style.background='rgba(14,159,110,.12)';
+      lbl.querySelector('span').style.color='#6EE7B7';
+    } else {
+      lbl.style.borderColor='rgba(255,255,255,.1)';
+      lbl.style.background='rgba(255,255,255,.04)';
+      lbl.querySelector('span').style.color='var(--t-muted)';
+    }
+    // Update "select all" checkbox
+    const all=document.querySelectorAll('.ex-prof-cb');
+    const allEl=document.getElementById('ex_prof_all');
+    if(allEl)allEl.checked=[...all].every(c=>c.checked);
+  },
+
   exportDialog(){
     const jos=DB.operation.listJobOrders();
     const projs=jos.map(jo=>{const p=DB.sales.getProject(jo.project_id)||{};return{id:jo.id,label:`${p.project_code||'-'} — ${p.company_name||jo.company_name||'-'} (${U.fmtD(p.onsite_date)})`,onsite_date:p.onsite_date||''};});
     const projOpts=projs.map(p=>`<option value="${p.id}">${U.esc(p.label)}</option>`).join('');
     Modal.open(`
     <div style="font-size:12px;font-weight:600;color:var(--t-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">เลือกรูปแบบ Export</div>
-    <div class="tabs" style="margin-bottom:16px">
+    <div class="tabs" style="margin-bottom:14px">
       <div class="tab active" onclick="switchTab(this,'ex_t1')">📅 ช่วงวันที่</div>
       <div class="tab" onclick="switchTab(this,'ex_t2')">📋 เลือก Project</div>
     </div>
@@ -595,22 +650,80 @@ Pages.op_report={
         </select>
       </div>
     </div>
-    <div class="divider"></div>
-    <div class="btn-grp" style="justify-content:center;gap:12px;padding-top:4px">
-      <button class="btn btn-pri" onclick="Pages.op_report._doExport('pdf')" style="min-width:130px">
+    <div class="divider" style="margin:12px 0 8px"></div>
+    <div style="font-size:12px;font-weight:600;color:var(--t-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏷️ เลือกประเภท (เลือกได้หลายประเภท)</div>
+    <div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:12px 14px">
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:8px;cursor:pointer">
+        <input type="checkbox" id="ex_type_all" checked
+          style="width:18px;height:18px;accent-color:#C9A84C;cursor:pointer;flex-shrink:0"
+          onchange="Pages.op_report._toggleAllTypes(this.checked)"/>
+        <span style="font-size:13px;font-weight:700;color:var(--c-gold-lt,#E2C46A)">เลือกทั้งหมด</span>
+      </label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;border:1.5px solid rgba(201,168,76,.35);background:rgba(201,168,76,.12);cursor:pointer;transition:all .18s" data-type-label="ในองค์กร">
+          <input type="checkbox" class="ex-type-cb" value="ในองค์กร" checked
+            style="width:16px;height:16px;accent-color:#C9A84C;cursor:pointer;flex-shrink:0"
+            onchange="Pages.op_report._updateTypeStyle(this)"/>
+          <span style="flex:1;font-size:12px;font-weight:600;color:var(--c-gold-lt,#E2C46A)">🏢 ในองค์กร</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;border:1.5px solid rgba(201,168,76,.35);background:rgba(201,168,76,.12);cursor:pointer;transition:all .18s" data-type-label="Part-time">
+          <input type="checkbox" class="ex-type-cb" value="Part-time" checked
+            style="width:16px;height:16px;accent-color:#C9A84C;cursor:pointer;flex-shrink:0"
+            onchange="Pages.op_report._updateTypeStyle(this)"/>
+          <span style="flex:1;font-size:12px;font-weight:600;color:var(--c-gold-lt,#E2C46A)">👥 Part-time</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;border:1.5px solid rgba(201,168,76,.35);background:rgba(201,168,76,.12);cursor:pointer;transition:all .18s" data-type-label="Out Source">
+          <input type="checkbox" class="ex-type-cb" value="Out Source" checked
+            style="width:16px;height:16px;accent-color:#C9A84C;cursor:pointer;flex-shrink:0"
+            onchange="Pages.op_report._updateTypeStyle(this)"/>
+          <span style="flex:1;font-size:12px;font-weight:600;color:var(--c-gold-lt,#E2C46A)">🌐 Out Source</span>
+        </label>
+      </div>
+    </div>
+    <div class="divider" style="margin:12px 0 8px"></div>
+    <div class="btn-grp" style="justify-content:center;gap:12px">
+      <button class="btn btn-pri" onclick="Pages.op_report._doExport('pdf')" style="min-width:140px">
         🖨️ Export PDF (A4)
       </button>
-      <button class="btn btn-out" onclick="Pages.op_report._doExport('csv')" style="min-width:130px">
+      <button class="btn btn-out" onclick="Pages.op_report._doExport('csv')" style="min-width:140px">
         📊 Export Excel (.csv)
       </button>
     </div>`,
     'Export รายงานสรุปค่าใช้จ่าย', null);
   },
 
+  _toggleAllTypes(checked){
+    document.querySelectorAll('.ex-type-cb').forEach(cb=>{cb.checked=checked;Pages.op_report._updateTypeStyle(cb);});
+  },
+  _updateTypeStyle(cb){
+    const lbl=cb.closest('label');
+    if(!lbl)return;
+    if(cb.checked){
+      lbl.style.borderColor='rgba(201,168,76,.35)';
+      lbl.style.background='rgba(201,168,76,.12)';
+      lbl.querySelector('span').style.color='var(--c-gold-lt,#E2C46A)';
+    } else {
+      lbl.style.borderColor='rgba(255,255,255,.1)';
+      lbl.style.background='rgba(255,255,255,.04)';
+      lbl.querySelector('span').style.color='var(--t-muted)';
+    }
+    const all=document.querySelectorAll('.ex-type-cb');
+    const allEl=document.getElementById('ex_type_all');
+    if(allEl)allEl.checked=[...all].every(c=>c.checked);
+  },
+
   _doExport(type){
-    const fromDate=document.getElementById('ex_from')?.value||'';
-    const toDate=document.getElementById('ex_to')?.value||'';
-    const selProj=document.getElementById('ex_proj')?.value||'';
+    // อ่านจาก tab ที่ active
+    const tab1=document.getElementById('ex_t1');
+    const tab2=document.getElementById('ex_t2');
+    const isDateTab=tab1&&tab1.classList.contains('active');
+    const isProjTab=tab2&&tab2.classList.contains('active');
+    const fromDate=(isDateTab&&document.getElementById('ex_from')?.value)||'';
+    const toDate=(isDateTab&&document.getElementById('ex_to')?.value)||'';
+    const selProj=(isProjTab&&document.getElementById('ex_proj')?.value)||'';
+    // เลือกประเภท (ในองค์กร / Part-time / Out Source)
+    const checkedTypes=[...document.querySelectorAll('.ex-type-cb:checked')];
+    const selTypes=checkedTypes.length>0?checkedTypes.map(c=>c.value):['ในองค์กร','Part-time','Out Source'];
     const jos=DB.operation.listJobOrders();
     let filtered=jos;
     if(selProj){
@@ -624,107 +737,144 @@ Pages.op_report={
         return true;
       });
     }
-    if(type==='pdf') this._exportPDF(filtered,fromDate,toDate);
-    else this._exportCSV(filtered,fromDate,toDate);
+    if(!filtered.length){U.toast('⚠ ไม่พบข้อมูลให้ Export — ลองปรับเงื่อนไข','warning');return;}
+    if(!selTypes.length){U.toast('⚠ กรุณาเลือกประเภทอย่างน้อย 1 รายการ','warning');return;}
+    if(type==='pdf') this._exportPDF(filtered,fromDate,toDate,selTypes);
+    else this._exportCSV(filtered,fromDate,toDate,selTypes);
   },
 
-  _exportCSV(jos,from,to){
-    let csv='﻿';
-    const title=from||to?`ช่วงวันที่ ${from||'-'} ถึง ${to||'-'}`:'ทุก Project';
-    csv+=`"รายงานสรุปค่าใช้จ่าย Operation — ${title}"
-`;
-    csv+=`"สร้างเมื่อ: ${new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})}"
+  // คำนวณค่าใช้จ่ายตามประเภท (array of staff_type filter)
+  _calcByTypes(jo,selTypes){
+    const sts=DB.operation.listStations(jo.id);
+    const eqs=DB.operation.listEquipments(jo.id);
+    const mp=DB.manpowerCost.list();
+    // Match staff_type with selected types (normalize case)
+    const matchType=(st)=>{
+      const t=(st||'').trim();
+      return selTypes.some(sel=>{
+        const s=sel.trim();
+        if(s==='Part-time')return t.toLowerCase().includes('part');
+        if(s==='Out Source')return t.toLowerCase().includes('out');
+        if(s==='ในองค์กร')return t==='ในองค์กร'||t.toLowerCase().includes('inhouse')||t.toLowerCase().includes('in-house');
+        return t===s;
+      });
+    };
+    const filteredSts=sts.filter(s=>matchType(s.staff_type));
+    let laborCost=0;
+    filteredSts.forEach(s=>{
+      let wage=s.wage_per_day;
+      if(wage===undefined||wage===null||wage===''){
+        const r=mp.find(m=>m.role===s.profession||m.role===s.staff_name);
+        wage=r?r.cost_per_day:0;
+      }
+      wage=parseFloat(wage)||0;
+      laborCost+=wage*(s.staff_count||1);
+    });
+    const eqCost=eqs.reduce((sum,e)=>sum+(e.price||0),0);
+    return{filteredSts,laborCost,eqCost,total:laborCost+eqCost};
+  },
 
-`;
-    csv+='Project Code,บริษัท,วันตรวจ,Part-time (คน),ค่าแรง (บาท),เช่าอุปกรณ์ (บาท),รวม (บาท),สถานะ\n';    let grand=0;
+  _exportCSV(jos,from,to,selTypes){
+    const title=from||to?`ช่วงวันที่ ${from||'-'} ถึง ${to||'-'}`:(jos.length===1?'Project เดียว':'ทุก Project');
+    const typeLabel=`ประเภท: ${selTypes.join(', ')}`;
+    let csv='\ufeff';
+    csv+=`"รายงานสรุปค่าใช้จ่าย Operation — ${title}"\n`;
+    csv+=`"${typeLabel}"\n`;
+    csv+=`"สร้างเมื่อ: ${new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})}"\n\n`;
+    csv+='Project Code,บริษัท,วันตรวจ,จำนวนคน,ค่าแรง (บาท),เช่าอุปกรณ์ (บาท),รวม (บาท),สถานะ\n';
+    let grand=0;
     jos.forEach(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const {parttimeSts,laborCost,eqCost,total}=this._calcJob(jo);
+      const {filteredSts,laborCost,eqCost,total}=this._calcByTypes(jo,selTypes);
       const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
       grand+=total;
-      csv+=`"${p.project_code||'-'}","${p.company_name||jo.company_name||'-'}","${p.onsite_date||'-'}",${parttimeSts.length},${laborCost},${eqCost},${total},"${isComplete?'Complete':'Onsite'}"
-`;
+      csv+=`"${p.project_code||'-'}","${(p.company_name||jo.company_name||'-').replace(/"/g,'""')}","${p.onsite_date||'-'}",${filteredSts.length},${laborCost},${eqCost},${total},"${isComplete?'Complete':'Onsite'}"\n`;
     });
-    csv+=`
-"รวมทั้งหมด",,,,,,"${grand}",""
-`;
-    // Detail rows
-    csv+='\n\"รายละเอียด Part-time ต่อ Project\"\n';
+    csv+=`\n"รวมทั้งหมด",,,,,,"${grand}",""\n`;
+    csv+='\n"รายละเอียดพนักงานแต่ละ Project"\n';
     csv+='Project,Station,วิชาชีพ,ชื่อ-สกุล,ประเภท,คน,ค่าแรง/วัน (บาท),รวม (บาท)\n';
+    const mp=DB.manpowerCost.list();
     jos.forEach(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const sts=DB.operation.listStations(jo.id);
-      const mp=DB.manpowerCost.list();
-      sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part')).forEach(s=>{
-        const wage=s.wage_per_day||(()=>{const r=mp.find(m=>m.role===s.profession);return r?r.cost_per_day:0;})();
-        csv+=`"${p.project_code||'-'}","${s.station_name}","${s.profession||'-'}","${s.staff_name||'-'}","${s.staff_type}",${s.staff_count},${wage},${wage*(s.staff_count||1)}
-`;
+      const {filteredSts}=this._calcByTypes(jo,selTypes);
+      filteredSts.forEach(s=>{
+        let wage=s.wage_per_day;
+        if(wage===undefined||wage===null||wage===''){const r=mp.find(m=>m.role===s.profession);wage=r?r.cost_per_day:0;}
+        wage=parseFloat(wage)||0;
+        csv+=`"${p.project_code||'-'}","${(s.station_name||'').replace(/"/g,'""')}","${s.profession||'-'}","${(s.staff_name||'-').replace(/"/g,'""')}","${s.staff_type||''}",${s.staff_count||1},${wage},${wage*(s.staff_count||1)}\n`;
       });
     });
-    const a=document.createElement('a');
-    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-    const fn=from?`Report_${from}_${to||'now'}.csv`:'Report_all.csv';
-    a.download=fn; a.click();
-    Modal.close(); U.toast('✅ Export Excel สำเร็จ');
+    try{
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download=from?`Report_${from}_${to||'now'}.csv`:(jos.length===1?`Report_${jos[0].id}.csv`:'Report_all.csv');
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      Modal.close();
+      U.toast(`✅ Export Excel สำเร็จ (${jos.length} งาน)`);
+    }catch(e){U.toast('❌ Export ผิดพลาด: '+e.message,'danger');console.error(e);}
   },
 
-  _exportPDF(jos,from,to){
+  _exportPDF(jos,from,to,selTypes){
     const mp=DB.manpowerCost.list();
-    const title=from||to?`ช่วงวันที่ ${from||'-'} ถึง ${to||'-'}`:'ทุก Project';
+    const TH='padding:5px 8px;border:1px solid #E5E7EB;font-weight:600;text-align:left';
+    const TD='padding:5px 8px;border:1px solid #E5E7EB';
+    const title=from||to?`ช่วงวันที่ ${from||'-'} ถึง ${to||'-'}`:(jos.length===1?'Project เดียว':'ทุก Project');
+    const typeLabel=`ประเภท: ${selTypes.join(', ')}`;
     const today=new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
     let grandTotal=0;
     const summaryRows=jos.map(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const {parttimeSts,laborCost,eqCost,total}=this._calcJob(jo);
+      const {filteredSts,laborCost,eqCost,total}=this._calcByTypes(jo,selTypes);
       grandTotal+=total;
       const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
       return`<tr>
         <td>${p.project_code||'-'}</td>
         <td>${p.company_name||jo.company_name||'-'}</td>
         <td style="text-align:center">${p.onsite_date||'-'}</td>
-        <td style="text-align:center">${parttimeSts.length}</td>
+        <td style="text-align:center">${filteredSts.length}</td>
         <td style="text-align:right">${U.fmt(laborCost)}</td>
         <td style="text-align:right">${U.fmt(eqCost)}</td>
         <td style="text-align:right;font-weight:700">${U.fmt(total)}</td>
         <td style="text-align:center"><span style="font-size:10px;padding:1px 6px;border-radius:3px;background:${isComplete?'#D1FAE5':'#FEF3C7'};color:${isComplete?'#065F46':'#92400E'}">${isComplete?'Complete':'Onsite'}</span></td>
       </tr>`;
     }).join('');
-    // Detail section
     let detailHTML='';
     jos.forEach(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const sts=DB.operation.listStations(jo.id);
+      const {filteredSts}=this._calcByTypes(jo,selTypes);
       const eqs=DB.operation.listEquipments(jo.id);
-      const ptSts=sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part'));
-      if(!ptSts.length&&!eqs.length)return;
+      if(!filteredSts.length&&!eqs.length)return;
       let labSum=0;
-      const ptRows=ptSts.map(s=>{
-        const wage=s.wage_per_day||(()=>{const r=mp.find(m=>m.role===s.profession);return r?r.cost_per_day:0;})();
+      const ptRows=filteredSts.map(s=>{
+        let wage=s.wage_per_day;
+        if(wage===undefined||wage===null||wage===''){const r=mp.find(m=>m.role===s.profession);wage=r?r.cost_per_day:0;}
+        wage=parseFloat(wage)||0;
         const cost=wage*(s.staff_count||1); labSum+=cost;
-        return`<tr><td>${s.station_name}</td><td>${s.profession||'-'}</td><td>${s.staff_name||'-'}</td><td style="text-align:center">${s.staff_count}</td><td style="text-align:right">${U.fmt(wage)}</td><td style="text-align:right">${U.fmt(cost)}</td></tr>`;
+        return`<tr><td>${s.station_name||'-'}</td><td>${s.profession||'-'}</td><td>${s.staff_name||'-'}</td><td style="text-align:center">${s.staff_type||'-'}</td><td style="text-align:center">${s.staff_count||1}</td><td style="text-align:right">${U.fmt(wage)}</td><td style="text-align:right">${U.fmt(cost)}</td></tr>`;
       }).join('');
       let eqSum=0;
-      const eqRows=eqs.map(e=>{eqSum+=(e.price||0);return`<tr><td colspan="4">${e.item_name}</td><td colspan="1" style="color:#6B7280">${e.remark||'-'}</td><td style="text-align:right">${U.fmt(e.price||0)}</td></tr>`;}).join('');
+      const eqRows=eqs.map(e=>{eqSum+=(e.price||0);return`<tr><td colspan="5">${e.item_name||'-'}</td><td style="color:#6B7280">${e.remark||'-'}</td><td style="text-align:right">${U.fmt(e.price||0)}</td></tr>`;}).join('');
       detailHTML+=`
       <div style="margin-top:12px;border:1px solid #E5E7EB;border-radius:6px;overflow:hidden;page-break-inside:avoid">
         <div style="background:#1E3A5F;color:#fff;padding:6px 12px;font-weight:700;font-size:12px;display:flex;justify-content:space-between">
           <span>${p.project_code||'-'} — ${p.company_name||'-'}</span>
           <span>วันตรวจ: ${p.onsite_date||'-'}</span>
         </div>
-        ${ptSts.length?`<table style="width:100%;border-collapse:collapse;font-size:11px">
-          <thead><tr style="background:#F3F4F6"><th style="${TH}">Station</th><th style="${TH}">วิชาชีพ</th><th style="${TH}">ชื่อ-สกุล</th><th style="${TH};text-align:center">คน</th><th style="${TH};text-align:right">ราคา/วัน</th><th style="${TH};text-align:right">รวม</th></tr></thead>
+        ${filteredSts.length?`<table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr style="background:#F3F4F6"><th style="${TH}">Station</th><th style="${TH}">วิชาชีพ</th><th style="${TH}">ชื่อ-สกุล</th><th style="${TH};text-align:center">ประเภท</th><th style="${TH};text-align:center">คน</th><th style="${TH};text-align:right">ราคา/วัน</th><th style="${TH};text-align:right">รวม</th></tr></thead>
           <tbody>${ptRows}</tbody>
-          <tfoot><tr style="background:#F9FAFB"><td colspan="5" style="${TD};font-weight:700">รวมค่าแรง</td><td style="${TD};text-align:right;font-weight:700">฿${U.fmt(labSum)}</td></tr></tfoot>
+          <tfoot><tr style="background:#F9FAFB"><td colspan="6" style="${TD};font-weight:700">รวมค่าแรง</td><td style="${TD};text-align:right;font-weight:700">฿${U.fmt(labSum)}</td></tr></tfoot>
         </table>`:''}
         ${eqs.length?`<table style="width:100%;border-collapse:collapse;font-size:11px;border-top:1px solid #E5E7EB">
-          <thead><tr style="background:#F3F4F6"><th colspan="4" style="${TH}">เช่าอุปกรณ์</th><th style="${TH}">หมายเหตุ</th><th style="${TH};text-align:right">ราคา</th></tr></thead>
+          <thead><tr style="background:#F3F4F6"><th colspan="5" style="${TH}">เช่าอุปกรณ์</th><th style="${TH}">หมายเหตุ</th><th style="${TH};text-align:right">ราคา</th></tr></thead>
           <tbody>${eqRows}</tbody>
-          <tfoot><tr style="background:#F9FAFB"><td colspan="5" style="${TD};font-weight:700">รวมค่าเช่า</td><td style="${TD};text-align:right;font-weight:700">฿${U.fmt(eqSum)}</td></tr></tfoot>
+          <tfoot><tr style="background:#F9FAFB"><td colspan="6" style="${TD};font-weight:700">รวมค่าเช่า</td><td style="${TD};text-align:right;font-weight:700">฿${U.fmt(eqSum)}</td></tr></tfoot>
         </table>`:''}
       </div>`;
     });
-    const TH='padding:5px 8px;border:1px solid #E5E7EB;font-weight:600;text-align:left';
-    const TD='padding:5px 8px;border:1px solid #E5E7EB';
     const html=`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">
     <title>รายงานค่าใช้จ่าย</title>
     <style>
@@ -741,6 +891,7 @@ Pages.op_report={
       <div>
         <div style="font-size:16px;font-weight:800;color:#1E3A5F">รายงานสรุปค่าใช้จ่าย — Operation</div>
         <div style="font-size:11px;color:#6B7280;margin-top:2px">${title}</div>
+        <div style="font-size:10px;color:#9CA3AF;margin-top:1px">${typeLabel}</div>
       </div>
       <div style="text-align:right;font-size:10px;color:#6B7280">
         <div>OcciCare Mobile Checkup</div>
@@ -748,20 +899,37 @@ Pages.op_report={
       </div>
     </div>
     <table>
-      <thead><tr><th>Project Code</th><th>บริษัท</th><th style="text-align:center">วันตรวจ</th><th style="text-align:center">Part-time</th><th style="text-align:right">ค่าแรง (฿)</th><th style="text-align:right">เช่าอุปกรณ์ (฿)</th><th style="text-align:right">รวม (฿)</th><th style="text-align:center">สถานะ</th></tr></thead>
+      <thead><tr><th>Project Code</th><th>บริษัท</th><th style="text-align:center">วันตรวจ</th><th style="text-align:center">จำนวนคน</th><th style="text-align:right">ค่าแรง (฿)</th><th style="text-align:right">เช่าอุปกรณ์ (฿)</th><th style="text-align:right">รวม (฿)</th><th style="text-align:center">สถานะ</th></tr></thead>
       <tbody>${summaryRows||'<tr><td colspan="8" style="text-align:center;padding:16px;color:#6B7280">ไม่พบข้อมูล</td></tr>'}</tbody>
       <tfoot><tr><td colspan="6" style="font-weight:800;font-size:13px">รวมทั้งหมด ${jos.length} งาน</td><td style="text-align:right;font-weight:800;font-size:14px">฿${U.fmt(grandTotal)}</td><td></td></tr></tfoot>
     </table>
     <div style="margin-top:16px;font-size:12px;font-weight:700;color:#1E3A5F;border-bottom:2px solid #1E3A5F;padding-bottom:4px;margin-bottom:8px">รายละเอียดค่าใช้จ่ายต่อ Project</div>
     ${detailHTML}
     <div class="total-box">
-      <span style="font-size:14px;font-weight:700">ยอดรวมทั้งสิ้น (Part-time + เช่าอุปกรณ์)</span>
+      <span style="font-size:14px;font-weight:700">ยอดรวมทั้งสิ้น (${selTypes.join(' + ')} + เช่าอุปกรณ์)</span>
       <span style="font-size:22px;font-weight:900">฿${U.fmt(grandTotal)}</span>
     </div>
     </body></html>`;
-    const w=window.open('','_blank','width=900,height=700');
-    if(w){w.document.write(html);w.document.close();setTimeout(()=>{w.print();},400);}
-    Modal.close(); U.toast('✅ เปิดหน้า PDF แล้ว กด Ctrl+P เพื่อพิมพ์');
+    try{
+      const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const oldFr=document.getElementById('pdf_print_frame');
+      if(oldFr)oldFr.remove();
+      const fr=document.createElement('iframe');
+      fr.id='pdf_print_frame';
+      fr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:none;visibility:hidden';
+      fr.src=url;
+      document.body.appendChild(fr);
+      fr.onload=()=>{
+        setTimeout(()=>{
+          try{fr.contentWindow.focus();fr.contentWindow.print();}
+          catch(e){const w=window.open(url,'_blank');if(!w)U.toast('⚠ กรุณาอนุญาต popup','warning');}
+          setTimeout(()=>URL.revokeObjectURL(url),60000);
+        },400);
+      };
+      Modal.close();
+      U.toast(`✅ เปิดหน้าพิมพ์ PDF (${jos.length} งาน)`);
+    }catch(e){U.toast('❌ Export PDF ผิดพลาด: '+e.message,'danger');console.error(e);}
   },
 };
 /* ── DASHBOARD ── */
@@ -775,7 +943,26 @@ Pages.dashboard={
   const prf=invs.reduce((s,i)=>s+(i.profit||0),0);
   const pend=invs.filter(i=>i.status==='Pending');
   const sc={};projs.forEach(p=>{sc[p.status]=(sc[p.status]||0)+1;});
-  let aHtml=alerts.map(a=>`<div class="ab ${a.type}">${a.msg}</div>`).join('');
+  let aHtml=alerts.length?`<div class="card mb4">
+    <div class="card-header">
+      <span class="card-title">🔔 ระบบแจ้งเตือน (${alerts.length})</span>
+      <div class="t-sm t-muted">รายการที่ต้องดำเนินการ</div>
+    </div>
+    <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+    ${alerts.map(a=>`<div class="ab ${a.type}" style="margin:0;border-radius:9px;border-left-width:4px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+          <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.08);white-space:nowrap">${a.category||a.type}</span>
+          <span class="fw6" style="font-size:13px">${a.title||a.msg}</span>
+        </div>
+        ${a.msg&&a.title?`<div style="font-size:12px;font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis">${a.msg}</div>`:''}
+        ${a.detail?`<div style="font-size:11px;color:var(--t-muted);margin-bottom:3px;line-height:1.5">${a.detail}</div>`:''}
+        ${a.action?`<div style="font-size:10px;font-weight:700;color:var(--c-gold-lt,#E2C46A)">📌 ${a.action}</div>`:''}
+      </div>
+      ${a.project_id?`<button class="btn btn-out btn-xs" onclick="(()=>{const p=DB.sales.getProject(${a.project_id});if(p){U.toast('Project: '+p.project_code);}})()" style="margin-left:6px;flex-shrink:0">ดู</button>`:''}
+    </div>`).join('')}
+    </div>
+  </div>`:'';
   const statusOpts=['all',...STATUS_FLOW].map(s=>`<option value="${s}" ${this._filter===s?'selected':''}>${s==='all'?'ทุกสถานะ':s}</option>`).join('');
   const filtered=this._filter==='all'?projs.slice().reverse():projs.slice().reverse().filter(p=>p.status===this._filter);
   // Build workflow cards
@@ -786,17 +973,29 @@ Pages.dashboard={
     const inv=DB.billing.getInvoice(p.id);
     const h=DB.sales.getHandover(p.id);
     const xrayData = DB.xray ? DB.xray.getMeta(p.id) : null;
-    const cklDone = 0;
+    const ckl = DB.checklist ? DB.checklist.getByProject(p.id) : {};
+    const cklDone = Object.keys(ckl).filter(k=>!k.endsWith('_note')&&ckl[k]).length;
+    const cklTotal = Pages.config_checklist ? Pages.config_checklist.getActive().length : 10;
     const steps=[
-      {icon:'💼',label:'Handover',done:!!h&&!!p.handover_sent,role:'Sales'},
+      {icon:'💼',label:'เวียนเอกสาร',done:!!h&&!!p.handover_sent,role:'Sales'},
       {icon:'📋',label:'ใบแจ้งงาน',done:!!jo&&jo.status!=='Draft',role:'Op'},
-      {icon:'✅',label:'Checklist',done:cklDone>=10,role:'Op'},
+      {icon:'✅',label:'Checklist',done:cklTotal>0&&cklDone>=cklTotal,role:'Op'},
       {icon:'🚑',label:'Onsite',done:p.status!=='Closed'&&p.status!=='Prospect',role:'Op'},
       {icon:'🔬',label:'ส่ง Lab',done:!!lp,role:'Lab'},
       {icon:'📡',label:'X-Ray',done:!!(xrayData&&xrayData.film_sent),role:'XRay'},
       {icon:'⏱',label:'TAT',done:lp?.status==='reported',role:'Lab'},
       {icon:'📄',label:'Set Plan',done:!!rp?.set_plan,role:'Report'},
       {icon:'📋',label:'ส่งผล',done:rp?.status==='sent',role:'Report'},
+      // OPD step — แสดงเฉพาะ Project ที่มีเก็บตก (missing>0) หรือลูกค้าเป็น Walkin
+      ...(()=>{
+        const logs=DB.operation.listOnsiteLogs(p.id);
+        const hasMissing=logs.some(l=>(l.missing||0)>0);
+        const cust=DB.customer.getCustomer(p.customer_id);
+        const isWalkin=cust&&(cust.job_type2==='Walkin'||cust.exam_location==='Walk in');
+        if(!hasMissing&&!isWalkin)return [];
+        const meta=(()=>{try{return JSON.parse(localStorage.getItem('opd_meta_'+p.id)||'null');}catch{return null;}})();
+        return [{icon:'🏥',label:'เก็บตก',done:!!(meta&&meta.exam_complete&&meta.doc_sent),role:'OPD'}];
+      })(),
       {icon:'💰',label:'Invoice',done:!!inv,role:'Billing'},
       {icon:'🏦',label:'ชำระแล้ว',done:inv?.status==='Paid',role:'Billing'},
     ];
@@ -808,9 +1007,12 @@ Pages.dashboard={
           <div style="font-size:15px;font-weight:700;color:var(--t-bright,#F0F4FA);margin-top:2px">${U.esc(p.company_name)}</div>
           <div style="font-size:12px;color:var(--t-muted,#7D92AB);margin-top:4px">📆 ${U.fmtD(p.onsite_date)} | ${(p.headcount||0).toLocaleString()} คน${daysLeft!==null&&daysLeft>=0&&daysLeft<=3?` | <span style="color:var(--warn);font-weight:700">⚠ อีก ${daysLeft} วัน</span>`:''}${p.due_date?` | กำหนดส่ง: ${U.fmtD(p.due_date)}`:''}</div>
         </div>
-        <div style="text-align:right">
-          ${U.badge(p.status)}
-          <div class="t-xs t-muted mt2">${steps.filter(s=>s.done).length}/${steps.length} ขั้นตอน</div>
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="text-align:right">
+            ${U.badge(p.status)}
+            <div class="t-xs t-muted mt2">${steps.filter(s=>s.done).length}/${steps.length} ขั้นตอน</div>
+          </div>
+          <button class="btn btn-gold btn-xs" onclick="event.stopPropagation();Pages.dashboard.viewOnsiteSummary(${p.id})" style="flex-shrink:0" title="สรุปยอด Onsite">📊 สรุปยอด</button>
         </div>
       </div>
       <div class="wf-steps">
@@ -868,6 +1070,83 @@ Pages.dashboard={
     </div>
     ${wfCardsHtml||`<div class="empty"><div class="icon">📋</div><p>ไม่พบ Project${this._filter!=='all'?` สถานะ "${this._filter}"`:''}  <button class="btn btn-out btn-sm" onclick="Pages.sales.addProject()">+ สร้างใหม่</button></p></div>`}
   </div>`;
+},
+viewOnsiteSummary(pid){
+  const p=DB.sales.getProject(pid);
+  if(!p){U.toast('ไม่พบข้อมูล Project','warning');return;}
+  const logs=DB.operation.listOnsiteLogs(pid);
+  const rpts=DB._get('operation_db','onsite_reports')||[];
+  const rpt=rpts.find(r=>r.project_id===pid);
+  const isComplete=['Lab','Report','Billing','Completed'].includes(p.status);
+  const totalExpected=logs.length?Math.max(...logs.map(l=>l.total_expected||0)):0;
+  const totalDone=logs.length?Math.max(...logs.map(l=>l.total_done||0)):0;
+  const totalMiss=logs.reduce((s,l)=>s+(l.missing||0),0);
+  const totalRef=logs.reduce((s,l)=>s+(l.refused||0),0);
+  const logRows=logs.map(l=>`<tr>
+    <td><span style="background:rgba(56,189,248,.15);color:#38BDF8;padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700">${l.station_code||'-'}</span></td>
+    <td class="fw6">${U.esc(l.station_name||'')}</td>
+    <td style="text-align:center">${l.total_expected||0}</td>
+    <td style="text-align:center;color:#6EE7B7;font-weight:700">${l.total_done||0}</td>
+    <td style="text-align:center;color:#FCD34D">${l.missing||0}</td>
+    <td style="text-align:center;color:#FCA5A5">${l.refused||0}</td>
+    <td style="color:var(--t-muted)">${U.esc(l.note||'-')}</td>
+  </tr>`).join('');
+  const qLabels=['อุปกรณ์ครบพร้อม','ออกเดินทางตรงเวลา','ถึงสถานที่ตรงเวลา','จัดสถานที่พร้อม','ประชุม Brief ก่อนเริ่ม','ความร่วมมือเจ้าหน้าที่','ไม่มีปัญหาหน้างาน'];
+  const qHtml=rpt?qLabels.map((lbl,i)=>{
+    const qKey=['q1_equip_ok','q2_depart_ok','q3_arrive_ok','q4_setup_ok','q5_brief_ok','q6_coop_ok','q7_issue_ok'][i];
+    const dKey=['q1_detail','q2_detail','q3_detail','q4_detail','q5_detail','q6_detail','q7_detail'][i];
+    const val=rpt[qKey];
+    return`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <span style="font-size:16px">${val===1?'✅':val===0?'❌':'➖'}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${lbl}</div>
+      ${rpt[dKey]?`<div style="font-size:12px;color:var(--t-muted);margin-top:2px">${U.esc(rpt[dKey])}</div>`:''}</div>
+    </div>`;
+  }).join(''):'<p style="color:var(--t-muted);font-size:13px">ยังไม่มีบันทึกงานออกหน่วย</p>';
+  Modal.open(`
+  <div class="ab info" style="margin-bottom:12px">
+    <div style="flex:1">
+      <div class="fw6" style="margin-bottom:3px">👁 โหมดดูอย่างเดียว (Read-only)</div>
+      <div class="t-sm">ข้อมูลนี้ไม่สามารถแก้ไขได้จากหน้า Dashboard — หากต้องการแก้ไข กรุณาไปที่หน้า Operation — Onsite</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;padding:10px 14px;background:var(--s-2,#172236);border-radius:9px">
+    <div>
+      <div class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${U.esc(p.project_code)}</div>
+      <div class="fw6" style="font-size:15px">${U.esc(p.company_name)}</div>
+      <div class="t-sm t-muted">${U.fmtD(p.onsite_date)} | ${(p.headcount||0).toLocaleString()} คน</div>
+    </div>
+    <div style="margin-left:auto">${isComplete?'<span class="badge b-closed">✅ Complete</span>':'<span class="badge b-onsite">🚑 Onsite</span>'}</div>
+  </div>
+  <div class="tabs" style="margin-bottom:12px">
+    <div class="tab active" onclick="switchTab(this,'dvs_t1')">สรุปยอด Station</div>
+    <div class="tab" onclick="switchTab(this,'dvs_t2')">บันทึกงานออกหน่วย</div>
+  </div>
+  <div id="dvs_t1" class="tp active">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+      <div style="background:var(--s-2,#172236);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--t-muted)">เป้าหมาย</div>
+        <div style="font-size:20px;font-weight:700">${totalExpected||(p.headcount||0)}</div>
+      </div>
+      <div style="background:var(--s-2,#172236);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--t-muted)">สำเร็จ</div>
+        <div style="font-size:20px;font-weight:700;color:#6EE7B7">${totalDone}</div>
+      </div>
+      <div style="background:var(--s-2,#172236);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--t-muted)">เก็บตก</div>
+        <div style="font-size:20px;font-weight:700;color:#FCD34D">${totalMiss}</div>
+      </div>
+      <div style="background:var(--s-2,#172236);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--t-muted)">ปฏิเสธ</div>
+        <div style="font-size:20px;font-weight:700;color:#FCA5A5">${totalRef}</div>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Code</th><th>Station</th><th style="text-align:center">เป้า</th><th style="text-align:center">สำเร็จ</th><th style="text-align:center">เก็บตก</th><th style="text-align:center">ปฏิเสธ</th><th>หมายเหตุ</th></tr></thead>
+      <tbody>${logRows||'<tr><td colspan="7" class="empty"><p style="color:var(--t-muted)">ยังไม่มีข้อมูล Station</p></td></tr>'}</tbody>
+    </table></div>
+  </div>
+  <div id="dvs_t2" class="tp">${qHtml}</div>`,
+  `👁 สรุปยอด Onsite — ${p.project_code}`, null, true);
 },
 filterStatus(s){this._filter=s;this._search='';this.render();},
 filterSearch(q){
@@ -953,6 +1232,20 @@ async edit(id){
   </div>
   <div class="fr">
     <div class="fg"><label>วันที่ติดต่อล่าสุด</label><input id="fc_lc" type="date" value="${f('last_contact')}"/></div>
+    <div class="fg"><label>ประเภทงาน 2</label>
+      <select id="fc_jt2">
+        <option value="" ${!c.job_type2?'selected':''}>-- เลือก --</option>
+        <option value="Mobile" ${c.job_type2==='Mobile'?'selected':''}>Mobile</option>
+        <option value="Walkin" ${c.job_type2==='Walkin'?'selected':''}>Walkin</option>
+      </select>
+    </div>
+    <div class="fg"><label>ตรวจที่</label>
+      <select id="fc_exloc">
+        <option value="" ${!c.exam_location?'selected':''}>-- เลือก --</option>
+        <option value="Mobile Checkup" ${c.exam_location==='Mobile Checkup'?'selected':''}>Mobile Checkup</option>
+        <option value="Walk in" ${c.exam_location==='Walk in'?'selected':''}>Walk in</option>
+      </select>
+    </div>
   </div>
   <div class="fg"><label>Note (บันทึกการคุย)</label><textarea id="fc_nt">${f('note')}</textarea></div>
   <div class="divider"></div>
@@ -979,6 +1272,8 @@ async edit(id){
       contact_role:document.getElementById('fc_cr').value.trim(),
       employee_count:parseInt(document.getElementById('fc_emp').value)||0,
       job_type:document.getElementById('fc_jt').value,
+      job_type2:document.getElementById('fc_jt2')?.value||'',
+      exam_location:document.getElementById('fc_exloc')?.value||'',
       sales_status:document.getElementById('fc_st').value,
       last_contact:document.getElementById('fc_lc').value,
       note:document.getElementById('fc_nt').value.trim(),
@@ -1508,11 +1803,30 @@ Pages.quotation={
 
   async closeWin(id){
     const q=DB.quotation.getQuotation(id);if(!q)return;
-    if(!U.confirm('ลูกค้าตกลงใช้บริการ — ปิดการขาย?'))return;
+    if(!U.confirm('ลูกค้าตกลงใช้บริการ — ปิดการขาย?\nระบบจะสร้าง Project + Job Order skeleton ให้อัตโนมัติ\nจะปรากฏในทุกทีม Operation/Lab/Report/Billing'))return;
     DB.quotation.saveQuotation({...q,status:'closed',closed_at:DB._now()});
     const c=DB.customer.getCustomer(q.customer_id);
     if(c&&c.sales_status!=='Closed')DB.customer.saveCustomer({...c,sales_status:'Closed',closed_at:DB._now()});
-    this.render();U.toast('🎉 ปิดการขายสำเร็จ!');
+    // ── Auto-create Project ที่ status='Closed' ให้ Role อื่นเห็นทันที ──
+    let proj=DB.sales.listProjects().find(p=>p.customer_id===q.customer_id&&p.status==='Closed'&&!DB.operation.getJobOrder(p.id));
+    if(!proj){
+      const items=DB.quotation.listItems(id);
+      const pkg=items.find(i=>i.type==='package')||items[0]||{};
+      proj=DB.sales.saveProject({
+        customer_id:q.customer_id,
+        company_name:q.company_name||(c?c.company_name:''),
+        quotation_id:id,
+        package_code:pkg.code||'',
+        package_name:pkg.name||'',
+        headcount:q.headcount||(c?c.employee_count:0)||0,
+        location:q.location||(c?c.address:'')||'',
+        status:'Closed',
+        created_by:DB.auth.session()?.name||'Sales',
+        handover_sent:0
+      });
+    }
+    U.toast('🎉 ปิดการขาย + สร้าง Project แล้ว! ทีม Operation เห็นแล้ว');
+    this.render();
     if(typeof NavBadges!=='undefined')NavBadges.update();
   },
 
@@ -1659,6 +1973,7 @@ async addProject(){
   </div>
   <div class="fr"><div class="fg"><label>เวลาเริ่ม</label><input id="sp_ts" type="time" value="07:00"/></div>
     <div class="fg"><label>เวลาสิ้นสุด</label><input id="sp_te" type="time" value="16:00"/></div>
+      <div class="fg"><label>วันที่สิ้นสุด</label><input id="sp_end" type="date"/></div>
   </div>
   <div class="fg"><label class="req">จำนวนคน</label><input id="ac_head" type="number"/></div>
   <div class="fg"><label class="req">สถานที่</label><input id="ac_loc" placeholder="ที่อยู่เต็ม"/></div>
@@ -1691,7 +2006,7 @@ async addProject(){
     if(!head||!date)return U.toast('กรุณากรอกข้อมูลให้ครบ','danger');
     const hwSent=document.getElementById('sp_hw')?.checked||false;
     const hwDate=document.getElementById('sp_hw_date')?.value||null;
-    const proj=DB.sales.saveProject({customer_id:cid,company_name:cust.company_name,headcount:head,onsite_date:date,due_date:due,onsite_time:document.getElementById('sp_ts').value,onsite_time_end:document.getElementById('sp_te').value,location:document.getElementById('ac_loc').value.trim(),coordinator_name:document.getElementById('ac_coord').value.trim(),coordinator_phone:document.getElementById('ac_cphone').value.trim(),status:'Closed',created_by:document.getElementById('sp_by').value.trim(),handover_sent:hwSent,handover_date:hwDate});
+    const proj=DB.sales.saveProject({customer_id:cid,company_name:cust.company_name,headcount:head,onsite_date:date,end_date:document.getElementById('sp_end')?.value||null,due_date:due,onsite_time:document.getElementById('sp_ts').value,onsite_time_end:document.getElementById('sp_te').value,location:document.getElementById('ac_loc').value.trim(),coordinator_name:document.getElementById('ac_coord').value.trim(),coordinator_phone:document.getElementById('ac_cphone').value.trim(),status:'Closed',created_by:document.getElementById('sp_by').value.trim(),handover_sent:hwSent,handover_date:hwDate});
     DB.sales.saveHandover({project_id:proj.id,conditions:document.getElementById('sp_cond').value.trim(),sent_at:DB._now()});
     Modal.close();this.render();U.toast(`✅ สร้าง Project ${proj.project_code} สำเร็จ`);
     if(typeof LineNotify!=='undefined')LineNotify.send(`📋 [MCK] สร้าง Project ใหม่\n${proj.project_code}\n🏢 ${cust.company_name}\n📆 วันตรวจ: ${proj.onsite_date}`);
@@ -1709,8 +2024,9 @@ _fillFromCust(cid){
 async editProject(id){
   const p=DB.sales.getProject(id);
   Modal.open(`<div class="fg"><label>Project Code</label><input value="${p.project_code}" disabled/></div>
-  <div class="fr"><div class="fg"><label>จำนวนคน</label><input id="ep_h" type="number" value="${p.headcount}"/></div>
-    <div class="fg"><label>วันตรวจ</label><input id="ep_d" type="date" value="${p.onsite_date}"/></div></div>
+  <div class="fr3"><div class="fg"><label>จำนวนคน</label><input id="ep_h" type="number" value="${p.headcount}"/></div>
+    <div class="fg"><label>วันตรวจ</label><input id="ep_d" type="date" value="${p.onsite_date}"/></div>
+    <div class="fg"><label>วันที่สิ้นสุด</label><input id="ep_end" type="date" value="${p.end_date||''}"/></div></div>
   <div class="fr"><div class="fg"><label>เวลาเริ่ม</label><input id="ep_ts" type="time" value="${p.onsite_time||'07:00'}"/></div>
     <div class="fg"><label>เวลาสิ้นสุด</label><input id="ep_te" type="time" value="${p.onsite_time_end||'16:00'}"/></div></div>
   <div class="fr"><div class="fg"><label>สถานที่</label><input id="ep_loc" value="${U.esc(p.location||'')}"/></div>
@@ -1732,7 +2048,7 @@ async editProject(id){
   'แก้ไข Project', async () => {
     const hwS=document.getElementById('ep_hw')?.checked||false;
     const hwD=document.getElementById('ep_hw_date')?.value||null;
-    DB.sales.saveProject({...p,headcount:parseInt(document.getElementById('ep_h').value)||p.headcount,onsite_date:document.getElementById('ep_d').value,onsite_time:document.getElementById('ep_ts').value,onsite_time_end:document.getElementById('ep_te').value,location:document.getElementById('ep_loc').value,due_date:document.getElementById('ep_due').value,coordinator_name:document.getElementById('ep_co').value,coordinator_phone:document.getElementById('ep_cp').value,handover_sent:hwS,handover_date:hwD});
+    DB.sales.saveProject({...p,headcount:parseInt(document.getElementById('ep_h').value)||p.headcount,onsite_date:document.getElementById('ep_d').value,end_date:document.getElementById('ep_end').value||null,onsite_time:document.getElementById('ep_ts').value,onsite_time_end:document.getElementById('ep_te').value,location:document.getElementById('ep_loc').value,due_date:document.getElementById('ep_due').value,coordinator_name:document.getElementById('ep_co').value,coordinator_phone:document.getElementById('ep_cp').value,handover_sent:hwS,handover_date:hwD});
     Modal.close();this.render();U.toast('✅ อัปเดต Project แล้ว');
   });
 },
@@ -1827,7 +2143,8 @@ _rmFile(fileId,pid){
 /* ── OP CHECKLIST (เตรียมงาน) ── */
 Pages.op_checklist={
   async render(){
-    const projs=DB.sales.listProjects();
+    // เฉพาะ Project ที่ปิดการขายแล้วและกำลังเตรียมงาน
+    const projs=DB.sales.listProjects().filter(p=>['Closed','Onsite','Lab','Report','Billing','Completed'].includes(p.status));
     const canEdit=DB.auth.can('edit','op_prep');
     const pOpts=`<option value="">-- เลือก Project --</option>`+projs.map(p=>`<option value="${p.id}">${p.project_code} — ${p.company_name} (${U.fmtD(p.onsite_date)})</option>`).join('');
     document.getElementById('content').innerHTML=`
@@ -1909,14 +2226,13 @@ Pages.op_checklist={
   _key(pid){return`ckl__${pid}`;},
   _load(pid){try{return JSON.parse(localStorage.getItem(this._key(pid))||'{}')}catch{return{};}},
   _save(pid,data){localStorage.setItem(this._key(pid),JSON.stringify(data));},
-  async toggle(pid,key,val){
-    // Auto-save immediately on tick — no need to press บันทึก
+  toggle(pid,key,val){
+    // Auto-save immediately on tick
     const noteEl=document.getElementById('ck_note_'+key);
-    const note=noteEl?noteEl.value:null;
-    // Save to SQL via API
-    const configItems2=Pages.config_checklist?await Pages.config_checklist.list():[];
-    const ci=configItems.find(c=>c.item_key===key)||{item_label:key,item_group:''};
-    DB.checklist.save(pid,key,ci.item_label||key,ci.item_group||'',val,note);
+    const note=noteEl?noteEl.value:'';
+    const configItems=Pages.config_checklist?Pages.config_checklist.list():[];
+    const ci=configItems.find(c=>c.key===key)||{label:key,group:''};
+    DB.checklist.save(pid,key,ci.label||key,ci.group||'',val,note);
     // update icon instantly
     const box=document.getElementById('ck_'+key)?.closest('div[style]');
     if(box){
@@ -1927,11 +2243,11 @@ Pages.op_checklist={
       box.lastElementChild.textContent=val?'✅':'⬜';
     }
     // update progress bar
-    const configItems=Pages.config_checklist?Pages.config_checklist.getActive():[];
-    const TOTAL=Math.max(configItems.length,10);
+    const cfgItems=Pages.config_checklist?Pages.config_checklist.getActive():[];
+    const TOTAL=Math.max(cfgItems.length,10);
     const d2=this._load(pid);
-    const done=configItems.length>0
-      ?configItems.filter(ci=>d2[ci.key]).length
+    const done=cfgItems.length>0
+      ?cfgItems.filter(ci=>d2[ci.key]).length
       :Object.keys(d2).filter(k=>!k.endsWith('_note')&&d2[k]).length;
     const pct=Math.round(done/TOTAL*100);
     const bar=document.querySelector('[style*="transition:width"]');
@@ -1988,15 +2304,33 @@ Pages.op_prep={
   currentJO:null,
   async render(){
     const jos=DB.operation.listJobOrders();
+    const allProjs=DB.sales.listProjects();
     const canAdd=DB.auth.can('add','op_prep'),canEdit=DB.auth.can('edit','op_prep'),canDel=DB.auth.can('delete','op_prep');
+    // ── 1) Project ที่ Closed แล้วแต่ยังไม่ได้สร้างใบแจ้งงาน ──
+    const pendingProjs=allProjs.filter(p=>['Closed','Onsite','Lab','Report','Billing','Completed'].includes(p.status)&&!jos.find(jo=>jo.project_id===p.id));
+    const pendingRows=pendingProjs.slice().reverse().map(p=>`<tr style="background:rgba(245,158,11,.05)">
+      <td class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${p.project_code||'-'}</td>
+      <td>${U.esc(p.company_name)}</td>
+      <td>${U.fmtD(p.onsite_date)}</td>
+      <td>${(p.headcount||0).toLocaleString()}</td>
+      <td>${U.badge(p.status)}</td>
+      <td><span class="badge b-draft" style="font-size:10px">⏳ ยังไม่สร้างใบแจ้งงาน</span></td>
+      <td>
+        ${canAdd?`<button class="btn btn-pri btn-xs" onclick="Pages.op_prep.createJOFromProject(${p.id})">+ สร้างใบแจ้งงาน</button>`:''}
+      </td>
+    </tr>`).join('');
+    // ── 2) Job Orders ที่สร้างแล้ว ──
     const rows=jos.slice().reverse().map(jo=>{
       const p=DB.sales.getProject(jo.project_id);
-      const ckl=JSON.parse(localStorage.getItem('ckl__'+jo.project_id)||'{}');
+      // อ่านจาก DB.checklist (ที่ Operation — เตรียมงาน บันทึกไว้)
+      const ckl=DB.checklist?DB.checklist.getByProject(jo.project_id):{};
       const cklDone=Object.keys(ckl).filter(k=>!k.endsWith('_note')&&ckl[k]).length;
-      const isReady=cklDone>=10&&(jo.status==='Confirmed'||jo.status==='Completed');
+      // ดึงจำนวนรายการ Active จาก Config Checklist
+      const totalCk=Pages.config_checklist?Pages.config_checklist.getActive().length:10;
+      const isReady=cklDone>=totalCk&&totalCk>0&&(jo.status==='Confirmed'||jo.status==='Completed');
       const readyBadge=isReady
         ?'<span class="badge b-completed" style="font-size:10px">✅ พร้อมออกหน่วย</span>'
-        :`<span class="badge b-draft" style="font-size:10px">Checklist ${cklDone}/10</span>`;
+        :`<span class="badge b-draft" style="font-size:10px">Checklist ${cklDone}/${totalCk}</span>`;
       return`<tr>
         <td class="fw6">${p?.project_code||'-'}</td>
         <td>${U.esc(jo.company_name)}</td>
@@ -2011,6 +2345,8 @@ Pages.op_prep={
         </td>
       </tr>`;
     }).join('');
+    // รวม pending rows ก่อน job orders
+    const allRows=pendingRows+rows;
     document.getElementById('content').innerHTML=`<div class="ph"><div><h2>📋 Operation — ใบแจ้งงาน</h2><p>สร้างและจัดการใบแจ้งงาน พร้อมพิมพ์ A4</p></div>${canAdd?`<button class="btn btn-pri" onclick="Pages.op_prep.createJO()">+ สร้างใบแจ้งงาน</button>`:''}</div>
     <div class="card">
       <div style="padding:14px 18px 14px;border-bottom:1px solid rgba(255,255,255,.06)">
@@ -2022,6 +2358,20 @@ Pages.op_prep={
       <div class="tbl-wrap"><table id="op_table"><thead><tr><th>Project</th><th>บริษัท</th><th>วันตรวจ</th><th>จำนวน</th><th>ใบแจ้งงาน</th><th>สถานะเตรียมงาน</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">ยังไม่มีใบแจ้งงาน</td></tr>'}</tbody></table></div>
     </div>`;
   },
+  createJOFromProject(pid){
+    // Auto-fill modal with project data and open createJO
+    setTimeout(()=>{
+      const sel=document.getElementById('cjo_p');
+      if(sel){
+        sel.value=pid;
+        if(typeof Pages.op_prep._fillFromProject==='function'){
+          Pages.op_prep._fillFromProject(pid);
+        }
+      }
+    },150);
+    this.createJO();
+  },
+
   async createJO(){
     const _all_projs_raw=DB.sales.listProjects();
     const projs=(_all_projs_raw||[]).filter(p=>['Closed','Onsite'].includes(p.status));
@@ -2074,11 +2424,14 @@ Pages.op_prep={
     <div class="fg"><label>Director</label><input id="jo_dir" value="${U.esc(jo.director||'')}"/></div>
     <div class="fg"><label>ประเภทงาน</label><select id="jo_jt">${U.sel(JOB_TYPES,jo.job_type||'ตรวจสุขภาพ')}</select></div></div>
   <div class="fr"><div class="fg"><label>กะทำงาน</label><input id="jo_sh" value="${U.esc(jo.shift||'')}"/></div>
-    <div class="fg"><label>หมายเหตุ</label><input id="jo_rm" value="${U.esc(jo.remark||'')}"/></div></div>`;},
+    <div class="fg"><label>หมายเหตุ</label><input id="jo_rm" value="${U.esc(jo.remark||'')}"/></div></div>
+  <div class="fg"><label>สถานะใบแจ้งงาน</label>
+    <select id="jo_status">${['Draft','Confirmed','Completed','Cancelled'].map(s=>`<option value="${s}" ${jo.status===s?'selected':''}>${s}</option>`).join('')}</select>
+  </div>`;},
   _signForm(jo){return`<div class="fr3"><div class="fg"><label>ผู้จัดทำ</label><input id="jo_s1" value="${U.esc(jo.signer_creator||'')}"/></div>
     <div class="fg"><label>หัวหน้าแผนก</label><input id="jo_s2" value="${U.esc(jo.signer_head||'')}"/></div>
     <div class="fg"><label>HR</label><input id="jo_s3" value="${U.esc(jo.signer_hr||'')}"/></div></div>`;},
-  _saveGeneral(jo){DB.operation.saveJobOrder({...jo,company_name:document.getElementById('jo_co')?.value||jo.company_name,onsite_date:document.getElementById('jo_dt')?.value||jo.onsite_date,location:document.getElementById('jo_loc')?.value||jo.location,headcount:parseInt(document.getElementById('jo_hc')?.value)||jo.headcount,depart_time:document.getElementById('jo_dep')?.value||jo.depart_time,start_time:document.getElementById('jo_st')?.value||jo.start_time,end_time:document.getElementById('jo_et')?.value||jo.end_time,director:document.getElementById('jo_dir')?.value||jo.director,job_type:document.getElementById('jo_jt')?.value||jo.job_type,shift:document.getElementById('jo_sh')?.value||jo.shift,remark:document.getElementById('jo_rm')?.value||jo.remark,status:'Confirmed'});},
+  _saveGeneral(jo){DB.operation.saveJobOrder({...jo,company_name:document.getElementById('jo_co')?.value||jo.company_name,onsite_date:document.getElementById('jo_dt')?.value||jo.onsite_date,location:document.getElementById('jo_loc')?.value||jo.location,headcount:parseInt(document.getElementById('jo_hc')?.value)||jo.headcount,depart_time:document.getElementById('jo_dep')?.value||jo.depart_time,start_time:document.getElementById('jo_st')?.value||jo.start_time,end_time:document.getElementById('jo_et')?.value||jo.end_time,director:document.getElementById('jo_dir')?.value||jo.director,job_type:document.getElementById('jo_jt')?.value||jo.job_type,shift:document.getElementById('jo_sh')?.value||jo.shift,remark:document.getElementById('jo_rm')?.value||jo.remark,status:document.getElementById('jo_status')?.value||jo.status||'Confirmed'});},
   _saveSign(jo){DB.operation.saveJobOrder({...DB.operation.getJobOrderById(jo.id),signer_creator:document.getElementById('jo_s1')?.value||jo.signer_creator,signer_head:document.getElementById('jo_s2')?.value||jo.signer_head,signer_hr:document.getElementById('jo_s3')?.value||jo.signer_hr});},
   _stationTable(joid){
     const sts=DB.operation.listStations(joid);
@@ -2154,9 +2507,90 @@ Pages.op_prep={
         wage_per_day:parseFloat(document.getElementById('as_wage').value)||0,
         remark:document.getElementById('as_rm').value,
       });
-      Modal.close();this.editJO(joid);U.toast('✅ เพิ่ม Station แล้ว');
+      Modal.close();
+      // ถ้าเป็น ST-05 เจาะเลือด — ถาม Tube เพิ่ม
+      if(stCode==='ST-05'){
+        setTimeout(()=>Pages.op_prep._promptTubes(joid),200);
+      } else {
+        this.editJO(joid);
+      }
+      U.toast('✅ เพิ่ม Station แล้ว');
     });
   },
+
+  _promptTubes(joid){
+    // แสดง modal ให้เลือก tube เพิ่ม (Clot, CBC, FBS, อื่นๆ)
+    Modal.open(`
+    <div class="ab info" style="margin-bottom:12px">
+      <div style="flex:1">
+        <div class="fw6" style="margin-bottom:3px">🩸 Station ST-05 เจาะเลือด</div>
+        <div class="t-sm">เลือก Tube ที่ใช้ในการเจาะเลือด (เลือกได้หลาย Tube)</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;border:1.5px solid rgba(201,168,76,.3);background:rgba(201,168,76,.08);cursor:pointer">
+        <input type="checkbox" class="tube-cb" value="ST-05A" style="width:17px;height:17px;accent-color:#C9A84C"/>
+        <span style="flex:1;font-weight:600;font-size:13px">🩸 Tube Clot</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;border:1.5px solid rgba(201,168,76,.3);background:rgba(201,168,76,.08);cursor:pointer">
+        <input type="checkbox" class="tube-cb" value="ST-05B" style="width:17px;height:17px;accent-color:#C9A84C"/>
+        <span style="flex:1;font-weight:600;font-size:13px">🔬 Tube CBC</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;border:1.5px solid rgba(201,168,76,.3);background:rgba(201,168,76,.08);cursor:pointer">
+        <input type="checkbox" class="tube-cb" value="ST-05C" style="width:17px;height:17px;accent-color:#C9A84C"/>
+        <span style="flex:1;font-weight:600;font-size:13px">💉 Tube FBS</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;border:1.5px solid rgba(201,168,76,.3);background:rgba(201,168,76,.08);cursor:pointer">
+        <input type="checkbox" id="tube_other_cb" style="width:17px;height:17px;accent-color:#C9A84C" onchange="document.getElementById('tube_other_wrap').style.display=this.checked?'block':'none'"/>
+        <span style="flex:1;font-weight:600;font-size:13px">➕ อื่นๆ (เพิ่ม Tube ใหม่)</span>
+      </label>
+    </div>
+    <div id="tube_other_wrap" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(201,168,76,.05);border-radius:8px;border:1px dashed rgba(201,168,76,.3)">
+      <div class="fg"><label>ชื่อ Tube ใหม่</label><input id="tube_other_name" placeholder="เช่น Tube EDTA"/></div>
+      <div class="t-xs t-muted">Tube ใหม่จะถูกเพิ่มเป็น Station เจาะเลือดอัตโนมัติ</div>
+    </div>
+    <div class="divider"></div>
+    <div class="fr"><div class="fg"><label>จำนวนคน (ทุก Tube)</label><input id="tube_cnt" type="number" value="1" min="1"/></div>
+      <div class="fg"><label>วิชาชีพ</label><select id="tube_prof">${U.sel(PROFESSIONS,'MT')}</select></div></div>
+    <div class="fr"><div class="fg"><label>ประเภท</label><select id="tube_type">${U.sel(STAFF_TYPES,'ในองค์กร')}</select></div>
+      <div class="fg"><label>ราคา/วัน (฿)</label><input id="tube_wage" type="number" value="0" min="0"/></div></div>`,
+    '🩸 เพิ่ม Tube สำหรับ ST-05',()=>{
+      const checkedTubes=[...document.querySelectorAll('.tube-cb:checked')].map(c=>c.value);
+      const otherCk=document.getElementById('tube_other_cb').checked;
+      const otherName=(document.getElementById('tube_other_name')?.value||'').trim();
+      if(!checkedTubes.length&&!(otherCk&&otherName)){
+        Modal.close();Pages.op_prep.editJO(joid);return;
+      }
+      const cnt=parseInt(document.getElementById('tube_cnt').value)||1;
+      const prof=document.getElementById('tube_prof').value;
+      const type=document.getElementById('tube_type').value;
+      const wage=parseFloat(document.getElementById('tube_wage').value)||0;
+      const sts=DB.operation.listStations(joid);
+      let nextNo=sts.length>0?Math.max(...sts.map(s=>s.order_no))+1:1;
+      // Add pre-defined tubes
+      checkedTubes.forEach(tubeCode=>{
+        const st=STATIONS.find(s=>s.code===tubeCode);
+        if(!st)return;
+        DB.operation.saveStation({
+          job_order_id:joid, order_no:nextNo++,
+          station_code:tubeCode, station_name:st.name,
+          staff_count:cnt, profession:prof, staff_name:'', staff_type:type, wage_per_day:wage, remark:''
+        });
+      });
+      // Add custom tube
+      if(otherCk&&otherName){
+        const customCode='ST-05Z'+Math.floor(Math.random()*1000);
+        DB.operation.saveStation({
+          job_order_id:joid, order_no:nextNo++,
+          station_code:customCode, station_name:otherName+' (เจาะเลือด)',
+          staff_count:cnt, profession:prof, staff_name:'', staff_type:type, wage_per_day:wage, remark:'Custom Tube'
+        });
+      }
+      Modal.close();Pages.op_prep.editJO(joid);
+      U.toast(`✅ เพิ่ม ${checkedTubes.length+(otherCk&&otherName?1:0)} Tube แล้ว`);
+    });
+  },
+
   editStation(sid,joid){
     const s=DB.operation.listStations(joid).find(x=>x.id===sid);
     if(!s)return;
@@ -2287,7 +2721,7 @@ Pages.op_prep={
     }
     const JO_CSS=`<style>
       .jo-print-doc{font-family:'Sarabun',sans-serif;color:#1A2332;font-size:13px;max-width:760px;margin:0 auto;}
-      .jo-doc-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:14px;border-bottom:3px solid #0D2137;}
+      .jo-doc-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;margin-bottom:10px;border-bottom:2px solid #0D2137;}
       .jo-doc-brand{display:flex;align-items:center;gap:12px;}
       .brand-mark{width:44px;height:44px;background:#0D2137;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;}
       .brand-text h1{font-size:15px;font-weight:700;color:#0D2137;margin-bottom:2px;}
@@ -2304,15 +2738,15 @@ Pages.op_prep={
       .jo-info-cell .val{font-size:12px;font-weight:600;color:#1A2332;}
       .jo-info-cell.highlight{background:#F0FDF4;border-color:#86EFAC;}
       .jo-info-cell.highlight .val{color:#065F46;}
-      .jo-table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11px;}
+      .jo-table{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10px;}
       .jo-table thead tr{background:#0D2137;}
-      .jo-table th{padding:8px 10px;font-size:9px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;text-align:left;border:none;}
-      .jo-table td{padding:8px 10px;border-bottom:1px solid #E4E9F0;vertical-align:middle;}
+      .jo-table th{padding:4px 7px;font-size:8.5px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.04em;text-align:left;border:none;}
+      .jo-table td{padding:4px 7px;border-bottom:1px solid #E4E9F0;vertical-align:middle;font-size:10px;line-height:1.3;}
       .jo-table tr:last-child td{border-bottom:none;}
       .jo-table tbody tr:nth-child(even) td{background:#F9FAFB;}
-      .jo-sign-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px;padding-top:14px;border-top:1px solid #E4E9F0;}
+      .jo-sign-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;padding-top:8px;border-top:1px solid #E4E9F0;page-break-inside:avoid;}
       .jo-sign-box{text-align:center;}
-      .sign-line{height:55px;border-bottom:1px solid #C8D0DC;margin-bottom:7px;}
+      .sign-line{height:38px;border-bottom:1px solid #C8D0DC;margin-bottom:4px;}
       .sign-label{font-size:10px;color:#8896A8;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
       .sign-name{font-size:11px;color:#1A2332;font-weight:600;margin-top:2px;}
       .jo-footer{margin-top:14px;padding-top:8px;border-top:1px solid #E4E9F0;display:flex;justify-content:space-between;font-size:9px;color:#B0BAC8;}
@@ -2336,14 +2770,19 @@ Pages.op_prep={
       </div>
       <div class="jo-section-title">ข้อมูลทั่วไป</div>
       <div class="jo-info-grid">
+        <!-- แถว 1: ชื่อบริษัท, วันที่ออกหน่วย, จำนวนพนักงาน -->
         <div class="jo-info-cell"><div class="lbl">ชื่อบริษัท / องค์กร</div><div class="val">${jo.company_name}</div></div>
         <div class="jo-info-cell highlight"><div class="lbl">วันที่ออกหน่วย</div><div class="val">${U.fmtD(jo.onsite_date)}</div></div>
-        <div class="jo-info-cell" style="grid-column:span 2"><div class="lbl">สถานที่</div><div class="val">${jo.location||'-'}</div></div>
         <div class="jo-info-cell"><div class="lbl">จำนวนพนักงาน</div><div class="val">${(jo.headcount||0).toLocaleString()} คน</div></div>
-        <div class="jo-info-cell"><div class="lbl">Director</div><div class="val">${jo.director||'-'}</div></div>
+        <!-- แถว 2: สถานที่ (เต็มแถว) -->
+        <div class="jo-info-cell" style="grid-column:span 3"><div class="lbl">สถานที่</div><div class="val">${jo.location||'-'}</div></div>
+        <!-- แถว 3: เวลาออกเดินทาง, เวลาเริ่ม-สิ้นสุด, กะทำงาน -->
         <div class="jo-info-cell"><div class="lbl">เวลาออกเดินทาง</div><div class="val">${jo.depart_time||'-'}</div></div>
-        <div class="jo-info-cell"><div class="lbl">เวลาเริ่มตรวจ — สิ้นสุด</div><div class="val">${jo.start_time||'-'} — ${jo.end_time||'-'}</div></div>
+        <div class="jo-info-cell"><div class="lbl">เวลาเริ่ม - สิ้นสุด</div><div class="val">${jo.start_time||'-'} - ${jo.end_time||'-'}</div></div>
         <div class="jo-info-cell"><div class="lbl">กะทำงาน</div><div class="val">${jo.shift||'-'}</div></div>
+        <!-- แถว 4: Director, ประเภทงาน, หมายเหตุ -->
+        <div class="jo-info-cell"><div class="lbl">Director</div><div class="val">${jo.director||'-'}</div></div>
+        <div class="jo-info-cell"><div class="lbl">ประเภทงาน</div><div class="val">${jo.job_type||'-'}</div></div>
         <div class="jo-info-cell"><div class="lbl">หมายเหตุ</div><div class="val">${jo.remark||'-'}</div></div>
       </div>
       <div class="jo-section-title">จุดตรวจ Station และอัตรากำลัง</div>
@@ -2356,11 +2795,7 @@ Pages.op_prep={
         <thead><tr><th>#</th><th>รายการ</th><th>ประเภท</th><th>ผู้รับผิดชอบ</th><th>เบอร์โทร</th><th>หมายเหตุ</th></tr></thead>
         <tbody>${vRows||'<tr><td colspan="6" style="text-align:center;padding:16px;color:#8896A8">ยังไม่มีรายการยานพาหนะ</td></tr>'}</tbody>
       </table>
-      ${eqRows.length?`<div class="jo-section-title">เช่าอุปกรณ์</div>
-      <table class="jo-table">
-        <thead><tr><th>รายการเช่าอุปกรณ์</th><th style="text-align:right">ราคาเช่า (฿)</th><th>หมายเหตุ</th></tr></thead>
-        <tbody>${eqRows}<tr><td colspan="2" style="text-align:right;font-weight:700;background:#f8fafc">รวมค่าเช่า</td><td style="text-align:right;font-weight:700">฿${U.fmt(eqTotal)}</td></tr></tbody>
-      </table>`:''}
+      
       <div class="jo-sign-section">
         <div class="jo-sign-box"><div class="sign-line"></div><div class="sign-label">ผู้จัดทำ</div><div class="sign-name">${jo.signer_creator||'..................................'}</div></div>
         <div class="jo-sign-box"><div class="sign-line"></div><div class="sign-label">หัวหน้าแผนก</div><div class="sign-name">${jo.signer_head||'..................................'}</div></div>
@@ -2380,23 +2815,23 @@ Pages.op_prep={
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Prompt:wght@600;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
     <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Sarabun',sans-serif;color:#1A2332;padding:24px;background:#fff;font-size:13px;}
-    .jo-print-doc{max-width:760px;margin:0 auto;}
+    body{font-family:'Sarabun',sans-serif;color:#1A2332;padding:12px;background:#fff;font-size:11.5px;}
+    .jo-print-doc{max-width:780px;margin:0 auto;}
     .jo-doc-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:14px;border-bottom:3px solid #0D2137;}
     .jo-doc-brand{display:flex;align-items:center;gap:12px;}
-    .brand-mark{width:44px;height:44px;background:#0D2137;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;}
-    .brand-text h1{font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:#0D2137;margin-bottom:2px;}
+    .brand-mark{width:36px;height:36px;background:#0D2137;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+    .brand-text h1{font-family:'Prompt',sans-serif;font-size:13px;font-weight:700;color:#0D2137;margin-bottom:1px;}
     .brand-text p{font-size:11px;color:#8896A8;}
     .jo-doc-meta{text-align:right;}
-    .doc-no{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;color:#0D2137;}
+    .doc-no{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:#0D2137;}
     .doc-date{font-size:10px;color:#8896A8;margin-top:2px;}
     .doc-badge{display:inline-block;margin-top:5px;padding:2px 12px;border-radius:20px;background:linear-gradient(90deg,#C9A84C,#E8C97A);color:#fff;font-size:10px;font-weight:700;}
-    .jo-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8896A8;margin:12px 0 7px;display:flex;align-items:center;gap:8px;}
+    .jo-section-title{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0D2137;margin:8px 0 4px;display:flex;align-items:center;gap:6px;}
     .jo-section-title::after{content:'';flex:1;height:1px;background:#E4E9F0;}
-    .jo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
-    .jo-info-cell{background:#F9FAFB;border-radius:6px;padding:7px 10px;border:1px solid #E4E9F0;}
-    .jo-info-cell .lbl{font-size:9px;font-weight:700;color:#8896A8;text-transform:uppercase;letter-spacing:.06em;}
-    .jo-info-cell .val{font-size:12px;font-weight:600;color:#1A2332;margin-top:1px;}
+    .jo-info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;}
+    .jo-info-cell{background:#F9FAFB;border-radius:5px;padding:5px 8px;border:1px solid #E4E9F0;}
+    .jo-info-cell .lbl{font-size:8.5px;font-weight:700;color:#8896A8;text-transform:uppercase;letter-spacing:.05em;}
+    .jo-info-cell .val{font-size:11.5px;font-weight:600;color:#1A2332;margin-top:1px;}
     .jo-info-cell.highlight{background:#F0FDF4;border-color:#86EFAC;}
     .jo-info-cell.highlight .val{color:#065F46;}
     .jo-table{width:100%;border-collapse:collapse;margin-bottom:8px;font-size:11px;}
@@ -2407,11 +2842,11 @@ Pages.op_prep={
     .jo-table tbody tr:nth-child(even) td{background:#F9FAFB;}
     .jo-sign-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px;padding-top:14px;border-top:1px solid #E4E9F0;}
     .jo-sign-box{text-align:center;}
-    .sign-line{height:55px;border-bottom:1px solid #C8D0DC;margin-bottom:7px;}
+    .sign-line{height:38px;border-bottom:1px solid #C8D0DC;margin-bottom:4px;}
     .sign-label{font-size:10px;color:#8896A8;font-weight:600;}
     .sign-name{font-size:11px;color:#1A2332;font-weight:600;margin-top:2px;}
     .jo-footer{margin-top:14px;padding-top:8px;border-top:1px solid #E4E9F0;display:flex;justify-content:space-between;font-size:9px;color:#B0BAC8;}
-    @media print{@page{size:A4;margin:15mm;} button{display:none!important;}}
+    @media print{@page{size:A4;margin:9mm 9mm 9mm 9mm;} button{display:none!important;} body{padding:0!important;font-size:10.5px!important;} .jo-table{page-break-inside:auto} .jo-table tr{page-break-inside:avoid;page-break-after:auto}}
     .no-print{display:flex;gap:8px;margin-bottom:16px;}
     .btn-p{padding:8px 18px;background:#0D2137;color:#fff;border:none;border-radius:7px;font-family:Sarabun,sans-serif;font-size:13px;cursor:pointer;}
     </style></head><body>
@@ -2428,7 +2863,7 @@ Pages.op_onsite={
     const projs=DB.sales.listProjects();
     const canAdd=DB.auth.can('add','op_onsite');
     // Build summary table of all onsite projects
-    const onsiteProjs=projs.filter(p=>DB.operation.listOnsiteLogs(p.id).length>0||['Onsite','Lab','Report','Billing','Completed'].includes(p.status));
+    const onsiteProjs=projs.filter(p=>DB.operation.listOnsiteLogs(p.id).length>0||['Closed','Onsite','Lab','Report','Billing','Completed'].includes(p.status));
     const summaryRows=onsiteProjs.map(p=>{
       const logs=DB.operation.listOnsiteLogs(p.id);
       const isComplete=p.status==='Lab'||p.status==='Report'||p.status==='Billing'||p.status==='Completed';
@@ -2476,7 +2911,10 @@ Pages.op_onsite={
     const logs=DB.operation.listOnsiteLogs(pid);
     const jo=DB.operation.getJobOrder(pid);
     const canAdd=DB.auth.can('add','op_onsite'),canDel=DB.auth.can('delete','op_onsite');
-    const totalDone=logs.reduce((s,l)=>s+(l.total_done||0),0);
+    // ตรวจสำเร็จ = นับจาก Station ลงทะเบียน (ST-01) เท่านั้น
+    // เป้าหมาย + สำเร็จ = นับจาก Station ที่มียอดมากสุด (ไม่บวกทุก station)
+    const totalExpected=logs.length?Math.max(...logs.map(l=>l.total_expected||0)):0;
+    const totalDone=logs.length?Math.max(...logs.map(l=>l.total_done||0)):0;
     const totalMiss=logs.reduce((s,l)=>s+(l.missing||0),0);
     const totalRef=logs.reduce((s,l)=>s+(l.refused||0),0);
     const pct=p.headcount>0?Math.round(totalDone/p.headcount*100):0;
@@ -2512,8 +2950,8 @@ Pages.op_onsite={
       <div class="card-header">
         <span class="card-title">📊 สรุปยอด — ${p.project_code} | ${p.company_name}</span>
         <div class="btn-grp">
-          ${canAdd?`<button class="btn btn-gold btn-sm" onclick="EXT.onsite.recordForm(${pid})">📝 บันทึกงานออกหน่วย</button>`:''}
           ${canAdd?`<button class="btn btn-pri btn-sm" onclick="Pages.op_onsite.addLog(${pid})">+ บันทึก Station</button>`:''}
+          ${canAdd?`<button class="btn btn-gold btn-sm" onclick="EXT.onsite.recordForm(${pid})">📝 บันทึกงานออกหน่วย</button>`:''}
           <button class="btn btn-out btn-sm" onclick="Pages.op_onsite.printSummary(${pid})">🖨 พิมพ์</button>
           <button class="btn btn-out btn-sm" onclick="Pages.op_onsite.exportCSV(${pid})">📥 Excel</button>
         </div>
@@ -2522,8 +2960,8 @@ Pages.op_onsite={
         <thead><tr><th>Code</th><th>Station</th><th style="text-align:center">เป้าหมาย</th><th style="text-align:center">สำเร็จ</th><th style="text-align:center">เก็บตก</th><th style="text-align:center">ปฏิเสธ</th><th>หมายเหตุ</th><th></th></tr></thead>
         <tbody>${logRows||'<tr><td colspan="8" class="empty"><div class="icon">📋</div><p>ยังไม่มีบันทึก กด "+ บันทึก Station"</p></td></tr>'}</tbody>
         ${logs.length>0?`<tfoot><tr>
-          <td colspan="2" class="fw6">รวมทั้งหมด</td>
-          <td class="fw6 t-center">${logs.reduce((s,l)=>s+l.total_expected,0)}</td>
+          <td colspan="2" class="fw6">รวมทั้งหมด (ยอดสูงสุด)</td>
+          <td class="fw6 t-center">${totalExpected}</td>
           <td class="fw6 t-center t-success">${totalDone}</td>
           <td class="fw6 t-center t-warn">${totalMiss}</td>
           <td class="fw6 t-center t-danger">${totalRef}</td>
@@ -2666,7 +3104,10 @@ Pages.op_onsite={
     const rpts=DB._get('operation_db','onsite_reports')||[];
     const rpt=rpts.find(r=>r.project_id===pid);
     const isComplete=['Lab','Report','Billing','Completed'].includes(p.status);
-    const totalDone=logs.reduce((s,l)=>s+(l.total_done||0),0);
+    // ตรวจสำเร็จ = นับจาก Station ลงทะเบียน (ST-01) เท่านั้น
+    // เป้าหมาย + สำเร็จ = นับจาก Station ที่มียอดมากสุด (ไม่บวกทุก station)
+    const totalExpected=logs.length?Math.max(...logs.map(l=>l.total_expected||0)):0;
+    const totalDone=logs.length?Math.max(...logs.map(l=>l.total_done||0)):0;
     const totalMiss=logs.reduce((s,l)=>s+(l.missing||0),0);
     const totalRef=logs.reduce((s,l)=>s+(l.refused||0),0);
     const pct=p.headcount>0?Math.round(totalDone/p.headcount*100):0;
@@ -2765,7 +3206,10 @@ Pages.op_onsite={
     const sgKey=`onsite_signer_${pid}`;
     let sg={};try{sg=JSON.parse(localStorage.getItem(sgKey)||'{}')}catch{}
     const totalExp=logs.reduce((s,l)=>s+l.total_expected,0);
-    const totalDone=logs.reduce((s,l)=>s+(l.total_done||0),0);
+    // ตรวจสำเร็จ = นับจาก Station ลงทะเบียน (ST-01) เท่านั้น
+    // เป้าหมาย + สำเร็จ = นับจาก Station ที่มียอดมากสุด (ไม่บวกทุก station)
+    const totalExpected=logs.length?Math.max(...logs.map(l=>l.total_expected||0)):0;
+    const totalDone=logs.length?Math.max(...logs.map(l=>l.total_done||0)):0;
     const totalMiss=logs.reduce((s,l)=>s+(l.missing||0),0);
     const totalRef=logs.reduce((s,l)=>s+(l.refused||0),0);
     const pct=p.headcount>0?Math.round(totalDone/p.headcount*100):0;
@@ -3058,6 +3502,18 @@ Pages.report={async render(){
     const sd=!!(rp.send_doc||meta.send_doc);     const sdd=rp.send_doc_date||meta.send_doc_date||'';
     const rr=!!(rp.receive_raw||meta.receive_raw); const rrd=rp.receive_raw_date||meta.receive_raw_date||'';
     const kr=!!(rp.key_raw||meta.key_raw);       const krd=rp.key_raw_date||meta.key_raw_date||'';
+    const ip=!!(rp.interpret||meta.interpret);   const ipd=rp.interpret_date||meta.interpret_date||'';
+    const bk=!!(rp.booklet||meta.booklet);       const bkd=rp.booklet_date||meta.booklet_date||'';
+    const rs=!!(rp.ready_to_send||meta.ready_to_send); const rsd=rp.ready_to_send_date||meta.ready_to_send_date||'';
+    // คำนวณสถานะ: ถ้าติ๊กครบทั้ง 7 ขั้น = Complete
+    const allDone=sp&&sd&&rr&&kr&&ip&&bk&&rs;
+    const statusBadge=allDone
+      ? '<span class="badge b-closed">✅ Complete</span>'
+      : U.badge(rp.status);
+    // SLA: ใช้ due_date จาก project แทน sla_deadline
+    const slaBadge=allDone
+      ? '<span class="badge b-closed">✅ เสร็จ</span>'
+      : U.tatBadge(p?.due_date||rp.sla_deadline);
     return`<tr>
       <td class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${p?.project_code||'-'}</td>
       <td class="fw6">${U.esc(p?.company_name||'-')}</td>
@@ -3068,12 +3524,14 @@ Pages.report={async render(){
       ${mkCk(rp.project_id,'send_doc','เวียนเอกสารแล้ว',sd,sdd)}
       ${mkCk(rp.project_id,'receive_raw','รับผลดิบแล้ว',rr,rrd)}
       ${mkCk(rp.project_id,'key_raw','คีย์ผลดิบแล้ว',kr,krd)}
-      <td>${U.tatBadge(rp.sla_deadline)}</td>
-      <td>${U.badge(rp.status)}</td>
+      ${mkCk(rp.project_id,'interpret','แปลผลแล้ว',ip,ipd)}
+      ${mkCk(rp.project_id,'booklet','ทำเล่มแล้ว',bk,bkd)}
+      ${mkCk(rp.project_id,'ready_to_send','พร้อมส่ง',rs,rsd)}
+      <td>${slaBadge}</td>
+      <td>${statusBadge}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-out btn-xs" onclick="Pages.report.viewPlan(${rp.project_id})">ดูแผน</button>
         ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.report.editPlan(${rp.id})">แก้ไข</button>`:''}
-        <button class="btn btn-out btn-xs" onclick="Pages.report.viewPatients(${rp.project_id})">รายชื่อ</button>
       </td>
     </tr>`;
   }).join('');
@@ -3082,7 +3540,7 @@ Pages.report={async render(){
     <div style="padding:12px 16px 0;display:flex;gap:8px;align-items:center">
       <input id="rp_search" placeholder="🔍 ค้นหา Project / บริษัท..." style="max-width:320px;padding:7px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;font-family:'Sarabun',sans-serif;outline:none" oninput="Pages.report._filterTable(this.value)"/>
     </div>
-    <div class="tbl-wrap"><table id="rp_table"><thead><tr><th>Project</th><th>บริษัท</th><th>จำนวน</th><th>วันตรวจ</th><th>กำหนดส่งผล</th><th style="text-align:center" title="Set Plan">Set Plan</th><th style="text-align:center" title="เวียนเอกสาร">เวียนเอกสาร</th><th style="text-align:center" title="รับผลดิบ">รับผลดิบ</th><th style="text-align:center" title="คีย์ผลดิบ">คีย์ผลดิบ</th><th>SLA</th><th>สถานะ</th><th></th></tr></thead><tbody id="rp_tbody">${rows||'<tr><td colspan="12" class="empty"><div class="icon">📋</div><p>ยังไม่มี Project Plan</p></td></tr>'}</tbody></table></div>
+    <div class="tbl-wrap"><table id="rp_table"><thead><tr><th>Project</th><th>บริษัท</th><th>จำนวน</th><th>วันตรวจ</th><th>กำหนดส่งผล</th><th style="text-align:center" title="Set Plan">Set Plan</th><th style="text-align:center" title="เวียนเอกสาร">เวียนเอกสาร</th><th style="text-align:center" title="รับผลดิบ">รับผลดิบ</th><th style="text-align:center" title="คีย์ผลดิบ">คีย์ผลดิบ</th><th style="text-align:center" title="แปลผล">แปลผล</th><th style="text-align:center" title="ทำเล่ม">ทำเล่ม</th><th style="text-align:center" title="รอส่ง">รอส่ง</th><th>SLA</th><th>สถานะ</th><th></th></tr></thead><tbody id="rp_tbody">${rows||'<tr><td colspan="15" class="empty"><div class="icon">📋</div><p>ยังไม่มี Project Plan</p></td></tr>'}</tbody></table></div>
   </div>`;
 },
 _toggleMeta(pid,key,val){
@@ -3123,20 +3581,18 @@ viewPlan(pid){
 async editPlan(id){
   const rp=DB.report.listPlans().find(r=>r.id===id);
   const meta=JSON.parse(localStorage.getItem('rp_meta_'+rp.project_id)||'{}');
-  const mkCk2=async (key,label) => {
+  const mkCk2=(key,label) => {
     const done=!!meta[key];
-    const dateVal=meta[key+'_date']||'';
     return`<label style="display:flex;align-items:center;gap:9px;padding:9px 13px;background:${done?'#F0FDF4':'var(--surf2)'};border:1.5px solid ${done?'#86EFAC':'var(--bdr)'};border-radius:9px;cursor:pointer;font-size:13px;transition:all .2s" id="ep2_lbl_${key}">
       <input type="checkbox" id="ep2_${key}" ${done?'checked':''} style="width:16px;height:16px;accent-color:var(--suc);flex-shrink:0"
-        onchange="(function(el,k){const p=el.closest('.mo-bd');const lbl=document.getElementById('ep2_lbl_'+k);const di=document.getElementById('ep2_date_'+k);if(el.checked){lbl.style.background='#F0FDF4';lbl.style.borderColor='#86EFAC';if(di&&!di.value)di.value=new Date().toISOString().substr(0,10);}else{lbl.style.background='var(--surf2)';lbl.style.borderColor='var(--bdr)';}})(this,'${key}')"/>
+        onchange="(function(el,k){const lbl=document.getElementById('ep2_lbl_'+k);if(el.checked){lbl.style.background='#F0FDF4';lbl.style.borderColor='#86EFAC';}else{lbl.style.background='var(--surf2)';lbl.style.borderColor='var(--bdr)';}})(this,'${key}')"/>
       <span style="flex:1;font-weight:${done?'600':'500'};color:${done?'var(--suc)':'var(--txt)'}">${done?'✅ ':''} ${label}</span>
-      <input type="date" id="ep2_date_${key}" value="${dateVal}" placeholder="วันที่" style="width:130px;padding:3px 8px;font-size:11px;border:1px solid var(--bdr);border-radius:6px;font-family:'Sarabun',sans-serif" onclick="event.stopPropagation()"/>
     </label>`;
   };
   Modal.open(`
   <div class="fr">
     <div class="fg"><label>ตรวจสอบโดย (Verify)</label><input id="rv_vf" value="${U.esc(rp.verified_by||'')}"/></div>
-    <div class="fg"><label>สถานะ</label><select id="rv_st">${U.sel(['pending','interpreting','reviewing','sent'],rp.status)}</select></div>
+    <div class="fg"><label>สถานะ</label><select id="rv_st">${U.sel([{v:'pending',l:'รอดำเนินการ'},{v:'interpreting',l:'กำลังแปลผล'},{v:'Booklet',l:'Booklet'},{v:'sent',l:'ส่งผลแล้ว'}],rp.status)}</select></div>
   </div>
   <div class="fr">
     <div class="fg"><label>TAT Deadline</label><input id="rv_tat" type="date" value="${rp.tat_deadline?rp.tat_deadline.substr(0,10):''}"/></div>
@@ -3146,10 +3602,13 @@ async editPlan(id){
   <div class="divider"></div>
   <div class="sec-title">ความคืบหน้า</div>
   <div class="g2" style="gap:8px">
-    ${await mkCk2('set_plan','✏️ Set Plan')}
-    ${await mkCk2('send_doc','📤 เวียนเอกสาร')}
-    ${await mkCk2('receive_raw','📥 รับผลดิบ')}
-    ${await mkCk2('key_raw','⌨️ คีย์ผลดิบ')}
+    ${mkCk2('set_plan','✏️ Set Plan')}
+    ${mkCk2('send_doc','📤 เวียนเอกสาร')}
+    ${mkCk2('receive_raw','📥 รับผลดิบ')}
+    ${mkCk2('key_raw','⌨️ คีย์ผลดิบ')}
+    ${mkCk2('interpret','🔬 แปลผล')}
+    ${mkCk2('booklet','📘 ทำเล่ม')}
+    ${mkCk2('ready_to_send','📦 รอส่ง')}
   </div>`,
   'แก้ไข Project Plan', async () => {
     const st=document.getElementById('rv_st').value;
@@ -3158,13 +3617,18 @@ async editPlan(id){
     DB.report.savePlan({...rp,verified_by:document.getElementById('rv_vf').value,status:st,tat_deadline:ta_d?new Date(ta_d).toISOString():rp.tat_deadline,sla_deadline:rv_d?new Date(rv_d).toISOString():rp.sla_deadline,sent_at:st==='sent'?(document.getElementById('rv_st_d').value?new Date(document.getElementById('rv_st_d').value).toISOString():DB._now()):rp.sent_at});
     if(st==='sent'){const p=DB.sales.getProject(rp.project_id);if(p)DB.sales.saveProject({...p,status:'Billing'});}
     const m=JSON.parse(localStorage.getItem('rp_meta_'+rp.project_id)||'{}');
-    ['set_plan','send_doc','receive_raw','key_raw'].forEach(k=>{
+    const today=new Date().toISOString().substr(0,10);
+    ['set_plan','send_doc','receive_raw','key_raw','interpret','booklet','ready_to_send'].forEach(k=>{
       const el=document.getElementById('ep2_'+k);
-      const de=document.getElementById('ep2_date_'+k);
       if(el){
+        const wasChecked=!!m[k];
         m[k]=el.checked;
-        if(el.checked){m[k+'_date']=de?.value||new Date().toISOString().substr(0,10);}
-        else{delete m[k+'_date'];}
+        if(el.checked){
+          // Keep existing date if was checked before, use today otherwise
+          m[k+'_date']=wasChecked?(m[k+'_date']||today):today;
+        } else {
+          delete m[k+'_date'];
+        }
       }
     });
     localStorage.setItem('rp_meta_'+rp.project_id,JSON.stringify(m));
@@ -3219,8 +3683,9 @@ Pages.config_checklist={
   ],
   _load(){try{return JSON.parse(localStorage.getItem(this._KEY)||'null')||this._defaults;}catch{return this._defaults;}},
   _save(items){localStorage.setItem(this._KEY,JSON.stringify(items));},
+  list(){return this._load();},
   async render(){
-    const items=await this.list();
+    const items=this.list();
     const canEdit=DB.auth.can('edit','config');
     const groups=[...new Set(items.map(i=>i.group))];
     let html=`<div class="ph"><div><h2>📋 ตั้งค่า Checklist เตรียมงาน</h2><p>กำหนดรายการที่จะแสดงใน Operation — เตรียมงาน (Checklist)</p></div>${canEdit?`<button class="btn btn-pri btn-sm" onclick="Pages.config_checklist.addItem()">+ เพิ่มรายการ</button>`:''}</div>
@@ -3301,9 +3766,336 @@ Pages.config_checklist={
     }
     U.toast(active?'✅ เปิดใช้งาน':'⬜ ปิดใช้งาน');
   },
-  async getActive(){const items=await this.list();return (items||[]).filter(i=>i.is_active!==false&&i.active!==false);}
+  getActive(){return (this.list()||[]).filter(i=>i.is_active!==false&&i.active!==false);}
 };
 
+
+
+
+/* ══════════════════════════════════════════════════
+   CONFIG STATIONS — ตั้งค่าจุดตรวจ Station
+   ข้อมูลที่ตั้งไว้จะแสดงใน Operation — ใบแจ้งงาน (เลือก Station)
+══════════════════════════════════════════════════ */
+Pages.config_stations={
+  _KEY:'sys_stations_config',
+  _defaults:STATION_DEFAULTS,
+  _load(){try{const raw=localStorage.getItem(this._KEY);if(raw){const arr=JSON.parse(raw);if(Array.isArray(arr)&&arr.length)return arr;}}catch{}return JSON.parse(JSON.stringify(this._defaults));},
+  _save(items){localStorage.setItem(this._KEY,JSON.stringify(items));},
+  list(){return this._load();},
+  getActive(){return this._load().filter(s=>s.active!==false);},
+
+  async render(){
+    const items=this.list();
+    const canEdit=DB.auth.can('edit','config');
+    const active=items.filter(s=>s.active!==false).length;
+    let html=`<div class="ph"><div><h2>🩺 ตั้งค่า Station</h2><p>กำหนดจุดตรวจทั้งหมดที่จะใช้ใน Operation — ใบแจ้งงาน</p></div>${canEdit?`<div class="btn-grp"><button class="btn btn-out btn-sm" onclick="Pages.config_stations.resetDefaults()">↻ รีเซ็ต Default</button><button class="btn btn-pri btn-sm" onclick="Pages.config_stations.addItem()">+ เพิ่ม Station</button></div>`:''}</div>
+    <div class="metrics-grid mb4">
+      <div class="metric-card acc"><div class="metric-label">Station ทั้งหมด</div><div class="metric-value">${items.length}</div></div>
+      <div class="metric-card suc"><div class="metric-label">เปิดใช้งาน</div><div class="metric-value">${active}</div></div>
+      <div class="metric-card warn"><div class="metric-label">ปิดใช้งาน</div><div class="metric-value">${items.length-active}</div></div>
+    </div>
+    <div class="ab info mb4">
+      <div style="flex:1">
+        <div class="fw6" style="margin-bottom:3px">📌 หมายเหตุ</div>
+        <div class="t-sm">Station ที่เปิดใช้งานเท่านั้นจะปรากฏในหน้า <strong>Operation — ใบแจ้งงาน</strong> เมื่อเพิ่ม Station ใหม่</div>
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">🩺 รายการจุดตรวจทั้งหมด</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th style="color:#fff">Code</th>
+          <th style="color:#fff">ชื่อจุดตรวจ</th>
+          <th style="color:#fff;text-align:center">เปิดใช้งาน</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+        ${items.map(s=>`<tr data-st="${s.code}" style="opacity:${s.active!==false?'1':'.5'};transition:opacity .2s">
+          <td><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:rgba(56,189,248,.15);color:#38BDF8;padding:2px 7px;border-radius:4px;font-weight:700">${U.esc(s.code)}</span></td>
+          <td class="fw6" style="color:var(--t-bright,#F0F4FA)">${U.esc(s.name)}</td>
+          <td style="text-align:center">
+            ${canEdit?`<label style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+              <input type="checkbox" ${s.active!==false?'checked':''} style="accent-color:#0E9F6E;width:17px;height:17px;cursor:pointer"
+                onchange="Pages.config_stations.toggleActive('${s.code}',this.checked)"/>
+            </label>`:(s.active!==false?'✅':'⬜')}
+          </td>
+          <td>
+            ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.config_stations.editItem('${s.code}')">แก้ไข</button>
+              <button class="btn btn-danger btn-xs" onclick="Pages.config_stations.delItem('${s.code}')">ลบ</button>`:''}
+          </td>
+        </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+    document.getElementById('content').innerHTML=html;
+  },
+
+  toggleActive(code,val){
+    const items=this._load();
+    const it=items.find(s=>s.code===code);
+    if(it)it.active=val;
+    this._save(items);
+    this.render();
+    U.toast(val?'✅ เปิดใช้งาน':'⬜ ปิดใช้งาน');
+  },
+
+  addItem(){
+    const items=this._load();
+    // Auto-generate next code
+    const codes=items.map(s=>s.code).filter(c=>/^ST-\d+$/.test(c));
+    const nums=codes.map(c=>parseInt(c.replace('ST-',''))||0);
+    const next=nums.length?Math.max(...nums)+1:1;
+    const nextCode='ST-'+String(next).padStart(2,'0');
+    Modal.open(`
+    <div class="ab info mb2"><div class="t-sm">Code จะถูกสร้างอัตโนมัติ หรือพิมพ์เองก็ได้ (ต้องไม่ซ้ำ)</div></div>
+    <div class="fr">
+      <div class="fg" style="max-width:140px"><label class="req">Code</label><input id="st_code" value="${nextCode}" placeholder="ST-XX"/></div>
+      <div class="fg"><label class="req">ชื่อจุดตรวจ</label><input id="st_name" placeholder="เช่น ตรวจหัวใจ Echo"/></div>
+    </div>`,
+    'เพิ่ม Station',()=>{
+      const code=(document.getElementById('st_code').value||'').trim().toUpperCase();
+      const name=(document.getElementById('st_name').value||'').trim();
+      if(!code||!name)return U.toast('กรุณาใส่ Code และชื่อจุดตรวจ','danger');
+      const existing=this._load();
+      if(existing.find(s=>s.code===code))return U.toast('Code นี้มีอยู่แล้ว','danger');
+      existing.push({code,name,active:true});
+      this._save(existing);
+      Modal.close();this.render();
+      U.toast('✅ เพิ่ม Station แล้ว');
+    });
+  },
+
+  editItem(code){
+    const items=this._load();
+    const s=items.find(x=>x.code===code);
+    if(!s)return;
+    Modal.open(`
+    <div class="fr">
+      <div class="fg" style="max-width:140px"><label>Code</label><input id="est_code" value="${U.esc(s.code)}" readonly style="opacity:.7;cursor:not-allowed"/></div>
+      <div class="fg"><label class="req">ชื่อจุดตรวจ</label><input id="est_name" value="${U.esc(s.name)}"/></div>
+    </div>
+    <div class="fg">
+      <label style="display:flex;align-items:center;gap:9px;padding:9px 13px;background:${s.active!==false?'#F0FDF4':'var(--s-2,#172236)'};border:1.5px solid ${s.active!==false?'#86EFAC':'var(--b-1,rgba(255,255,255,.1))'};border-radius:9px;cursor:pointer">
+        <input type="checkbox" id="est_active" ${s.active!==false?'checked':''} style="width:16px;height:16px;accent-color:#0E9F6E"/>
+        <span style="flex:1;font-weight:600">เปิดใช้งาน</span>
+      </label>
+    </div>`,
+    'แก้ไข Station',()=>{
+      const name=(document.getElementById('est_name').value||'').trim();
+      if(!name)return U.toast('กรุณาใส่ชื่อจุดตรวจ','danger');
+      const existing=this._load();
+      const it=existing.find(x=>x.code===code);
+      if(it){
+        it.name=name;
+        it.active=document.getElementById('est_active').checked;
+      }
+      this._save(existing);
+      Modal.close();this.render();
+      U.toast('✅ อัปเดตแล้ว');
+    });
+  },
+
+  delItem(code){
+    if(!U.confirm(`ลบ Station ${code}?\n\n⚠ Station ที่ถูกใช้ใน Job Order เดิมจะยังคงอยู่ แต่จะไม่สามารถเพิ่มใหม่ได้`))return;
+    const items=this._load().filter(s=>s.code!==code);
+    this._save(items);
+    this.render();
+    U.toast('✅ ลบแล้ว');
+  },
+
+  resetDefaults(){
+    if(!U.confirm('รีเซ็ตเป็น Default ทั้งหมด?\n\n⚠ การเปลี่ยนแปลงที่ตั้งไว้จะถูกลบทิ้ง'))return;
+    localStorage.removeItem(this._KEY);
+    this.render();
+    U.toast('✅ รีเซ็ตเป็น Default แล้ว');
+  }
+};
+
+/* ══════════════════════════════════════════════════
+   OPD PAGE — ตรวจครบ
+   แสดง Project ที่ (มีเก็บตก) หรือ (job_type2='Walkin')
+══════════════════════════════════════════════════ */
+Pages.opd={
+  _search:'', _status:'',
+  _STEPS:[
+    {key:'exam_complete',   label:'ตรวจครบแล้ว'},
+    {key:'doc_sent',        label:'ส่งเอกสารแล้ว'},
+  ],
+  _getMeta(pid){
+    try{return JSON.parse(localStorage.getItem('opd_meta_'+pid)||'null');}catch{return null;}
+  },
+  _saveMeta(pid,data){
+    localStorage.setItem('opd_meta_'+pid,JSON.stringify({...(this._getMeta(pid)||{}),...data}));
+  },
+  _statusLabel(meta){
+    if(!meta)return{label:'รอดำเนินการ',cls:'b-draft'};
+    if(meta.exam_complete&&meta.doc_sent)return{label:'✅ Complete',cls:'b-completed'};
+    if(meta.exam_complete&&!meta.doc_sent)return{label:'รอส่งเอกสาร',cls:'b-onsite'};
+    if(!meta.exam_complete&&meta.doc_sent)return{label:'รอตรวจครบ',cls:'b-onsite'};
+    return{label:'รอดำเนินการ',cls:'b-draft'};
+  },
+  toggleStep(pid,key,val){
+    const today=new Date().toISOString().substr(0,10);
+    const patch={};
+    patch[key]=val?true:false;
+    patch[key+'_date']=val?today:null;
+    this._saveMeta(pid,patch);
+    this.render();
+    U.toast(val?`✅ บันทึก — ${new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})}`:'↩ ยกเลิก');
+  },
+
+  render(){
+    const canEdit=DB.auth.can('edit','opd');
+    const allProjs=DB.sales.listProjects();
+    const custs=DB.customer.listCustomers();
+    // Filter: Project ที่ (มีเก็บตก > 0) OR (customer.job_type2 === 'Walkin')
+    const projs=allProjs.filter(p=>{
+      const logs=DB.operation.listOnsiteLogs(p.id);
+      const hasMissing=logs.some(l=>(l.missing||0)>0);
+      const cust=custs.find(c=>c.id===p.customer_id);
+      const isWalkin=cust&&(cust.job_type2==='Walkin'||cust.exam_location==='Walk in');
+      return hasMissing||isWalkin;
+    });
+
+    const sq=(this._search||'').toLowerCase().trim();
+    const statusF=this._status||'';
+    const filtered=projs.filter(p=>{
+      const txt=(p.project_code+' '+p.company_name).toLowerCase();
+      const txtMatch=!sq||txt.includes(sq);
+      const meta=this._getMeta(p.id);
+      const st=this._statusLabel(meta);
+      const stMatch=!statusF||(statusF==='complete'&&st.cls==='b-closed')||(statusF==='pending'&&st.cls!=='b-closed');
+      return txtMatch&&stMatch;
+    });
+
+    const mkCk=(pid,meta,key,label)=>{
+      const done=!!(meta&&meta[key]);
+      const dateVal=meta&&meta[key+'_date']||'';
+      if(done){
+        return`<td style="text-align:center;vertical-align:middle;padding:6px 4px">
+          <div style="display:inline-flex;flex-direction:column;align-items:center;gap:1px">
+            <span style="font-size:18px;cursor:${canEdit?'pointer':'default'}" ${canEdit?`onclick="Pages.opd.toggleStep(${pid},'${key}',false)" title="คลิกเพื่อยกเลิก"`:''}>✅</span>
+            ${dateVal?`<div style="font-size:9px;color:#6EE7B7;font-weight:600">${U.fmtD(dateVal)}</div>`:''}
+          </div>
+        </td>`;
+      }
+      return`<td style="text-align:center;vertical-align:middle;padding:6px 4px">
+        ${canEdit?`<input type="checkbox" style="width:18px;height:18px;accent-color:#0E9F6E;cursor:pointer" onchange="Pages.opd.toggleStep(${pid},'${key}',this.checked)" title="${label}"/>`:'<span style="color:var(--t-muted);font-size:16px">⬜</span>'}
+      </td>`;
+    };
+
+    const rows=filtered.map(p=>{
+      const meta=this._getMeta(p.id);
+      const st=this._statusLabel(meta);
+      const logs=DB.operation.listOnsiteLogs(p.id);
+      const missing=logs.reduce((s,l)=>s+(l.missing||0),0);
+      const cust=custs.find(c=>c.id===p.customer_id);
+      const isWalkin=cust&&cust.job_type2==='Walkin';
+      const reason=isWalkin?'<span class="badge b-lab" style="font-size:10px">Walkin</span>':`<span class="badge b-draft" style="font-size:10px">เก็บตก ${missing} คน</span>`;
+      return`<tr>
+        <td class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${p.project_code}</td>
+        <td class="fw6">${U.esc(p.company_name)}</td>
+        <td>${U.fmtD(p.onsite_date)}</td>
+        <td>${p.end_date?U.fmtD(p.end_date):'<span class="t-muted t-sm">-</span>'}</td>
+        <td>${reason}</td>
+        ${mkCk(p.id,meta,'exam_complete','ตรวจครบ')}
+        ${mkCk(p.id,meta,'doc_sent','ส่งเอกสาร')}
+        <td><span class="badge ${st.cls}" style="font-size:10px">${st.label}</span></td>
+        <td style="white-space:nowrap">
+          ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.opd.editMeta(${p.id})">แก้ไข</button>`:''}
+          ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.opd.attachFile(${p.id})">📎</button>`:''}
+          ${DB.auth.can('delete','opd')?`<button class="btn btn-danger btn-xs" onclick="Pages.opd.delMeta(${p.id})">ลบ</button>`:''}
+        </td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('content').innerHTML=`
+    <div class="ph">
+      <div><h2>🏥 OPD — ตรวจครบ</h2>
+      <p>Project ที่มีเก็บตกหรือ Walkin</p></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="position:relative;flex:7">
+          <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;opacity:.5">🔍</span>
+          <input value="${U.esc(this._search||'')}" placeholder="ค้นหา Project / บริษัท..." autocomplete="off"
+            oninput="Pages.opd._search=this.value;Pages.opd.render()"
+            style="width:100%;padding:9px 12px 9px 34px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;outline:none"/>
+        </div>
+        <select onchange="Pages.opd._status=this.value;Pages.opd.render()"
+          style="flex:3;padding:9px 12px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff">
+          <option value="">ทุกสถานะ</option>
+          <option value="pending" ${this._status==='pending'?'selected':''}>รอดำเนินการ</option>
+          <option value="complete" ${this._status==='complete'?'selected':''}>ตรวจครบ</option>
+        </select>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>Project</th><th>บริษัท</th><th>วันตรวจ</th><th>วันที่สิ้นสุด</th>
+          <th>เหตุผล</th>
+          <th style="text-align:center">ตรวจครบ</th>
+          <th style="text-align:center">ส่งเอกสาร</th>
+          <th>สถานะ</th><th></th>
+        </tr></thead>
+        <tbody>${rows||`<tr><td colspan="9" class="empty"><div class="icon">🏥</div><p>ไม่พบ Project ที่มีเก็บตกหรือ Walkin</p></td></tr>`}</tbody>
+      </table></div>
+    </div>`;
+  },
+
+  editMeta(pid){
+    const p=DB.sales.getProject(pid);
+    const meta=this._getMeta(pid)||{};
+    Modal.open(`
+    <div class="sr"><span>Project</span><span class="fw6">${p.project_code}</span></div>
+    <div class="sr"><span>บริษัท</span><span>${p.company_name}</span></div>
+    <div class="sr"><span>วันตรวจ</span><span>${U.fmtD(p.onsite_date)}</span></div>
+    <div class="sr"><span>วันที่สิ้นสุด</span><span>${p.end_date?U.fmtD(p.end_date):'-'}</span></div>
+    <div class="divider"></div>
+    <div class="sec-title">การดำเนินการ</div>
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${meta.exam_complete?'#F0FDF4':'var(--s-2,#172236)'};border:1.5px solid ${meta.exam_complete?'#86EFAC':'var(--b-1,rgba(255,255,255,.1))'};border-radius:9px;cursor:pointer;margin-bottom:8px;transition:all .15s">
+      <input type="checkbox" id="opd_ck" ${meta.exam_complete?'checked':''} style="width:17px;height:17px;accent-color:#0E9F6E;flex-shrink:0"/>
+      <span style="flex:1;font-weight:${meta.exam_complete?'600':'500'};color:${meta.exam_complete?'var(--c-suc)':'var(--t-bright)'}">${meta.exam_complete?'✅ ':''}ตรวจครบแล้ว</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${meta.doc_sent?'#F0FDF4':'var(--s-2,#172236)'};border:1.5px solid ${meta.doc_sent?'#86EFAC':'var(--b-1,rgba(255,255,255,.1))'};border-radius:9px;cursor:pointer;transition:all .15s">
+      <input type="checkbox" id="opd_ds" ${meta.doc_sent?'checked':''} style="width:17px;height:17px;accent-color:#0E9F6E;flex-shrink:0"/>
+      <span style="flex:1;font-weight:${meta.doc_sent?'600':'500'};color:${meta.doc_sent?'var(--c-suc)':'var(--t-bright)'}">${meta.doc_sent?'✅ ':''}ส่งเอกสารแล้ว</span>
+    </label>
+    <div class="fg" style="margin-top:12px"><label>หมายเหตุ</label><textarea id="opd_nt" style="min-height:60px">${U.esc(meta.note||'')}</textarea></div>`,
+    'แก้ไข — OPD', ()=>{
+      const ck=document.getElementById('opd_ck').checked;
+      const ds=document.getElementById('opd_ds').checked;
+      const nt=document.getElementById('opd_nt').value;
+      const today=new Date().toISOString().substr(0,10);
+      const wasExam=!!meta.exam_complete;
+      const wasDoc=!!meta.doc_sent;
+      this._saveMeta(pid,{
+        exam_complete:ck,
+        exam_complete_date:ck?(wasExam?(meta.exam_complete_date||today):today):null,
+        doc_sent:ds,
+        doc_sent_date:ds?(wasDoc?(meta.doc_sent_date||today):today):null,
+        note:nt
+      });
+      Modal.close();this.render();U.toast('✅ บันทึกแล้ว');
+    });
+  },
+
+  attachFile(pid){
+    const input=document.createElement('input');
+    input.type='file';input.multiple=true;
+    input.onchange=async e=>{
+      const files=e.target.files;if(!files.length)return;
+      if(typeof DB.files?.addFiles!=='function'){U.toast('⚠ ระบบไฟล์ไม่พร้อม','warning');return;}
+      await DB.files.addFiles('opd_'+pid,'opd_doc','เอกสาร OPD',files);
+      U.toast(`✅ แนบไฟล์ ${files.length} ไฟล์แล้ว`);
+    };
+    input.click();
+  },
+
+  delMeta(pid){
+    if(!U.confirm('ลบข้อมูล OPD ของ Project นี้?'))return;
+    localStorage.removeItem('opd_meta_'+pid);
+    this.render();U.toast('✅ ลบแล้ว');
+  }
+};
 
 Pages.billing={async render(){
   const invs=DB.billing.listInvoices();const canAdd=DB.auth.can('add','billing'),canEdit=DB.auth.can('edit','billing');
@@ -3660,11 +4452,16 @@ Pages.calendar={
       let evHtml='';
       evs.forEach(p=>{
         const c=this._getEventColor(p);
+        const jt=p.job_type||'-';
+        const jtShort=jt.length>10?jt.substr(0,10)+'…':jt;
+        const coShort=p.company_name.length>14?p.company_name.substr(0,14)+'…':p.company_name;
         evHtml+=`<div onclick="event.stopPropagation();Pages.calendar.openProj(${p.id})"
-          style="font-size:11px;padding:2px 6px;border-radius:5px;margin-bottom:2px;cursor:pointer;
-                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;line-height:1.5;
-                 background:${c}22;color:${c};border-left:3px solid ${c};">
-          ${p.company_name.length>14?p.company_name.substr(0,14)+'…':p.company_name}
+          style="font-size:11px;padding:3px 6px;border-radius:5px;margin-bottom:2px;cursor:pointer;
+                 white-space:nowrap;overflow:hidden;font-weight:600;line-height:1.4;
+                 background:${c}22;color:${c};border-left:3px solid ${c};"
+          title="${U.esc(p.company_name)} — ${U.esc(jt)}">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;opacity:.85">${jtShort}</div>
+          <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis">${coShort}</div>
         </div>`;
       });
       html+=`<div onclick="Pages.calendar.openDay('${ds}')"
@@ -3713,7 +4510,7 @@ Pages.calendar={
     const lp=DB.lab.getLabProject(p.id);
     const rp=DB.report.getPlan(p.id);
     const inv=DB.billing.getInvoice(p.id);
-    const col=this.STATUS_COLORS[p.status]||'#888';
+    const col=this._getEventColor(p);
     const dL=p.onsite_date?Math.ceil((new Date(p.onsite_date)-new Date())/86400000):null;
     const steps=[
       {l:'Handover',done:!!DB.sales.getHandover(p.id)&&!!p.handover_sent,icon:'💼'},
@@ -3992,11 +4789,6 @@ Pages.config={async render(){
     </tr>`;
   }).join('');
   document.getElementById('content').innerHTML=`<div class="ph"><h2>⚙ Config — ตั้งค่าระบบ</h2></div>
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab(this,'cfg_t1')">⚙ ระบบ</div>
-    <div class="tab" onclick="switchTab(this,'cfg_t2');Pages.config.renderExamItems()">🧪 รายการตรวจ</div>
-    <div class="tab" onclick="switchTab(this,'cfg_t3');Pages.config.renderManpower()">👥 ต้นทุนอัตรากำลัง</div>
-  </div>
   <div id="cfg_t1" class="tp active">
   <div class="g2 mb4">
     <div class="card"><div class="card-header"><span class="card-title">⏱ TAT & SLA Config</span>${canEditCfg?`<button class="btn btn-pri btn-sm" onclick="Pages.config.editTAT()">แก้ไข</button>`:''}</div>
@@ -4004,7 +4796,8 @@ Pages.config={async render(){
       <div class="sr"><span>TAT (> Threshold)</span><span class="fw6">${tat.large} วัน</span></div>
       <div class="sr"><span>Threshold จำนวนคน</span><span class="fw6">${(tat.threshold).toLocaleString()} คน</span></div>
       <div class="sr"><span>SLA หลัง TAT</span><span class="fw6">+${sla.days_after_tat} วัน</span></div>
-      <div class="sr"><span>แจ้งเตือนก่อนครบ</span><span class="fw6">${ad} วัน</span></div>
+      <div class="sr"><span>แจ้งเตือนก่อนครบ Lab/Report</span><span class="fw6">${ad} วัน</span></div>
+      <div class="sr"><span>📡 แจ้งเตือน X-Ray (วันหลังออกตรวจ)</span><span class="fw6 t-gold">${DB.config.getXrayAlertDays()} วัน</span></div>
     </div>
     <div class="card"><div class="card-header"><span class="card-title">🔑 สิทธิ์ตาม Role</span></div>
       <div class="tbl-wrap"><table><thead><tr><th>Role</th><th>Module</th><th></th></tr></thead><tbody>${rp}</tbody></table></div>
@@ -4014,31 +4807,45 @@ Pages.config={async render(){
     <div class="tbl-wrap"><table><thead><tr><th>Username</th><th>ชื่อ</th><th>Role</th><th>สถานะ</th><th></th></tr></thead><tbody>${uRows}</tbody></table></div>
   </div>
   </div><!-- end cfg_t1 -->
-  <div id="cfg_t2" class="tp">
-    <div class="empty"><div class="icon">🧪</div><p>คลิกแท็บ "รายการตรวจ" เพื่อโหลด</p></div>
-  </div>
-  <div id="cfg_t3" class="tp">
-    <div class="empty"><div class="icon">👥</div><p>คลิกแท็บ "ต้นทุนอัตรากำลัง" เพื่อโหลด</p></div>
-  </div>`;
+`;
 },
 editTAT(){
-  const tat=DB.config.getTAT(),sla=DB.config.getSLA(),ad=DB.config.getAlertDays();
-  Modal.open(`<div class="fr3"><div class="fg"><label>TAT (คนน้อย) วัน</label><input id="ct_s" type="number" value="${tat.small}"/></div>
+  const tat=DB.config.getTAT(),sla=DB.config.getSLA(),ad=DB.config.getAlertDays(),xa=DB.config.getXrayAlertDays();
+  Modal.open(`
+  <div class="sec-title">⏱ TAT & SLA</div>
+  <div class="fr3">
+    <div class="fg"><label>TAT (คนน้อย) วัน</label><input id="ct_s" type="number" value="${tat.small}"/></div>
     <div class="fg"><label>TAT (คนเยอะ) วัน</label><input id="ct_l" type="number" value="${tat.large}"/></div>
-    <div class="fg"><label>Threshold คน</label><input id="ct_th" type="number" value="${tat.threshold}"/></div></div>
-  <div class="fr"><div class="fg"><label>SLA หลัง TAT (วัน)</label><input id="ct_sla" type="number" value="${sla.days_after_tat}"/></div>
-    <div class="fg"><label>แจ้งเตือนก่อนครบ (วัน)</label><input id="ct_ad" type="number" value="${ad}"/></div></div>`,
-  'แก้ไข TAT & SLA',()=>{
+    <div class="fg"><label>Threshold คน</label><input id="ct_th" type="number" value="${tat.threshold}"/></div>
+  </div>
+  <div class="fr">
+    <div class="fg"><label>SLA หลัง TAT (วัน)</label><input id="ct_sla" type="number" value="${sla.days_after_tat}"/></div>
+    <div class="fg"><label>แจ้งเตือนก่อนครบ Lab/Report (วัน)</label><input id="ct_ad" type="number" value="${ad}"/></div>
+  </div>
+  <div class="divider"></div>
+  <div class="sec-title">📡 X-Ray Alert</div>
+  <div class="ab info" style="margin-bottom:10px">
+    แจ้งเตือนทีม X-Ray หากยังไม่ดำเนินการครบ ภายใน X วัน หลังจากวันออกหน่วย
+  </div>
+  <div class="fg" style="max-width:200px">
+    <label>แจ้งเตือนหลังออกตรวจ (วัน)</label>
+    <input id="ct_xray" type="number" value="${xa}" min="1"/>
+  </div>`,
+  'แก้ไข TAT & SLA & Alert',()=>{
     DB.config.setTAT({small:parseInt(document.getElementById('ct_s').value)||15,large:parseInt(document.getElementById('ct_l').value)||20,threshold:parseInt(document.getElementById('ct_th').value)||2000});
     DB.config.setSLA({days_after_tat:parseInt(document.getElementById('ct_sla').value)||7});
     DB.config.setAlertDays(parseInt(document.getElementById('ct_ad').value)||3);
+    DB.config.setXrayAlertDays(parseInt(document.getElementById('ct_xray').value)||7);
     Modal.close();this.render();U.toast('✅ บันทึก Config แล้ว');
   });
 },
 addUser(){this.editUser(null);},
 editUser(id){
   const u=id?DB.auth.getUser(id):{};
-  const rOpts=U.sel(['admin','sales','operation','lab','report','billing'].map(r=>({v:r,l:r})),u.role||'sales');
+  // ดึงรายชื่อ Role ทั้งหมดจาก DB (admin, sales, operation, lab, xray, report, opd, billing)
+  const allRoles=DB.auth.listRoles().map(r=>r.role);
+  const roleLabels={admin:'ผู้ดูแลระบบ (admin)',sales:'ทีมขาย (sales)',operation:'Operation (operation)',lab:'ห้องแล็บ (lab)',xray:'X-Ray (xray)',report:'ทีมทำผล (report)',opd:'OPD (opd)',billing:'การเงิน (billing)'};
+  const rOpts=U.sel(allRoles.map(r=>({v:r,l:roleLabels[r]||r})),u.role||'sales');
   Modal.open(`<div class="fr"><div class="fg"><label class="req">Username</label><input id="eu_un" value="${U.esc(u.username||'')}"/></div>
     <div class="fg"><label class="${id?'':'req'}">Password${id?' (เว้นว่างถ้าไม่เปลี่ยน)':''}</label><input id="eu_pw" type="password"/></div></div>
   <div class="fr"><div class="fg"><label class="req">ชื่อ-นามสกุล</label><input id="eu_nm" value="${U.esc(u.name||'')}"/></div>

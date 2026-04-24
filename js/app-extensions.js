@@ -528,25 +528,113 @@ window.EXT = {
   },
 
   onsite: {
+    // Toggle radio selection styling + show/hide detail textarea
+    selectAnswer(qid, value) {
+      const radios = document.getElementsByName(qid);
+      for (const r of radios) {
+        const lbl = r.closest('label');
+        if (!lbl) continue;
+        const txt = lbl.querySelector('.ons-txt');
+        if (r.checked) {
+          if (r.value === 'yes') {
+            lbl.style.background = 'rgba(14,159,110,.18)';
+            lbl.style.borderColor = 'rgba(14,159,110,.65)';
+            if (txt) { txt.style.color = '#6EE7B7'; txt.style.fontWeight = '700'; }
+          } else {
+            lbl.style.background = 'rgba(240,62,88,.14)';
+            lbl.style.borderColor = 'rgba(240,62,88,.5)';
+            if (txt) { txt.style.color = '#FCA5A5'; txt.style.fontWeight = '700'; }
+          }
+        } else {
+          if (r.value === 'yes') {
+            lbl.style.background = 'rgba(14,159,110,.06)';
+            lbl.style.borderColor = 'rgba(14,159,110,.3)';
+          } else {
+            lbl.style.background = 'rgba(240,62,88,.04)';
+            lbl.style.borderColor = 'rgba(240,62,88,.2)';
+          }
+          if (txt) { txt.style.color = 'var(--t-body,#C2CEDF)'; txt.style.fontWeight = '500'; }
+        }
+      }
+      // Show detail box when 'no' (bad answer), hide when 'yes'
+      const wrap = document.getElementById(qid + '_detail_wrap');
+      if (wrap) wrap.style.display = (value === 'no') ? 'block' : 'none';
+    },
+
     async recordForm(pid){
       if(!pid){ U.toast('กรุณาเลือก Project ก่อน','warning'); return; }
       const p = DB.sales.getProject(pid); if(!p){ U.toast('ไม่พบข้อมูล Project','warning'); return; }
       const jo = DB.operation.getJobOrder(pid);
       const sess = DB.auth.session();
+
+      // CLEANUP: ล้าง onsite_logs แถวเก่าที่ station_code='REPORT' (บันทึกผิดที่จาก version เก่า)
+      // และ migrate ข้อมูลเก่าไปยัง onsite_reports ถ้ายังไม่มี
+      const allLogs = DB._get('operation_db','onsite_logs')||[];
+      const oldReportRow = allLogs.find(l=>l.project_id===pid&&l.station_code==='REPORT');
+      if(oldReportRow){
+        const existingReports = DB._get('operation_db','onsite_reports')||[];
+        const hasNewReport = existingReports.find(r=>r.project_id===pid);
+        if(!hasNewReport){
+          // Migrate q1..q7 (yes/no strings) → q*_ok (1/0/null)
+          const toBool=(v)=>v==='yes'?1:(v==='no'?0:null);
+          existingReports.push({
+            id: DB._nextId('operation_db','onsite_reports'),
+            project_id: pid,
+            onsite_date: oldReportRow.onsite_date||p.onsite_date,
+            director: oldReportRow.director||'',
+            company_name: oldReportRow.company_name||p.company_name,
+            q1_equip_ok: toBool(oldReportRow.q1),  q1_detail: oldReportRow.q1_detail||'',
+            q2_depart_ok: toBool(oldReportRow.q2), q2_detail: oldReportRow.q2_detail||'',
+            q3_arrive_ok: toBool(oldReportRow.q3), q3_detail: oldReportRow.q3_detail||'',
+            q4_setup_ok: toBool(oldReportRow.q4),  q4_detail: oldReportRow.q4_detail||'',
+            q5_brief_ok: toBool(oldReportRow.q5),  q5_detail: oldReportRow.q5_detail||'',
+            q6_coop_ok: toBool(oldReportRow.q6),   q6_detail: oldReportRow.q6_detail||'',
+            q7_issue_ok: toBool(oldReportRow.q7),  q7_detail: oldReportRow.q7_detail||'',
+            note: oldReportRow.note||'',
+            recorded_by: oldReportRow.recorded_by||'-',
+            created_at: oldReportRow.created_at||DB._now(),
+            updated_at: DB._now()
+          });
+          DB._set('operation_db','onsite_reports',existingReports);
+        }
+        // ลบแถว REPORT จาก onsite_logs
+        DB._set('operation_db','onsite_logs',allLogs.filter(l=>!(l.project_id===pid&&l.station_code==='REPORT')));
+      }
+
+      // โหลดข้อมูลเดิม (ถ้ามี) มา pre-fill ฟอร์ม
+      const existingReport = (DB._get('operation_db','onsite_reports')||[]).find(r=>r.project_id===pid)||{};
+      const reverseBool=(b)=>b===1?'yes':(b===0?'no':'');
+      const prefill = {
+        dir: existingReport.director||jo?.director||'',
+        q1: reverseBool(existingReport.q1_equip_ok),  q1_d: existingReport.q1_detail||'',
+        q2: reverseBool(existingReport.q2_depart_ok), q2_d: existingReport.q2_detail||'',
+        q3: reverseBool(existingReport.q3_arrive_ok), q3_d: existingReport.q3_detail||'',
+        q4: reverseBool(existingReport.q4_setup_ok),  q4_d: existingReport.q4_detail||'',
+        q5: reverseBool(existingReport.q5_brief_ok),  q5_d: existingReport.q5_detail||'',
+        q6: reverseBool(existingReport.q6_coop_ok),   q6_d: existingReport.q6_detail||'',
+        q7: reverseBool(existingReport.q7_issue_ok),  q7_d: existingReport.q7_detail||'',
+        note: existingReport.note||''
+      };
       // conditional detail rows
-      const yesNo=(id,label,yesLbl,noLbl,detailLabel)=>`
-      <div style="margin-bottom:14px;padding:12px 14px;background:var(--s-2,#172236);border-radius:10px;border:1px solid rgba(255,255,255,.06)">
-        <div style="font-size:13px;font-weight:600;color:var(--t-bright,#F0F4FA);margin-bottom:10px">${label}</div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;color:var(--t-body,#C2CEDF)">
-            <input type="radio" name="${id}" value="yes" onclick="document.getElementById('${id}_detail_wrap').style.display='none'" style="accent-color:var(--c-suc,#0E9F6E)"/> ${yesLbl}
+      const yesNo=(id,label,yesLbl,noLbl,detailLabel,initVal,initDetail)=>`
+      <div style="margin-bottom:12px;padding:12px 14px;background:var(--s-2,#172236);border-radius:10px;border:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:12.5px;font-weight:600;color:var(--t-bright,#F0F4FA);margin-bottom:10px;line-height:1.45">${label}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label class="ons-opt" data-val="yes" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;border:1.5px solid rgba(14,159,110,.3);background:rgba(14,159,110,.06);cursor:pointer;transition:all .18s">
+            <input type="radio" name="${id}" value="yes" ${initVal==='yes'?'checked':''}
+              onclick="EXT.onsite.selectAnswer('${id}','yes')"
+              style="width:17px;height:17px;accent-color:#0E9F6E;cursor:pointer;flex-shrink:0"/>
+            <span class="ons-txt" style="flex:1;font-size:12.5px;color:var(--t-body,#C2CEDF);line-height:1.4">${yesLbl}</span>
           </label>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;color:var(--t-body,#C2CEDF)">
-            <input type="radio" name="${id}" value="no" onclick="document.getElementById('${id}_detail_wrap').style.display='block'" style="accent-color:var(--c-danger,#F03E58)"/> ${noLbl}
+          <label class="ons-opt" data-val="no" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;border:1.5px solid rgba(240,62,88,.2);background:rgba(240,62,88,.04);cursor:pointer;transition:all .18s">
+            <input type="radio" name="${id}" value="no" ${initVal==='no'?'checked':''}
+              onclick="EXT.onsite.selectAnswer('${id}','no')"
+              style="width:17px;height:17px;accent-color:#F03E58;cursor:pointer;flex-shrink:0"/>
+            <span class="ons-txt" style="flex:1;font-size:12.5px;color:var(--t-body,#C2CEDF);line-height:1.4">${noLbl}</span>
           </label>
         </div>
-        <div id="${id}_detail_wrap" style="display:none;margin-top:10px">
-          <textarea id="${id}_detail" placeholder="${detailLabel}" style="width:100%;padding:8px 10px;border:1.5px solid rgba(255,255,255,.1);border-radius:8px;font-size:12px;font-family:'IBM Plex Sans Thai',sans-serif;background:var(--s-3,#1D2B42);color:var(--t-bright,#F0F4FA);min-height:60px;resize:vertical"></textarea>
+        <div id="${id}_detail_wrap" style="display:${initVal==='no'?'block':'none'};margin-top:10px">
+          <textarea id="${id}_detail" placeholder="${detailLabel}" style="width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.1);border-radius:8px;font-size:12.5px;font-family:'IBM Plex Sans Thai',sans-serif;background:var(--s-3,#1D2B42);color:var(--t-bright,#F0F4FA);min-height:64px;resize:vertical;line-height:1.5">${U.esc(initDetail||'')}</textarea>
         </div>
       </div>`;
       Modal.open(`
@@ -562,22 +650,22 @@ window.EXT = {
       </div>
       <div class="fg">
         <label class="req">ชื่อ Director</label>
-        <input id="ons_dir" value="${U.esc(jo?.director||'')}"/>
+        <input id="ons_dir" value="${U.esc(prefill.dir)}"/>
       </div>
 
       <div class="sec-title" style="margin-top:8px">แบบฟอร์มบันทึกงานออกหน่วย</div>
 
-      ${yesNo('ons_q1','1. ปัญหาด้านการเตรียมพร้อมของอุปกรณ์สำหรับออกหน่วยตรวจสุขภาพในแต่ละจุด','1.1 ไม่มี','1.2 มี — ระบุรายละเอียด','ระบุรายละเอียดปัญหา...')}
-      ${yesNo('ons_q2','2. การเดินทางออกจากศูนย์ OcciCare ตรงกับเวลาที่ระบุไว้ในใบแจ้งงาน','2.1 ตรงเวลา','2.2 ไม่ตรงเวลา — ระบุเหตุผล','เหตุผลที่ไม่ตรงเวลา...')}
-      ${yesNo('ons_q3','3. เดินทางมาถึงสถานที่ตรวจสุขภาพตรงกับเวลาเข้าพื้นที่ที่ระบุไว้ในใบแจ้งงาน','3.1 ตรงเวลา / ก่อนเวลา','3.2 ไม่ตรงเวลา — ระบุเหตุผล','เหตุผลที่ไม่ตรงเวลา...')}
-      ${yesNo('ons_q4','4. จัดสถานที่ รวมถึงจุดตรวจแต่ละจุดจนพร้อมสำหรับตรวจสุขภาพ ก่อนเวลาเริ่มที่ระบุไว้ในใบแจ้งงาน','4.1 พร้อม','4.2 ไม่พร้อม — ระบุรายละเอียด','รายละเอียด...')}
-      ${yesNo('ons_q5','5. Director มีการ Morning Brief ก่อนเริ่มตรวจสุขภาพ','5.1 มี','5.2 ไม่มี — ระบุเหตุผล','เหตุผล...')}
-      ${yesNo('ons_q6','6. การให้ความร่วมมือของเจ้าหน้าที่ที่ออกหน่วยตรวจสุขภาพ (ช่วยยกของ ซัพพอร์ต เรียง และนับผลดิบ)','6.1 มี','6.2 ไม่มี — ระบุรายละเอียด','รายละเอียด...')}
-      ${yesNo('ons_q7','7. ปัญหาหน้างานระหว่างการปฏิบัติงานออกหน่วยตรวจสุขภาพเคลื่อนที่','7.1 ไม่มี','7.2 มี — ระบุรายละเอียด','รายละเอียดปัญหา...')}
+      ${yesNo('ons_q1','1. ปัญหาด้านการเตรียมพร้อมของอุปกรณ์สำหรับออกหน่วยตรวจสุขภาพในแต่ละจุด','1.1 ไม่มี','1.2 มี — ระบุรายละเอียด','ระบุรายละเอียดปัญหา...',prefill.q1,prefill.q1_d)}
+      ${yesNo('ons_q2','2. การเดินทางออกจากศูนย์ OcciCare ตรงกับเวลาที่ระบุไว้ในใบแจ้งงาน','2.1 ตรงเวลา','2.2 ไม่ตรงเวลา — ระบุเหตุผล','เหตุผลที่ไม่ตรงเวลา...',prefill.q2,prefill.q2_d)}
+      ${yesNo('ons_q3','3. เดินทางมาถึงสถานที่ตรวจสุขภาพตรงกับเวลาเข้าพื้นที่ที่ระบุไว้ในใบแจ้งงาน','3.1 ตรงเวลา / ก่อนเวลา','3.2 ไม่ตรงเวลา — ระบุเหตุผล','เหตุผลที่ไม่ตรงเวลา...',prefill.q3,prefill.q3_d)}
+      ${yesNo('ons_q4','4. จัดสถานที่ รวมถึงจุดตรวจแต่ละจุดจนพร้อมสำหรับตรวจสุขภาพ ก่อนเวลาเริ่มที่ระบุไว้ในใบแจ้งงาน','4.1 พร้อม','4.2 ไม่พร้อม — ระบุรายละเอียด','รายละเอียด...',prefill.q4,prefill.q4_d)}
+      ${yesNo('ons_q5','5. Director มีการ Morning Brief ก่อนเริ่มตรวจสุขภาพ','5.1 มี','5.2 ไม่มี — ระบุเหตุผล','เหตุผล...',prefill.q5,prefill.q5_d)}
+      ${yesNo('ons_q6','6. การให้ความร่วมมือของเจ้าหน้าที่ที่ออกหน่วยตรวจสุขภาพ (ช่วยยกของ ซัพพอร์ต เรียง และนับผลดิบ)','6.1 มี','6.2 ไม่มี — ระบุรายละเอียด','รายละเอียด...',prefill.q6,prefill.q6_d)}
+      ${yesNo('ons_q7','7. ปัญหาหน้างานระหว่างการปฏิบัติงานออกหน่วยตรวจสุขภาพเคลื่อนที่','7.1 ไม่มี','7.2 มี — ระบุรายละเอียด','รายละเอียดปัญหา...',prefill.q7,prefill.q7_d)}
 
       <div class="fg">
         <label>8. หมายเหตุ / อื่นๆ / เพิ่มเติม</label>
-        <textarea id="ons_q8" placeholder="บันทึกเพิ่มเติม..."></textarea>
+        <textarea id="ons_q8" placeholder="บันทึกเพิ่มเติม...">${U.esc(prefill.note)}</textarea>
       </div>
       <div class="fg">
         <label>บันทึกโดย</label>
@@ -593,24 +681,47 @@ window.EXT = {
         if(!dir)return U.toast('กรุณาใส่ชื่อ Director','danger');
         const answers={};
         for(let i=1;i<=7;i++) answers['q'+i]=getQ('ons_q'+i);
-        // Save as onsite summary log
-        DB.operation.saveOnsiteLog({
+        // Helper: 'yes'=1 (ok), 'no'=0 (problem), ''=null
+        const toBool=(v)=>v==='yes'?1:(v==='no'?0:null);
+
+        // บันทึกลงตาราง onsite_reports (แยกจาก onsite_logs เพื่อไม่ให้โชว์ในตารางสรุปยอด Station)
+        const rpts=DB._get('operation_db','onsite_reports')||[];
+        const existingIdx=rpts.findIndex(r=>r.project_id===pid);
+        const reportData={
           project_id: pid,
-          station_code: 'REPORT',
-          station_name: 'สรุปบันทึกงานออกหน่วย',
           onsite_date: p.onsite_date,
           director: dir,
           company_name: p.company_name,
-          q1: answers.q1.ans, q1_detail: answers.q1.detail,
-          q2: answers.q2.ans, q2_detail: answers.q2.detail,
-          q3: answers.q3.ans, q3_detail: answers.q3.detail,
-          q4: answers.q4.ans, q4_detail: answers.q4.detail,
-          q5: answers.q5.ans, q5_detail: answers.q5.detail,
-          q6: answers.q6.ans, q6_detail: answers.q6.detail,
-          q7: answers.q7.ans, q7_detail: answers.q7.detail,
+          // Match keys ที่ viewSummary อ่าน: q1_equip_ok, q2_depart_ok, ...
+          q1_equip_ok: toBool(answers.q1.ans),  q1_detail: answers.q1.detail,
+          q2_depart_ok: toBool(answers.q2.ans), q2_detail: answers.q2.detail,
+          q3_arrive_ok: toBool(answers.q3.ans), q3_detail: answers.q3.detail,
+          q4_setup_ok: toBool(answers.q4.ans),  q4_detail: answers.q4.detail,
+          q5_brief_ok: toBool(answers.q5.ans),  q5_detail: answers.q5.detail,
+          q6_coop_ok: toBool(answers.q6.ans),   q6_detail: answers.q6.detail,
+          q7_issue_ok: toBool(answers.q7.ans),  q7_detail: answers.q7.detail,
           note: document.getElementById('ons_q8').value,
           recorded_by: sess?.name||sess?.username||'-',
-        });
+          updated_at: DB._now()
+        };
+        if(existingIdx>=0){
+          // อัปเดตรายการเดิม (คง id และ created_at)
+          const old=rpts[existingIdx];
+          rpts[existingIdx]={...old,...reportData};
+        } else {
+          reportData.id=DB._nextId('operation_db','onsite_reports');
+          reportData.created_at=DB._now();
+          rpts.push(reportData);
+        }
+        DB._set('operation_db','onsite_reports',rpts);
+
+        // CLEANUP: ลบข้อมูลเก่าใน onsite_logs ที่ถูกบันทึกผิดที่ (station_code='REPORT')
+        const logs=DB._get('operation_db','onsite_logs')||[];
+        const cleanedLogs=logs.filter(l=>!(l.project_id===pid&&l.station_code==='REPORT'));
+        if(cleanedLogs.length!==logs.length){
+          DB._set('operation_db','onsite_logs',cleanedLogs);
+        }
+
         Modal.close();
         if(Pages.op_onsite?.loadProject) Pages.op_onsite.loadProject(pid);
         U.toast('✅ บันทึกงานออกหน่วยสำเร็จ');

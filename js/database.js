@@ -64,7 +64,9 @@ const DB={
     getSLA(){return this.get('sla',{days_after_tat:7});},
     setSLA(v){this.set('sla',v);},
     getAlertDays(){return this.get('alert_days',3);},
-    setAlertDays(v){this.set('alert_days',v);}
+    setAlertDays(v){this.set('alert_days',v);},
+    getXrayAlertDays(){return this.get('xray_alert_days',7);},
+    setXrayAlertDays(v){this.set('xray_alert_days',v);}
   },
 
   customer:{
@@ -313,6 +315,39 @@ const DB={
     },
   },
 
+  checklist:{
+    getByProject(pid){
+      const rows=DB._get('operation_db','checklists').filter(r=>r.project_id===pid);
+      const result={};
+      rows.forEach(r=>{
+        result[r.item_key]=!!r.is_done;
+        if(r.note)result[r.item_key+'_note']=r.note;
+      });
+      return result;
+    },
+    save(pid,itemKey,itemLabel,itemGroup,isDone,note){
+      const rows=DB._get('operation_db','checklists');
+      const existing=rows.find(r=>r.project_id===pid&&r.item_key===itemKey);
+      if(existing){
+        existing.is_done=isDone?1:0;
+        existing.item_label=itemLabel;
+        existing.item_group=itemGroup;
+        existing.note=note||'';
+        existing.done_at=isDone?DB._now():null;
+        existing.updated_at=DB._now();
+      } else {
+        rows.push({
+          id:DB._nextId('operation_db','checklists'),
+          project_id:pid, item_key:itemKey, item_label:itemLabel,
+          item_group:itemGroup, is_done:isDone?1:0,
+          note:note||'', done_at:isDone?DB._now():null,
+          created_at:DB._now(), updated_at:DB._now()
+        });
+      }
+      DB._set('operation_db','checklists',rows);
+    }
+  },
+
   billing:{
     listInvoices(){return DB._get('billing_db','invoices');},
     getInvoice(pid){return DB._get('billing_db','invoices').find(r=>r.project_id===pid)||null;},
@@ -395,22 +430,158 @@ const DB={
   checkAlerts(){
     const alerts=[];const today=new Date();
     const ad=DB.config.getAlertDays();
+    const xrayAlertDays=DB.config.getXrayAlertDays();
+    const fmtD=(d)=>{
+      if(!d)return'-';
+      const dt=new Date(d);
+      return dt.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});
+    };
+    // ── TAT Deadline Lab ── (auto-hide ถ้า reported หรือ completed)
     DB.lab.listProjects().forEach(lp=>{
-      if(!lp.tat_deadline||lp.status==='reported')return;
+      if(!lp.tat_deadline)return;
+      if(['reported','completed','approved'].includes(lp.status))return;
       const d=Math.ceil((new Date(lp.tat_deadline)-today)/86400000);
-      const p=DB.sales.getProject(lp.project_id);const nm=p?p.company_name:`#${lp.project_id}`;
-      if(d<0)alerts.push({type:'danger',msg:`⚠ TAT เกินกำหนด: ${nm} (${Math.abs(d)} วัน)`,project_id:lp.project_id});
-      else if(d<=ad)alerts.push({type:'warning',msg:`🕐 TAT ใกล้ครบ ${d} วัน: ${nm}`,project_id:lp.project_id});
+      const p=DB.sales.getProject(lp.project_id);
+      const nm=p?p.company_name:`#${lp.project_id}`;
+      const code=p?p.project_code:'';
+      if(d<0){
+        alerts.push({
+          type:'danger',
+          category:'TAT-Lab',
+          title:`⚠ TAT Lab เกินกำหนด ${Math.abs(d)} วัน`,
+          msg:`${code} — ${nm}`,
+          detail:`Deadline: ${fmtD(lp.tat_deadline)} | สถานะ Lab: ${lp.status} | ${(lp.headcount||0).toLocaleString()} คน`,
+          action:'ตรวจสอบ Lab Project',
+          project_id:lp.project_id
+        });
+      } else if(d<=ad){
+        alerts.push({
+          type:'warning',
+          category:'TAT-Lab',
+          title:`🕐 TAT Lab ใกล้ครบ ${d} วัน`,
+          msg:`${code} — ${nm}`,
+          detail:`Deadline: ${fmtD(lp.tat_deadline)} | สถานะ Lab: ${lp.status} | ${(lp.headcount||0).toLocaleString()} คน`,
+          action:'เร่งดำเนินการ Lab',
+          project_id:lp.project_id
+        });
+      }
     });
+    // ── SLA Deadline Report — ใช้ project.due_date + ตรวจครบทุกขั้นตอน ──
     DB.report.listPlans().forEach(rp=>{
-      if(!rp.sla_deadline||rp.status==='sent')return;
-      const d=Math.ceil((new Date(rp.sla_deadline)-today)/86400000);
-      const p=DB.sales.getProject(rp.project_id);const nm=p?p.company_name:`#${rp.project_id}`;
-      if(d<0)alerts.push({type:'danger',msg:`⚠ SLA เกินกำหนด: ${nm}`,project_id:rp.project_id});
-      else if(d<=ad)alerts.push({type:'warning',msg:`📋 SLA ใกล้ครบ ${d} วัน: ${nm}`,project_id:rp.project_id});
+      if(['sent','completed','approved'].includes(rp.status))return;
+      const p=DB.sales.getProject(rp.project_id);
+      if(!p)return;
+      // ดึง deadline: ใช้ project.due_date ก่อน fallback sla_deadline
+      const deadline=p.due_date||rp.sla_deadline;
+      if(!deadline)return;
+      // ตรวจว่าครบทุกขั้นตอนแล้วหรือยัง (7 ขั้น) — ถ้าครบแล้วไม่ alert
+      const meta=(()=>{try{return JSON.parse(localStorage.getItem('rp_meta_'+rp.project_id)||'{}');}catch{return {};}})();
+      const allDone=!!(rp.set_plan||meta.set_plan)&&!!(rp.send_doc||meta.send_doc)&&!!(rp.receive_raw||meta.receive_raw)&&!!(rp.key_raw||meta.key_raw)&&!!(rp.interpret||meta.interpret)&&!!(rp.booklet||meta.booklet)&&!!(rp.ready_to_send||meta.ready_to_send);
+      if(allDone)return;
+      const d=Math.ceil((new Date(deadline)-today)/86400000);
+      const nm=p.company_name;
+      const code=p.project_code;
+      if(d<0){
+        alerts.push({
+          type:'danger',
+          category:'SLA-Report',
+          title:`⚠ Report เลยกำหนดส่งผล ${Math.abs(d)} วัน`,
+          msg:`${code} — ${nm}`,
+          detail:`กำหนดส่ง: ${fmtD(deadline)} | สถานะ Report: ${rp.status} | ${(rp.headcount||0).toLocaleString()} คน`,
+          action:'เร่งทำผล + ส่งให้ลูกค้า',
+          project_id:rp.project_id
+        });
+      } else if(d<=ad){
+        alerts.push({
+          type:'warning',
+          category:'SLA-Report',
+          title:`📋 Report ใกล้ครบกำหนด ${d} วัน`,
+          msg:`${code} — ${nm}`,
+          detail:`กำหนดส่ง: ${fmtD(deadline)} | สถานะ Report: ${rp.status} | ${(rp.headcount||0).toLocaleString()} คน`,
+          action:'เร่งทำผล',
+          project_id:rp.project_id
+        });
+      }
     });
+    // ── Critical Lab Values ──
     DB.lab.listAlerts().filter(a=>!a.acknowledged).forEach(a=>{
-      alerts.push({type:'critical',msg:`🚨 Critical: ${a.patient_name} — ${a.test_name}=${a.value}`,project_id:a.project_id});
+      const p=DB.sales.getProject(a.project_id);
+      const nm=p?p.company_name:`#${a.project_id}`;
+      const code=p?p.project_code:'';
+      alerts.push({
+        type:'critical',
+        category:'ค่าวิกฤต',
+        title:`🚨 ค่าวิกฤต Lab — ${a.test_name}`,
+        msg:`${nm} | HN${a.hn||'-'} ${a.patient_name}`,
+        detail:`รายการ: ${a.test_name} | ค่าที่พบ: ${a.value} | ค่าปกติ: ${a.normal_range||'-'}${a.note?' | หมายเหตุ: '+a.note:''}`,
+        action:'แจ้งทีมแพทย์ + ติดต่อผู้ป่วยด่วน',
+        project_id:a.project_id,
+        alert_id:a.id
+      });
+    });
+    // ── Onsite ใกล้วันออก (3 วัน) ──
+    DB.sales.listProjects().filter(p=>p.onsite_date&&['Closed','Onsite'].includes(p.status)).forEach(p=>{
+      const d=Math.ceil((new Date(p.onsite_date)-today)/86400000);
+      if(d>=0&&d<=ad){
+        alerts.push({
+          type:'info',
+          category:'Onsite',
+          title:`📅 Onsite ใกล้ถึง ${d===0?'วันนี้':'อีก '+d+' วัน'}`,
+          msg:`${p.project_code} — ${p.company_name}`,
+          detail:`วันออกหน่วย: ${fmtD(p.onsite_date)} | สถานที่: ${p.location||'-'} | ${(p.headcount||0).toLocaleString()} คน`,
+          action:'ตรวจสอบ Checklist + ใบแจ้งงาน',
+          project_id:p.id
+        });
+      }
+    });
+    // ── Invoice ค้างชำระ ──
+    DB.billing.listInvoices().filter(i=>i.status==='Pending'||i.status==='Overdue').forEach(inv=>{
+      const p=DB.sales.getProject(inv.project_id);
+      const nm=p?p.company_name:`#${inv.project_id}`;
+      const issuedDays=inv.issued_at?Math.floor((today-new Date(inv.issued_at))/86400000):0;
+      if(issuedDays>30){
+        alerts.push({
+          type:'warning',
+          category:'Billing',
+          title:`💰 Invoice ค้างชำระ ${issuedDays} วัน`,
+          msg:`${inv.invoice_no} — ${nm}`,
+          detail:`ยอด: ฿${(inv.total||0).toLocaleString()} | ออกใบ: ${fmtD(inv.issued_at)} | สถานะ: ${inv.status}`,
+          action:'ติดตามทวงถาม',
+          project_id:inv.project_id
+        });
+      }
+    });
+    // ── X-Ray Alert (จากวันออกตรวจ + xrayAlertDays) ──
+    DB.sales.listProjects().forEach(p=>{
+      if(!p.onsite_date)return;
+      // เฉพาะ project ที่ Onsite จบแล้ว (status=Lab/Report/Billing/Completed)
+      if(!['Lab','Report','Billing','Completed'].includes(p.status))return;
+      // ตรวจ X-Ray Meta
+      const xm=DB.xray?DB.xray.getMeta(p.id):null;
+      // ครบทุก step? skip
+      const STEPS=['film_sent','interpreting','report_done','approved','write_cd','send_excel','send_media'];
+      const allDone=xm && STEPS.every(s=>xm[s]);
+      if(allDone)return;
+      // คำนวณวันที่ผ่านมาจากวันออกตรวจ
+      const daysSince=Math.floor((today-new Date(p.onsite_date))/86400000);
+      if(daysSince<xrayAlertDays)return; // ยังไม่ถึงเวลาเตือน
+      // หา step ล่าสุดที่ทำ
+      const doneCount=xm?STEPS.filter(s=>xm[s]).length:0;
+      const nextStep=STEPS.find(s=>!xm||!xm[s])||'film_sent';
+      const stepLabels={
+        film_sent:'ส่งฟิล์มอ่านผล',interpreting:'รอแปลผล',report_done:'จัดทำผล',
+        approved:'Approve ผล',write_cd:'Write CD',send_excel:'ส่ง File Excel',send_media:'ส่ง CD/DVD/Flash Drive'
+      };
+      const overDays=daysSince-xrayAlertDays;
+      alerts.push({
+        type: overDays>3?'danger':'warning',
+        category:'X-Ray',
+        title:`📡 X-Ray ${overDays>0?'เกินกำหนด '+overDays+' วัน':'ใกล้ครบกำหนด'}`,
+        msg:`${p.project_code} — ${p.company_name}`,
+        detail:`วันออกหน่วย: ${fmtD(p.onsite_date)} | ผ่านมา ${daysSince} วัน | ทำแล้ว ${doneCount}/${STEPS.length} ขั้น | ติดที่: ${stepLabels[nextStep]}`,
+        action:'เร่งทีม X-Ray ดำเนินการ',
+        project_id:p.id
+      });
     });
     return alerts;
   },
@@ -428,7 +599,8 @@ const DB={
       {id:4,username:'lab01',password:'lab1234',name:'นางสาวรัตนา ใจดี',role:'lab',active:true,created_at:DB._now(),updated_at:DB._now()},
       {id:5,username:'report01',password:'rpt1234',name:'นายสมชาย วงศ์ดี',role:'report',active:true,created_at:DB._now(),updated_at:DB._now()},
       {id:6,username:'billing01',password:'bill1234',name:'นางมาลี รักไทย',role:'billing',active:true,created_at:DB._now(),updated_at:DB._now()},
-      {id:7,username:'xray01',password:'xray1234',name:'นายอาทิตย์ ฟิล์มทอง',role:'xray',active:true,created_at:DB._now(),updated_at:DB._now()}
+      {id:7,username:'xray01',password:'xray1234',name:'นายอาทิตย์ ฟิล์มทอง',role:'xray',active:true,created_at:DB._now(),updated_at:DB._now()},
+      {id:8,username:'opd01',password:'opd1234',name:'นางสาววราภรณ์ OPD',role:'opd',active:true,created_at:DB._now(),updated_at:DB._now()}
     ];
     // Merge: add users that don't exist yet (by username)
     defaultUsers.forEach(u=>{
@@ -443,13 +615,81 @@ const DB={
     const fullNoDel={view:true,add:true,edit:true,delete:false};
     const none={view:false,add:false,edit:false,delete:false};
     const defaultRoles=[
-      {role:'admin',modules:{dashboard:full,customers:full,sales:full,quotation:full,op_prep:full,op_onsite:full,lab:full,report:full,billing:full,config:full},created_at:DB._now(),updated_at:DB._now()},
-      {role:'sales',modules:{dashboard:viewOnly,customers:fullNoDel,sales:fullNoDel,quotation:full,op_prep:none,op_onsite:none,lab:none,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
-      {role:'operation',modules:{dashboard:viewOnly,customers:viewOnly,sales:viewOnly,op_prep:full,op_onsite:full,lab:none,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
-      {role:'lab',modules:{dashboard:viewOnly,customers:none,sales:viewOnly,op_prep:viewOnly,op_onsite:viewOnly,lab:fullNoDel,xray:viewOnly,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
-      {role:'xray',modules:{dashboard:viewOnly,customers:none,sales:viewOnly,op_prep:none,op_onsite:viewOnly,lab:none,xray:fullNoDel,report:none,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
-      {role:'report',modules:{dashboard:viewOnly,customers:viewOnly,sales:fullNoDel,op_prep:viewOnly,op_onsite:viewOnly,lab:viewOnly,report:fullNoDel,billing:none,config:none},created_at:DB._now(),updated_at:DB._now()},
-      {role:'billing',modules:{dashboard:viewOnly,customers:viewOnly,sales:viewOnly,op_prep:none,op_onsite:none,lab:none,report:viewOnly,billing:fullNoDel,config:none},created_at:DB._now(),updated_at:DB._now()}
+      // admin — เข้าถึงได้ทุก navbar ทุก module
+      {role:'admin',modules:{
+        dashboard:full, customers:full, sales:full, quotation:full,
+        op_prep:full, op_onsite:full, op_report:full,
+        lab:full, xray:full, report:full, opd:full, billing:full,
+        config:full
+      },created_at:DB._now(),updated_at:DB._now()},
+
+      // sales — ทีมขาย: CRM, ใบเสนอราคา, Project & Handover
+      //   เห็น Dashboard, ปฏิทิน
+      //   ไม่เห็น: Operation, Lab, X-Ray, Report, Billing, Config
+      {role:'sales',modules:{
+        dashboard:viewOnly, customers:fullNoDel, sales:fullNoDel, quotation:full,
+        op_prep:none, op_onsite:none, op_report:none,
+        lab:none, xray:none, report:none, opd:none, billing:none,
+        config:none
+      },created_at:DB._now(),updated_at:DB._now()},
+
+      // operation — ทีมออกหน่วย: Checklist, ใบแจ้งงาน, Onsite, รายงานสรุป
+      //   เห็น Dashboard, ปฏิทิน, Project (view), ลูกค้า (view)
+      //   ไม่เห็น: Sales-create, Quotation, Lab, X-Ray, Report, Billing, Config
+      {role:'operation',modules:{
+        dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
+        op_prep:full, op_onsite:full, op_report:full,
+        lab:none, xray:none, report:none, opd:none, billing:none,
+        config:none
+      },created_at:DB._now(),updated_at:DB._now()},
+
+      // lab — ห้องปฏิบัติการ: Lab & TAT, X-Ray (view)
+      //   เห็น Dashboard, Project (view), Onsite (view)
+      //   ไม่เห็น: Sales-edit, Quotation, Op-edit, Report, Billing, Config
+      {role:'lab',modules:{
+        dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
+        op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
+        lab:fullNoDel, xray:viewOnly, report:none, opd:none, billing:none,
+        config:none
+      },created_at:DB._now(),updated_at:DB._now()},
+
+      // xray — เอกซเรย์: X-Ray อ่านฟิล์ม
+      //   เห็น Dashboard, Project (view), Onsite (view)
+      //   ไม่เห็น: Sales-edit, Quotation, Op-edit, Lab, Report, Billing, Config
+      {role:'xray',modules:{
+        dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
+        op_prep:none, op_onsite:viewOnly, op_report:none,
+        lab:none, xray:fullNoDel, report:none, opd:none, billing:none,
+        config:none
+      },created_at:DB._now(),updated_at:DB._now()},
+
+      // report — ทีมทำผล: Report & Plan
+      //   เห็น Dashboard, ลูกค้า (view), Project, Onsite (view), Lab (view)
+      //   ไม่เห็น: Quotation, Op-edit, X-Ray, Billing, Config
+      {role:'report',modules:{
+        dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
+        op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
+        lab:viewOnly, xray:none, report:fullNoDel, opd:none, billing:none,
+        config:none
+      },created_at:DB._now(),updated_at:DB._now()},
+
+      // billing — การเงิน: Billing & Invoice
+      //   เห็น Dashboard, Project (view), Report (view)
+      //   ไม่เห็น: Sales-edit, Quotation, Operation, Lab, X-Ray, Config
+      {role:'billing',modules:{
+        dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
+        op_prep:none, op_onsite:none, op_report:none,
+        lab:none, xray:none, report:viewOnly, opd:none, billing:fullNoDel,
+        config:none
+      },created_at:DB._now(),updated_at:DB._now()},
+
+      // opd — ทีม OPD: เห็น Project ที่มี เก็บตก หรือ Walkin
+      {role:'opd',modules:{
+        dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
+        op_prep:none, op_onsite:viewOnly, op_report:none,
+        lab:none, xray:none, report:none, opd:fullNoDel, billing:none,
+        config:none
+      },created_at:DB._now(),updated_at:DB._now()}
     ];
     const existingRoles=DB._get('auth_db','role_permissions');
     defaultRoles.forEach(r=>{if(!existingRoles.find(e=>e.role===r.role))existingRoles.push(r);});
