@@ -2766,21 +2766,56 @@ Pages.op_prep={
         ${canAdd?`<button class="btn btn-pri btn-xs" onclick="Pages.op_prep.createJOFromProject(${p.id})">+ สร้างใบแจ้งงาน</button>`:''}
       </td>
     </tr>`).join('');
-    // ── 2) Job Orders ที่สร้างแล้ว ──
-    const rows=jos.slice().reverse().map(jo=>{
+    // ── 2) Job Orders ที่สร้างแล้ว — sort by project then onsite_date+day_no ──
+    // Group by project for visual highlighting
+    const projGroups = {};
+    jos.forEach(jo=>{
+      if(!projGroups[jo.project_id]) projGroups[jo.project_id] = [];
+      projGroups[jo.project_id].push(jo);
+    });
+    // Sort within each group + overall newest project first
+    const sortedJos = [];
+    const projIds = Object.keys(projGroups).map(Number);
+    // Sort projects by max onsite_date (newest first)
+    projIds.sort((a,b)=>{
+      const aMax = Math.max(...projGroups[a].map(j=>new Date(j.onsite_date||0).getTime()));
+      const bMax = Math.max(...projGroups[b].map(j=>new Date(j.onsite_date||0).getTime()));
+      return bMax - aMax;
+    });
+    projIds.forEach(pid=>{
+      // Within project: sort by day_no, then onsite_date
+      const grp = projGroups[pid].slice().sort((a,b)=>{
+        const dnA = parseInt(a.day_no)||0, dnB = parseInt(b.day_no)||0;
+        if(dnA !== dnB) return dnA - dnB;
+        return new Date(a.onsite_date||0) - new Date(b.onsite_date||0);
+      });
+      grp.forEach((jo,idx)=>{ jo._isFirstInGroup = (idx===0); jo._groupSize = grp.length; });
+      sortedJos.push(...grp);
+    });
+    // Render rows
+    const rows=sortedJos.map(jo=>{
       const p=DB.sales.getProject(jo.project_id);
-      // อ่านจาก DB.checklist (ที่ Operation — เตรียมงาน บันทึกไว้)
       const ckl=DB.checklist?DB.checklist.getByProject(jo.project_id):{};
       const cklDone=Object.keys(ckl).filter(k=>!k.endsWith('_note')&&ckl[k]).length;
-      // ดึงจำนวนรายการ Active จาก Config Checklist
       const totalCk=Pages.config_checklist?Pages.config_checklist.getActive().length:10;
       const isReady=cklDone>=totalCk&&totalCk>0&&(jo.status==='Confirmed'||jo.status==='Completed');
-      const readyBadge=isReady
-        ?'<span class="badge b-completed" style="font-size:10px">✅ พร้อมออกหน่วย</span>'
-        :`<span class="badge b-draft" style="font-size:10px">Checklist ${cklDone}/${totalCk}</span>`;
-      return`<tr>
-        <td class="fw6">${p?.project_code||'-'}</td>
-        <td>${U.esc(jo.company_name)}</td>
+      const dayNo = parseInt(jo.day_no)||0;
+      const totalDays = parseInt(jo.total_days)||jo._groupSize||1;
+      // Badge: วันที่ N (gold)
+      const dayBadge = dayNo > 0
+        ? `<span style="background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:'IBM Plex Mono',monospace;margin-left:5px;vertical-align:1px">วันที่ ${dayNo}</span>`
+        : '';
+      // Badge: 📅 N วัน (blue) — only on first JO of multi-day project
+      const totalBadge = (jo._isFirstInGroup && totalDays > 1)
+        ? `<span style="background:rgba(56,189,248,.15);color:#7DD3FC;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:4px;margin-left:6px;vertical-align:1px">📅 ${totalDays} วัน</span>`
+        : '';
+      // Highlight same-project rows (rest of group after first)
+      const rowStyle = (jo._groupSize > 1) ? 'background:rgba(110,231,183,.04)' : '';
+      // ชื่อบริษัท: opacity reduced for non-first rows in group
+      const companyOpacity = (!jo._isFirstInGroup && jo._groupSize > 1) ? 'opacity:.65' : '';
+      return`<tr style="${rowStyle}">
+        <td><span class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${p?.project_code||'-'}</span>${dayBadge}${totalBadge}</td>
+        <td style="${companyOpacity}">${U.esc(jo.company_name)}</td>
         <td>${U.fmtD(jo.onsite_date)}</td>
         <td>${(jo.headcount||0).toLocaleString()}</td>
         <td>${U.badge(jo.status||'Draft')}</td>
@@ -2802,7 +2837,7 @@ Pages.op_prep={
           style="flex:1;padding:8px 14px;border:1.5px solid rgba(255,255,255,.1);border-radius:9px;font-size:13px;background:rgba(255,255,255,.06);color:#fff;font-family:'IBM Plex Sans Thai',sans-serif;outline:none"
           onfocus="this.style.borderColor='var(--c-teal,#00B8AA)'" onblur="this.style.borderColor='rgba(255,255,255,.1)'"/>
       </div>
-      <div class="tbl-wrap"><table id="op_table"><thead><tr><th>Project</th><th>บริษัท</th><th>วันตรวจ</th><th>จำนวน</th><th>สถานะใบแจ้งงาน</th><th>ผู้จัดทำ</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="7" class="empty">ยังไม่มีใบแจ้งงาน</td></tr>'}</tbody></table></div>
+      <div class="tbl-wrap"><table id="op_table"><thead><tr><th>Project</th><th>บริษัท</th><th>วันตรวจ</th><th>จำนวน</th><th>สถานะใบแจ้งงาน</th><th>ผู้จัดทำ</th><th></th></tr></thead><tbody>${allRows||'<tr><td colspan="7" class="empty">ยังไม่มีใบแจ้งงาน</td></tr>'}</tbody></table></div>
     </div>`;
   },
   createJOFromProject(pid){
@@ -2819,65 +2854,239 @@ Pages.op_prep={
     this.createJO();
   },
 
+  // ─── Helper: prefill stations จาก Sales staffing สำหรับ 1 JO ───
+  _prefillStationsFromSales(joId, pid){
+    try {
+      const staffing = DB.sales.getStaffing(pid);
+      if(!staffing || !staffing.stations || staffing.stations.length === 0) return 0;
+      staffing.stations.forEach((s,i)=>{
+        const cnt = parseInt(s.staff_count)||1;
+        const staffList = [];
+        for(let k=0;k<cnt;k++){
+          staffList.push({profession:'เจ้าหน้าที่',staff_name:'',staff_type:'ในองค์กร',wage_per_day:0,phone:'',remark:''});
+        }
+        DB.operation.saveStation({
+          job_order_id: joId, order_no: i+1,
+          station_code: s.code, station_name: s.name,
+          staff_count: cnt, exam_count: s.exam_count||0, staff_list: staffList,
+          profession:'เจ้าหน้าที่', staff_name:'', staff_type:'ในองค์กร',
+          wage_per_day:0, phone:'', remark: s.note||''
+        });
+      });
+      return staffing.stations.length;
+    } catch(e){ console.warn('prefillStations failed:',e); return 0; }
+  },
+
+  // ─── Re-render multi-day list rows when จำนวนวัน changes ───
+  _renderDayList(){
+    const st = window._cjoState || {};
+    const n = parseInt(st.numDays)||1;
+    const baseDate = st.baseDate || new Date().toISOString().slice(0,10);
+    const totalHc = parseInt(st.totalHc)||0;
+    const perDayHc = n>0 ? Math.floor(totalHc/n) : 0;
+    let rows = '';
+    for(let i=0;i<n;i++){
+      const d = new Date(baseDate);
+      d.setDate(d.getDate()+i);
+      const dStr = d.toISOString().slice(0,10);
+      // ใช้ค่าเดิมถ้า user แก้ไว้
+      const existing = st.days && st.days[i] ? st.days[i] : {};
+      const dateVal = existing.date || dStr;
+      const startVal = existing.start || '07:00';
+      const endVal = existing.end || '16:00';
+      const hcVal = existing.hc !== undefined ? existing.hc : (i===n-1 ? totalHc - perDayHc*(n-1) : perDayHc);
+      rows += `<div class="cjo-day-row" data-i="${i}" style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 90px;gap:7px;padding:7px 5px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center">
+        <div style="background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:5px;font-family:'IBM Plex Mono',monospace;text-align:center">วันที่ ${i+1}</div>
+        <input type="date" data-f="date" value="${dateVal}" onchange="Pages.op_prep._captureDayRows()" style="padding:5px 8px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#FFFFFF;font-size:11.5px;font-family:inherit;width:100%"/>
+        <input type="time" data-f="start" value="${startVal}" onchange="Pages.op_prep._captureDayRows()" style="padding:5px 8px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#FFFFFF;font-size:11.5px;font-family:inherit;width:100%"/>
+        <input type="time" data-f="end" value="${endVal}" onchange="Pages.op_prep._captureDayRows()" style="padding:5px 8px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#FFFFFF;font-size:11.5px;font-family:inherit;width:100%"/>
+        <input type="number" data-f="hc" value="${hcVal}" min="0" onchange="Pages.op_prep._captureDayRows()" style="padding:5px 8px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#FFFFFF;font-size:11.5px;font-family:inherit;text-align:center;width:100%"/>
+      </div>`;
+    }
+    const wrap = document.getElementById('cjo_day_list');
+    if(wrap) wrap.innerHTML = rows;
+    // sync summary
+    this._updateCjoSummary();
+  },
+
+  _captureDayRows(){
+    const st = window._cjoState || {};
+    st.days = st.days || [];
+    document.querySelectorAll('.cjo-day-row').forEach(row=>{
+      const i = parseInt(row.dataset.i);
+      st.days[i] = {
+        date: row.querySelector('[data-f="date"]')?.value,
+        start: row.querySelector('[data-f="start"]')?.value,
+        end: row.querySelector('[data-f="end"]')?.value,
+        hc: parseInt(row.querySelector('[data-f="hc"]')?.value)||0
+      };
+    });
+    window._cjoState = st;
+    this._updateCjoSummary();
+  },
+
+  _updateCjoSummary(){
+    const st = window._cjoState || {};
+    const sumEl = document.getElementById('cjo_sum');
+    if(!sumEl) return;
+    const n = parseInt(st.numDays)||1;
+    let totalHc = 0;
+    if(st.days){
+      st.days.slice(0,n).forEach(d=>{ totalHc += (parseInt(d?.hc)||0); });
+    } else {
+      totalHc = parseInt(st.totalHc)||0;
+    }
+    sumEl.innerHTML = `📊 รวม <span style="color:#6EE7B7;font-weight:700;font-family:'IBM Plex Mono',monospace">${n} ใบแจ้งงาน</span> · <span style="color:#6EE7B7;font-weight:700;font-family:'IBM Plex Mono',monospace">${totalHc.toLocaleString()} คน</span>`;
+  },
+
+  _setNumDays(n){
+    this._captureDayRows();
+    const st = window._cjoState || {};
+    st.numDays = n;
+    // ถ้าเป็น value ใหม่ที่ใหญ่กว่าเดิม — ขยาย days array
+    if(st.days && st.days.length < n){
+      const baseDate = st.baseDate;
+      const totalHc = parseInt(st.totalHc)||0;
+      const perDay = n>0 ? Math.floor(totalHc/n) : 0;
+      for(let i=st.days.length; i<n; i++){
+        const d = new Date(baseDate); d.setDate(d.getDate()+i);
+        st.days.push({date:d.toISOString().slice(0,10), start:'07:00', end:'16:00', hc:(i===n-1?totalHc-perDay*(n-1):perDay)});
+      }
+    }
+    window._cjoState = st;
+    // Update day-btn active state
+    document.querySelectorAll('.cjo-day-btn').forEach(b=>{
+      b.classList.toggle('active', parseInt(b.dataset.n)===n);
+    });
+    // Custom input sync
+    const ci = document.getElementById('cjo_num_custom');
+    if(ci) ci.value = n>7 ? n : '';
+    this._renderDayList();
+  },
+
   async createJO(){
     const _all_projs_raw=DB.sales.listProjects();
     const projs=(_all_projs_raw||[]).filter(p=>['Closed','Onsite'].includes(p.status));
     if(!projs.length)return U.toast('ไม่มี Project ที่พร้อม','warning');
     const pOpts=U.sel(projs.map(p=>({v:p.id,l:`${p.project_code} — ${p.company_name}`})),'');
-    Modal.open(`<div class="ab info mb4">สร้างใบแจ้งงานจาก Project ที่ปิดการขายแล้ว</div>
+
+    // Initialize state
+    window._cjoState = { numDays:1, days:[], baseDate:'', totalHc:0 };
+
+    Modal.open(`<div class="ab info mb4">สร้างใบแจ้งงานจาก Project ที่ปิดการขายแล้ว · รองรับ <strong>หลายวัน</strong> ในคลิกเดียว</div>
     <div class="fg"><label class="req">เลือก Project</label><select id="cjo_p" onchange="Pages.op_prep._fillFromProject(this.value)">${pOpts}</select></div>
+
+    <div class="divider"></div><div class="sec-title">📅 จำนวนวันออกตรวจ</div>
+    <div style="display:flex;gap:5px;margin-bottom:11px;flex-wrap:wrap;align-items:center">
+      ${[1,2,3,4,5,6,7].map(n=>`<button type="button" class="cjo-day-btn${n===1?' active':''}" data-n="${n}" onclick="Pages.op_prep._setNumDays(${n})" style="padding:6px 14px;border:1.5px solid rgba(255,255,255,.15);background:#162338;color:#FFFFFF;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;min-width:46px;text-align:center;transition:all .15s">${n}</button>`).join('')}
+      <input id="cjo_num_custom" type="number" min="1" max="30" placeholder="N" oninput="if(this.value){Pages.op_prep._setNumDays(parseInt(this.value)||1)}" style="width:60px;padding:5px;background:#162338;border:1.5px solid rgba(255,255,255,.15);border-radius:7px;color:#FFFFFF;font-size:12.5px;text-align:center;font-family:inherit"/>
+    </div>
+
+    <div class="ab info mb4" style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.25);color:#7DD3FC;font-size:11.5px;display:flex;align-items:flex-start;gap:7px">
+      ℹ️ <div><strong>Auto-fill:</strong> วันที่จะเรียงต่อกันจากวันที่ออกตรวจของ Project · จำนวนคนต่อวันจะหารยอดรวม · แก้ได้ทีละช่อง · บันทึก = สร้างทั้งหมดในคลิกเดียว</div>
+    </div>
+
+    <div style="font-size:10.5px;color:rgba(255,255,255,.85);text-transform:uppercase;font-weight:700;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;letter-spacing:.5px">รายละเอียดแต่ละวัน</div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px;max-height:240px;overflow-y:auto;margin-bottom:11px">
+      <div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr 90px;gap:7px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.06);font-size:10px;color:rgba(255,255,255,.6);text-transform:uppercase;font-weight:600;font-family:'IBM Plex Mono',monospace;letter-spacing:.5px">
+        <div></div><div>วันที่</div><div>เริ่ม</div><div>สิ้นสุด</div><div style="text-align:center">จำนวนคน</div>
+      </div>
+      <div id="cjo_day_list"></div>
+    </div>
+
+    <div id="cjo_sum" style="background:rgba(110,231,183,.07);border:1px solid rgba(110,231,183,.25);padding:8px 12px;border-radius:6px;font-size:12px;color:#FFFFFF;font-weight:500;margin-bottom:11px">📊 รวม <span style="color:#6EE7B7;font-weight:700">1 ใบแจ้งงาน</span></div>
+
+    <div class="divider"></div><div class="sec-title">⚙ ค่าเริ่มต้น (ใช้กับทุกใบ)</div>
     <div class="fr"><div class="fg"><label>เวลาออกเดินทาง</label><input id="cjo_dep" type="time" value="05:30"/></div>
-      <div class="fg"><label>เวลาเริ่มตรวจ</label><input id="cjo_st" type="time" value="07:00"/></div>
-      <div class="fg"><label>เวลาสิ้นสุด</label><input id="cjo_et" type="time" value="16:00"/></div></div>
-    <div class="fr"><div class="fg"><label>Director</label>${U.staffAutocomplete('cjo_dir', '', 'ค้นหาจากชื่อ/ชื่อเล่น/แผนก/ตำแหน่ง/รหัส')}</div>
-      <div class="fg"><label>ประเภทงาน</label><select id="cjo_jt">${U.sel(JOB_TYPES,'ตรวจสุขภาพ')}</select></div></div>
-    <div class="fr"><div class="fg"><label>กะทำงาน</label><input id="cjo_sh" value="เช้า"/></div>
-      <div class="fg"><label>หมายเหตุ</label><input id="cjo_rm"/></div></div>
+      <div class="fg"><label>Director</label>${U.staffAutocomplete('cjo_dir', '', 'ค้นหาจากชื่อ/ชื่อเล่น/แผนก/ตำแหน่ง/รหัส')}</div></div>
+    <div class="fr"><div class="fg"><label>ประเภทงาน</label><select id="cjo_jt">${U.sel(JOB_TYPES,'ตรวจสุขภาพ')}</select></div>
+      <div class="fg"><label>กะทำงาน</label><input id="cjo_sh" value="เช้า"/></div></div>
+    <div class="fg"><label>หมายเหตุ</label><input id="cjo_rm"/></div>
+
     <div class="divider"></div><div class="sec-title">ลายเซ็นผู้รับผิดชอบ</div>
     <div class="fr3"><div class="fg"><label>ผู้จัดทำ</label>${U.staffAutocomplete('cjo_s1','','ค้นหาผู้จัดทำ')}</div>
       <div class="fg"><label>หัวหน้าแผนก</label>${U.staffAutocomplete('cjo_s2','','ค้นหาหัวหน้าแผนก')}</div>
-      <div class="fg"><label>HR</label>${U.staffAutocomplete('cjo_s3','','ค้นหา HR')}</div></div>`,
+      <div class="fg"><label>HR</label>${U.staffAutocomplete('cjo_s3','','ค้นหา HR')}</div></div>
+    <style>.cjo-day-btn:hover{border-color:rgba(240,205,127,.4)!important}.cjo-day-btn.active{background:linear-gradient(180deg,#F0CD7F,#D4A845)!important;color:#1A1A1A!important;border-color:#F0CD7F!important}</style>`,
     'สร้างใบแจ้งงาน', async () => {
+      this._captureDayRows();
       const pid=parseInt(document.getElementById('cjo_p').value);
       if(!pid)return U.toast('กรุณาเลือก Project','danger');
       const p=DB.sales.getProject(pid);
-      const jo=DB.operation.saveJobOrder({project_id:pid,company_name:p.company_name,location:p.location||'',onsite_date:p.onsite_date,headcount:p.headcount,depart_time:document.getElementById('cjo_dep').value,start_time:document.getElementById('cjo_st').value,end_time:document.getElementById('cjo_et').value,director:document.getElementById('cjo_dir').value,job_type:document.getElementById('cjo_jt').value,shift:document.getElementById('cjo_sh').value,remark:document.getElementById('cjo_rm').value,signer_creator:document.getElementById('cjo_s1').value,signer_head:document.getElementById('cjo_s2').value,signer_hr:document.getElementById('cjo_s3').value,status:'Draft'});
-      // ─── Sales staffing prefill — ถ้า Sales ลงอัตรากำลังไว้ ดึงมาสร้าง Station ───
-      try {
-        const staffing = DB.sales.getStaffing(pid);
-        if(staffing && staffing.stations && staffing.stations.length > 0){
-          const newJo = DB.operation.getJobOrder(pid);
-          if(newJo){
-            staffing.stations.forEach((s,i)=>{
-              const cnt = parseInt(s.staff_count)||1;
-              const staffList = [];
-              for(let k=0;k<cnt;k++){
-                staffList.push({profession:'เจ้าหน้าที่',staff_name:'',staff_type:'ในองค์กร',wage_per_day:0,phone:''});
-              }
-              DB.operation.saveStation({
-                job_order_id: newJo.id,
-                order_no: i+1,
-                station_code: s.code,
-                station_name: s.name,
-                staff_count: cnt,
-                exam_count: s.exam_count||0,
-                staff_list: staffList,
-                profession: 'เจ้าหน้าที่',
-                staff_name: '',
-                staff_type: 'ในองค์กร',
-                wage_per_day: 0,
-                phone: '',
-                remark: s.note||''
-              });
-            });
-          }
-        }
-      } catch(e){ console.warn('Sales staffing prefill failed:', e); }
-      Modal.close();this.render();U.toast(`✅ สร้างใบแจ้งงานแล้ว`);
-      setTimeout(()=>this.viewJO(jo.id),300);
+      const st = window._cjoState || {};
+      const n = parseInt(st.numDays)||1;
+      const days = (st.days||[]).slice(0,n);
+      // หา max day_no ที่มีอยู่ของ project นี้ (สำหรับการสร้างซ้ำ)
+      const existingJOs = DB.operation.listJobOrders().filter(j=>j.project_id===pid);
+      let maxDayNo = existingJOs.reduce((m,j)=>Math.max(m, parseInt(j.day_no)||0), 0);
+      // คอมมอน fields
+      const common = {
+        project_id: pid,
+        company_name: p.company_name,
+        location: p.location||'',
+        depart_time: document.getElementById('cjo_dep').value,
+        director: document.getElementById('cjo_dir').value,
+        job_type: document.getElementById('cjo_jt').value,
+        shift: document.getElementById('cjo_sh').value,
+        remark: document.getElementById('cjo_rm').value,
+        signer_creator: document.getElementById('cjo_s1').value,
+        signer_head: document.getElementById('cjo_s2').value,
+        signer_hr: document.getElementById('cjo_s3').value,
+        status: 'Draft'
+      };
+      let createdJOs = [];
+      for(let i=0; i<n; i++){
+        const d = days[i] || {};
+        const dayNo = maxDayNo + i + 1;
+        const jo = DB.operation.saveJobOrder({
+          ...common,
+          onsite_date: d.date || p.onsite_date,
+          start_time: d.start || '07:00',
+          end_time: d.end || '16:00',
+          headcount: parseInt(d.hc) || Math.floor((p.headcount||0)/n),
+          day_no: dayNo,
+          total_days: maxDayNo + n,  // total รวม (จะ update ภายหลังถ้ามีสร้างเพิ่ม)
+        });
+        createdJOs.push(jo);
+        // Sales staffing prefill — สร้าง station ให้ทุกใบ
+        Pages.op_prep._prefillStationsFromSales(jo.id, pid);
+      }
+      // Update total_days บนใบเก่าด้วย
+      const newTotal = maxDayNo + n;
+      existingJOs.forEach(oj=>{
+        DB.operation.saveJobOrder({...oj, total_days: newTotal});
+      });
+      window._cjoState = null;
+      Modal.close();
+      this.render();
+      U.toast(`✅ สร้างใบแจ้งงาน ${n} ใบเรียบร้อย`);
+      if(n===1){
+        setTimeout(()=>this.viewJO(createdJOs[0].id),300);
+      }
     });
+
+    // Initialize after modal opens
+    setTimeout(()=>{
+      const projSel = document.getElementById('cjo_p');
+      if(projSel && projSel.value){
+        Pages.op_prep._fillFromProject(projSel.value);
+      } else {
+        Pages.op_prep._renderDayList();
+      }
+    }, 50);
   },
-  _fillFromProject(pid){if(!pid)return;const p=DB.sales.getProject(parseInt(pid));if(!p)return;},
+  _fillFromProject(pid){
+    if(!pid)return;
+    const p=DB.sales.getProject(parseInt(pid));
+    if(!p)return;
+    // Set state with project data
+    const st = window._cjoState || {};
+    st.baseDate = p.onsite_date || new Date().toISOString().slice(0,10);
+    st.totalHc = parseInt(p.headcount)||0;
+    st.days = []; // reset days to use new defaults
+    window._cjoState = st;
+    Pages.op_prep._renderDayList();
+  },
   editJO(id){
     const jo=DB.operation.getJobOrderById(id);
     Modal.open(`<div class="tabs"><div class="tab active" onclick="switchTab(this,'jt1')">ข้อมูลทั่วไป</div><div class="tab" onclick="switchTab(this,'jt2')">Station & อัตรากำลัง</div><div class="tab" onclick="switchTab(this,'jt3')">ยานพาหนะ</div><div class="tab" onclick="switchTab(this,'jt4')">เช่าอุปกรณ์</div><div class="tab" onclick="switchTab(this,'jt5')">ลายเซ็น</div></div>
