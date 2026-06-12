@@ -3480,12 +3480,17 @@ Pages.op_prep={
       .doc-badge{display:inline-block;margin-top:5px;padding:2px 12px;border-radius:20px;background:linear-gradient(90deg,#C9A84C,#E8C97A);color:#fff;font-size:10px;font-weight:700;}
       .jo-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8896A8;margin:14px 0 8px;display:flex;align-items:center;gap:8px;}
       .jo-section-title::after{content:'';flex:1;height:1px;background:#E4E9F0;}
-      .jo-info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:9px;}
+      .jo-info-row{display:grid;gap:5px;margin-bottom:5px;}
+      .jo-info-row.r1{grid-template-columns:2fr 1fr 1fr;}            /* 50/25/25 */
+      .jo-info-row.r2{grid-template-columns:1fr;}                    /* 100 */
+      .jo-info-row.r3{grid-template-columns:2fr 3fr 2fr 3fr;}        /* 20/30/20/30 */
+      .jo-info-row.r4{grid-template-columns:3fr 7fr;}                /* 30/70 */
       .jo-info-cell{background:#F9FAFB;border-radius:5px;padding:5px 9px;border:1px solid #E4E9F0;}
       .jo-info-cell .lbl{font-size:8px;font-weight:700;color:#8896A8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px;}
       .jo-info-cell .val{font-size:11px;font-weight:600;color:#1A2332;line-height:1.25;}
       .jo-info-cell.highlight{background:#F0FDF4;border-color:#86EFAC;}
       .jo-info-cell.highlight .val{color:#065F46;}
+      .jo-table{table-layout:fixed;width:100%;}
       .jo-table{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10px;}
       .jo-table thead tr{background:#0D2137;}
       .jo-table thead{display:table-header-group;}  /* repeat on every print page */
@@ -3504,16 +3509,18 @@ Pages.op_prep={
       .jo-sum-item{text-align:center;}.jo-sum-val{font-size:20px;font-weight:700;color:#0D2137;}.jo-sum-lbl{font-size:9px;color:#8896A8;text-transform:uppercase;margin-top:2px;}
     </style>`;
     return JO_CSS+`<div class="jo-print-doc">
-      <!-- Running header: visible only on page 2+ during print -->
-      <div class="jo-print-running-header">
-        <div class="ph-left">
-          ใบแจ้งงาน <span class="ph-mono">${p?.project_code||'-'}</span>
-          · ${U.esc(jo.company_name||'')}
-          · ${U.fmtD(jo.onsite_date)}
-          · ${(jo.headcount||0).toLocaleString()} คน
-        </div>
-        <div class="ph-right">หน้าต่อ</div>
-      </div>
+    <table class="jo-page-repeater">
+      <thead>
+        <tr><td>
+          <!-- Running strip — repeats at top of EVERY printed page via thead display:table-header-group -->
+          <div class="jo-running-strip">
+            <div class="strip-ttl">📋 ใบแจ้งงาน<span class="strip-code">${p?.project_code||'-'}</span></div>
+            <div class="strip-info">${U.esc(jo.company_name||'')} · ${U.fmtD(jo.onsite_date)} · ${(jo.headcount||0).toLocaleString()} คน</div>
+          </div>
+        </td></tr>
+      </thead>
+      <tbody>
+        <tr><td>
       <div class="jo-doc-header">
         <div class="jo-doc-brand">
           <div class="brand-mark">🏥</div>
@@ -3529,24 +3536,39 @@ Pages.op_prep={
         </div>
       </div>
       <div class="jo-section-title">ข้อมูลทั่วไป</div>
-      <div class="jo-info-grid">
-        <!-- แถว 1: ชื่อบริษัท, วันที่ออกหน่วย, จำนวนพนักงาน -->
+      <!-- Row 1: 50/25/25 -->
+      <div class="jo-info-row r1">
         <div class="jo-info-cell"><div class="lbl">ชื่อบริษัท / องค์กร</div><div class="val">${jo.company_name}</div></div>
         <div class="jo-info-cell highlight"><div class="lbl">วันที่ออกหน่วย</div><div class="val">${U.fmtD(jo.onsite_date)}</div></div>
         <div class="jo-info-cell"><div class="lbl">จำนวนพนักงาน</div><div class="val">${(jo.headcount||0).toLocaleString()} คน</div></div>
-        <!-- แถว 2: สถานที่ (เต็มแถว) -->
-        <div class="jo-info-cell" style="grid-column:span 3"><div class="lbl">สถานที่</div><div class="val">${jo.location||'-'}</div></div>
-        <!-- แถว 3: เวลาออกเดินทาง, เวลาเริ่ม-สิ้นสุด, กะทำงาน -->
+      </div>
+      <!-- Row 2: สถานที่ (100%) -->
+      <div class="jo-info-row r2">
+        <div class="jo-info-cell"><div class="lbl">สถานที่</div><div class="val">${jo.location||'-'}</div></div>
+      </div>
+      <!-- Row 3: 20/30/20/30 (Director ย้ายมาที่นี่) -->
+      <div class="jo-info-row r3">
         <div class="jo-info-cell"><div class="lbl">เวลาออกเดินทาง</div><div class="val">${jo.depart_time||'-'}</div></div>
         <div class="jo-info-cell"><div class="lbl">เวลาเริ่ม - สิ้นสุด</div><div class="val">${jo.start_time||'-'} - ${jo.end_time||'-'}</div></div>
         <div class="jo-info-cell"><div class="lbl">กะทำงาน</div><div class="val">${jo.shift||'-'}</div></div>
-        <!-- แถว 4: Director, ประเภทงาน, หมายเหตุ -->
         <div class="jo-info-cell"><div class="lbl">Director</div><div class="val">${jo.director||'-'}</div></div>
+      </div>
+      <!-- Row 4: 30/70 -->
+      <div class="jo-info-row r4">
         <div class="jo-info-cell"><div class="lbl">ประเภทงาน</div><div class="val">${jo.job_type||'-'}</div></div>
         <div class="jo-info-cell"><div class="lbl">หมายเหตุ</div><div class="val">${jo.remark||'-'}</div></div>
       </div>
       <div class="jo-section-title">จุดตรวจ Station และอัตรากำลัง</div>
       <table class="jo-table">
+        <colgroup>
+          <col style="width:3%"/>
+          <col style="width:20%"/>
+          <col style="width:5%"/>
+          <col style="width:10%"/>
+          <col style="width:25%"/>
+          <col style="width:10%"/>
+          <col style="width:27%"/>
+        </colgroup>
         <thead><tr><th>#</th><th>จุดตรวจ Station</th><th style="text-align:center">คน</th><th style="text-align:center">จำนวนตรวจ</th><th>ชื่อ-สกุล</th><th>ประเภท</th><th>หมายเหตุ</th></tr></thead>
         <tbody>${stRows||'<tr><td colspan="7" style="text-align:center;padding:16px;color:#8896A8">ยังไม่มีรายการ Station</td></tr>'}</tbody>
       </table>
@@ -3565,6 +3587,9 @@ Pages.op_prep={
         <span>Mobile Checkup System — ใบแจ้งงานออกหน่วย</span>
         <span>พิมพ์: ${today}</span>
       </div>
+        </td></tr>
+      </tbody>
+    </table>
     </div>`;
   },
   printJO(id){
@@ -3606,41 +3631,41 @@ Pages.op_prep={
     .sign-label{font-size:10px;color:#8896A8;font-weight:600;}
     .sign-name{font-size:11px;color:#1A2332;font-weight:600;margin-top:2px;}
     .jo-footer{margin-top:14px;padding-top:8px;border-top:1px solid #E4E9F0;display:flex;justify-content:space-between;font-size:9px;color:#B0BAC8;}
+    /* Page repeater table — thead จะซ้ำที่บนทุกหน้าโดยอัตโนมัติ */
+    .jo-page-repeater{width:100%;border-collapse:collapse;}
+    .jo-page-repeater > thead{display:table-header-group;}
+    .jo-page-repeater > tbody > tr > td{padding:0;}
+    .jo-page-repeater > thead > tr > td{padding:0;}
+    .jo-running-strip{
+      background:linear-gradient(90deg,#0D2137,#1A3C65);
+      color:#fff;
+      padding:4px 10px;
+      border-radius:4px;
+      margin-bottom:6px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size:9.5px;
+      page-break-inside:avoid;
+    }
+    .jo-running-strip *{color:#fff;}
+    .jo-running-strip .strip-ttl{font-weight:700}
+    .jo-running-strip .strip-code{background:#F0CD7F;color:#1A1A1A!important;padding:1px 6px;border-radius:3px;font-family:monospace;font-weight:700;font-size:9px;margin:0 4px}
+    .jo-running-strip .strip-info{font-size:8.5px;opacity:.92}
     @media print{
       @page{
         size:A4;
-        margin:14mm 9mm 12mm 9mm;
+        margin:8mm 9mm 10mm 9mm;
       }
-      @page :first { margin-top:9mm; }  /* หน้าแรกใช้ขอบบนปกติ — header doc อยู่บนเอกสารเอง */
       button{display:none!important;}
       body{padding:0!important;font-size:10.5px!important;}
       .jo-table{page-break-inside:auto}
       .jo-table tr{page-break-inside:avoid;page-break-after:auto}
       .jo-doc-header{page-break-after:avoid}
       .jo-section-title{page-break-after:avoid}
-      .jo-info-grid{page-break-after:avoid}
+      .jo-info-row{page-break-inside:avoid}
       .jo-sign-section{page-break-before:avoid;page-break-inside:avoid}
-      .jo-print-running-header{
-        display:block!important;
-        position:fixed;
-        top:0;left:0;right:0;
-        padding:3mm 9mm;
-        background:#fff;
-        border-bottom:1px solid #E4E9F0;
-        font-size:9px;
-        color:#3A5166;
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        z-index:9999;
-      }
-      .jo-print-running-header .ph-left{font-weight:700;color:#0D2137}
-      .jo-print-running-header .ph-mono{font-family:monospace;color:#1E40AF;font-weight:700}
-      .jo-print-running-header .ph-right{font-size:8.5px;color:#8896A8}
-      /* ซ่อนหน้าแรก — มี doc header เต็มอยู่แล้ว */
-      @page :first .jo-print-running-header { display:none; }
     }
-    .jo-print-running-header{display:none}  /* ซ่อนตอน preview ไม่พิมพ์ */
     .no-print{display:flex;gap:8px;margin-bottom:16px;}
     .btn-p{padding:8px 18px;background:#0D2137;color:#fff;border:none;border-radius:7px;font-family:Sarabun,sans-serif;font-size:13px;cursor:pointer;}
     </style></head><body>
