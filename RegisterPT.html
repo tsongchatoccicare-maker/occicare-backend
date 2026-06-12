@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ลงทะเบียน Part-Time — Mobile Checkup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1322; --s1:#0F1A2E; --s2:#162338; --s3:#1D2B42;
+    --gold:#F0CD7F; --gold-d:#D4A845;
+    --green:#6EE7B7; --red:#FCA5A5; --yellow:#FCD34D;
+    --bdr:rgba(255,255,255,.15); --bdr-l:rgba(255,255,255,.08);
+    --txt:#FFFFFF; --txt-m:rgba(255,255,255,.75);
+  }
+  *{box-sizing:border-box;color:var(--txt)}
+  body{
+    margin:0;min-height:100vh;
+    background:linear-gradient(180deg,#0B1322 0%,#162338 100%);
+    font-family:'IBM Plex Sans Thai',-apple-system,sans-serif;
+    padding:30px 18px;
+  }
+  .wrap{max-width:720px;margin:0 auto}
+  .hdr{
+    background:linear-gradient(180deg,var(--s1),var(--s2));
+    border:1.5px solid rgba(240,205,127,.25);
+    border-radius:16px 16px 0 0;
+    padding:22px 26px;
+    display:flex;align-items:center;gap:16px;
+  }
+  .hdr-icon{
+    width:54px;height:54px;border-radius:50%;
+    background:linear-gradient(180deg,var(--gold),var(--gold-d));
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px;color:#1A1A1A;
+    box-shadow:0 6px 16px rgba(240,205,127,.3);
+    flex-shrink:0;
+  }
+  .hdr h1{margin:0;font-size:20px;font-weight:700}
+  .hdr p{margin:4px 0 0;font-size:12.5px;color:var(--txt-m);font-weight:400}
+  .card{
+    background:var(--s1);
+    border:1.5px solid rgba(240,205,127,.15);
+    border-top:none;
+    border-radius:0 0 16px 16px;
+    padding:24px 26px;
+    box-shadow:0 12px 40px rgba(0,0,0,.4);
+  }
+  .alert{
+    background:rgba(252,165,165,.06);
+    border:1px solid rgba(252,165,165,.3);
+    padding:11px 14px;border-radius:8px;
+    font-size:12.5px;line-height:1.55;margin-bottom:20px;font-weight:500;
+    color:#FFC1C1;
+  }
+  .alert strong{color:#FCA5A5;font-weight:700}
+  .fg{margin-bottom:16px}
+  .fg label{
+    display:block;font-size:13px;color:var(--txt);
+    margin-bottom:6px;font-weight:600;line-height:1.45;
+  }
+  .fg label .num{
+    background:rgba(240,205,127,.15);color:var(--gold);
+    padding:1px 8px;border-radius:5px;margin-right:7px;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:700;
+  }
+  .fg label.req::after{content:" *";color:var(--red);font-weight:700}
+  .fg .desc{
+    font-size:11.5px;color:var(--txt-m);font-weight:400;
+    margin-top:-2px;margin-bottom:5px;line-height:1.4;
+  }
+  .fg input,.fg select,.fg textarea{
+    width:100%;padding:10px 13px;
+    background:var(--s3);
+    border:1.5px solid var(--bdr);border-radius:7px;
+    color:var(--txt);font-size:13.5px;font-family:inherit;font-weight:500;
+    transition:border-color .15s, background .15s;
+    outline:none;
+  }
+  .fg input:focus,.fg select:focus,.fg textarea:focus{
+    border-color:var(--gold);background:#243454;
+  }
+  .fg input::placeholder,.fg textarea::placeholder{color:rgba(255,255,255,.35)}
+  .fg textarea{min-height:70px;resize:vertical}
+
+  /* File upload */
+  .file-area{
+    background:var(--s2);
+    border:1.5px dashed rgba(240,205,127,.4);
+    border-radius:9px;padding:18px 14px;
+    text-align:center;cursor:pointer;
+    transition:all .15s;
+    display:block;
+  }
+  .file-area:hover{border-color:var(--gold);background:var(--s3)}
+  .file-area.has-file{
+    border-style:solid;border-color:var(--green);
+    background:rgba(110,231,183,.06);
+  }
+  .file-area input[type=file]{display:none}
+  .file-icon{font-size:24px;margin-bottom:6px;display:block}
+  .file-label{font-size:13px;font-weight:600;color:var(--gold);display:block;margin-bottom:3px}
+  .file-area.has-file .file-label{color:var(--green)}
+  .file-hint{font-size:11px;color:var(--txt-m);font-weight:400;margin-top:3px}
+  .file-name{font-size:12.5px;color:var(--green);font-weight:600;margin-top:6px;word-break:break-all}
+  .file-thumb{max-width:120px;max-height:80px;margin:7px auto 0;border-radius:5px;display:block;border:1px solid var(--bdr)}
+
+  /* Buttons */
+  .btn-bar{display:flex;justify-content:space-between;align-items:center;margin-top:24px;gap:10px;flex-wrap:wrap}
+  .btn{
+    padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;
+    cursor:pointer;font-family:inherit;border:1px solid var(--bdr);
+    background:transparent;color:var(--txt);transition:all .15s;
+  }
+  .btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(240,205,127,.05)}
+  .btn-pri{
+    background:linear-gradient(180deg,var(--gold),var(--gold-d));
+    color:#1A1A1A;border-color:var(--gold);font-weight:700;
+    padding:11px 32px;font-size:13.5px;
+  }
+  .btn-pri:hover{background:linear-gradient(180deg,#FFD580,#E2B850);color:#1A1A1A}
+
+  /* Toast */
+  .toast{
+    position:fixed;top:24px;right:24px;left:24px;max-width:380px;margin:0 auto;
+    background:linear-gradient(180deg,var(--green),#34D399);color:#1A1A1A;
+    padding:12px 18px;border-radius:9px;font-weight:600;font-size:13px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+    transform:translateY(-100px);opacity:0;transition:all .3s ease;z-index:9999;
+    text-align:center;
+  }
+  .toast.show{transform:translateY(0);opacity:1}
+  .toast.error{background:linear-gradient(180deg,var(--red),#F87171);color:#1A1A1A}
+
+  /* Validation */
+  .fg input.invalid,.fg select.invalid,.fg textarea.invalid{border-color:var(--red);background:rgba(252,165,165,.05)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<div class="hdr">
+  <div class="hdr-icon">⏰</div>
+  <div>
+    <h1>ลงทะเบียน Part-Time</h1>
+    <p>กรอกข้อมูลเพื่อสมัครเป็นพนักงาน Part-Time ในงานตรวจสุขภาพเคลื่อนที่</p>
+  </div>
+</div>
+
+<form id="ptForm" class="card" autocomplete="off">
+
+  <div class="alert">
+    ⚠ <strong>กรุณากรอกข้อมูลให้ครบถ้วน</strong> ทุกช่องที่มี <span style="color:var(--red);font-weight:700">*</span> เป็นข้อมูลที่จำเป็น และต้องแนบเอกสารทั้ง 3 ข้อตามที่กำหนด
+  </div>
+
+  <!-- อีเมล -->
+  <div class="fg">
+    <label class="req">อีเมล</label>
+    <input id="email" type="email" required placeholder="อีเมลของคุณ"/>
+  </div>
+
+  <!-- 1. ชื่อ - นามสกุล -->
+  <div class="fg">
+    <label class="req"><span class="num">1</span>ชื่อ - นามสกุล</label>
+    <input id="full_name" required placeholder="คำตอบของคุณ"/>
+  </div>
+
+  <!-- 2. เบอร์โทรศัพท์ -->
+  <div class="fg">
+    <label class="req"><span class="num">2</span>เบอร์โทรศัพท์</label>
+    <input id="phone" type="tel" required placeholder="คำตอบของคุณ"/>
+  </div>
+
+  <!-- 3. ป้ายทะเบียนรถ -->
+  <div class="fg">
+    <label class="req"><span class="num">3</span>ป้ายทะเบียนรถ</label>
+    <input id="car_plate" required placeholder="คำตอบของคุณ"/>
+  </div>
+
+  <!-- 4. Email สำหรับหนังสือรับรองหักภาษี ณ ที่จ่าย -->
+  <div class="fg">
+    <label class="req"><span class="num">4</span>กรอก Email ในการจัดส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย</label>
+    <input id="tax_email" type="email" required placeholder="คำตอบของคุณ"/>
+  </div>
+
+  <!-- 5. ที่อยู่สำหรับหนังสือรับรองหักภาษี -->
+  <div class="fg">
+    <label class="req"><span class="num">5</span>ที่อยู่ ในการจัดส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย</label>
+    <div class="desc">(กรณีที่อยู่ตามบัตรประชาชน ให้พิมพ์ว่า <strong style="color:var(--gold)">"ตามบัตรประชาชน"</strong>)</div>
+    <textarea id="tax_address" required placeholder="คำตอบของคุณ"></textarea>
+  </div>
+
+  <!-- 6. ตำแหน่ง -->
+  <div class="fg">
+    <label class="req"><span class="num">6</span>ตำแหน่ง</label>
+    <select id="position" required>
+      <option value="">เลือก</option>
+      <option>แพทย์ทั่วไป</option>
+      <option>แพทย์อาชีวอนามัย</option>
+      <option>พยาบาลวิชาชีพ</option>
+      <option>เทคนิคการแพทย์</option>
+      <option>ผู้ช่วยพยาบาล</option>
+      <option>เจ้าหน้าที่ เจาะเลือด มีใบCer</option>
+      <option>เจ้าหน้าที่ อาชีวอนามัย มีใบCer</option>
+      <option>เจ้าหน้าที่ อาชีวอนามัย ไม่มีใบCer</option>
+      <option>เจ้าหน้าที่ทั่วไป</option>
+    </select>
+  </div>
+
+  <!-- 7. เอกสารใบประกอบวิชาชีพ -->
+  <div class="fg">
+    <label class="req"><span class="num">7</span>เอกสารสำเนาใบประกอบวิชาชีพ</label>
+    <div class="desc">(กรณี PN NA ให้แนบประกาศนียบัตร)</div>
+    <label class="file-area" for="file_license" id="area_license">
+      <input id="file_license" type="file" accept="image/*,application/pdf" onchange="onFile(this,'license')" required/>
+      <span class="file-icon">📜</span>
+      <span class="file-label">คลิกเพื่อเลือกไฟล์</span>
+      <span class="file-hint">PDF, JPG, PNG (สูงสุด 100 MB · 1 ไฟล์)</span>
+      <div id="info_license"></div>
+    </label>
+  </div>
+
+  <!-- 8. เอกสารบัตรประชาชน -->
+  <div class="fg">
+    <label class="req"><span class="num">8</span>เอกสารสำเนาหน้าบัตรประชาชน</label>
+    <div class="desc">ใช้ในการออกใบหักภาษี (ภาพถ่ายต้องเห็นชื่ออยู่ชัดเจน)</div>
+    <label class="file-area" for="file_id" id="area_id">
+      <input id="file_id" type="file" accept="image/*,application/pdf" onchange="onFile(this,'id')" required/>
+      <span class="file-icon">🪪</span>
+      <span class="file-label">คลิกเพื่อเลือกไฟล์</span>
+      <span class="file-hint">PDF, JPG, PNG (สูงสุด 100 MB · 1 ไฟล์)</span>
+      <div id="info_id"></div>
+    </label>
+  </div>
+
+  <!-- 9. เอกสารบัญชีธนาคาร -->
+  <div class="fg">
+    <label class="req"><span class="num">9</span>เอกสารสำเนาหน้าบัญชีธนาคารการรับค่าจ้าง</label>
+    <div class="desc">
+      <strong style="color:var(--red)">ต้องเป็นหน้าบัญชีตัวเองเท่านั้น!!!</strong><br>
+      ใช้แบบใดใส่แบบนั้นตามหน้าตัวอย่าง · <strong style="color:var(--red)">**หากไม่ใช่บัญชีตัวเองระบบจะไม่สามารถทำเบิกงานได้**</strong>
+    </div>
+    <label class="file-area" for="file_bank" id="area_bank">
+      <input id="file_bank" type="file" accept="image/*,application/pdf" onchange="onFile(this,'bank')" required/>
+      <span class="file-icon">🏦</span>
+      <span class="file-label">คลิกเพื่อเลือกไฟล์</span>
+      <span class="file-hint">PDF, JPG, PNG (สูงสุด 100 MB · 1 ไฟล์)</span>
+      <div id="info_bank"></div>
+    </label>
+  </div>
+
+  <div class="btn-bar">
+    <button type="button" class="btn" onclick="clearForm()">↻ ล้างฟอร์ม</button>
+    <button type="submit" class="btn btn-pri">📤 ส่ง</button>
+  </div>
+</form>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ═══ Storage Key — ตรงกับ DB._get('hr_db','parttime') ในระบบหลัก
+// Format: ${db}__${t} = "hr_db__parttime"
+const STORAGE_KEY = 'hr_db__parttime';
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
+
+// ═══ Storage helpers (ใช้ key ตรงตาม DB._get/DB._set ในระบบหลัก) ═══
+function listPT(){
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }
+  catch { return []; }
+}
+function savePT(rows){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+    return true;
+  } catch(e){
+    if(e.name === 'QuotaExceededError'){
+      showToast('❌ ข้อมูลใหญ่เกิน localStorage limit — ลองลดขนาดรูป', true);
+    } else {
+      showToast('❌ บันทึกไม่สำเร็จ: '+e.message, true);
+    }
+    return false;
+  }
+}
+function nextId(){
+  const rows = listPT();
+  return rows.length>0 ? Math.max(...rows.map(r=>r.id||0))+1 : 1;
+}
+
+function showToast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr?' error':'');
+  setTimeout(()=>t.className='toast', 3000);
+}
+
+// ═══ File upload — convert to base64 ═══
+const uploadedFiles = {license:null, id:null, bank:null};
+
+function onFile(input, key){
+  const file = input.files[0];
+  const area = document.getElementById('area_'+key);
+  const info = document.getElementById('info_'+key);
+  if(!file){
+    uploadedFiles[key] = null;
+    area.classList.remove('has-file');
+    info.innerHTML = '';
+    return;
+  }
+  if(file.size > MAX_FILE_SIZE){
+    showToast(`❌ ไฟล์ใหญ่เกิน 100 MB`, true);
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadedFiles[key] = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      data: e.target.result
+    };
+    area.classList.add('has-file');
+    const isImg = file.type.startsWith('image/');
+    info.innerHTML = `
+      <div class="file-name">✅ ${escapeHtml(file.name)} (${formatSize(file.size)})</div>
+      ${isImg?`<img class="file-thumb" src="${e.target.result}" alt="preview"/>`:''}
+    `;
+  };
+  reader.onerror = () => {
+    showToast('❌ อ่านไฟล์ไม่สำเร็จ', true);
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function formatSize(bytes){
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(2) + ' MB';
+}
+
+function clearForm(){
+  if(!confirm('ล้างข้อมูลในฟอร์มทั้งหมด?')) return;
+  document.getElementById('ptForm').reset();
+  ['license','id','bank'].forEach(k=>{
+    uploadedFiles[k] = null;
+    document.getElementById('area_'+k).classList.remove('has-file');
+    document.getElementById('info_'+k).innerHTML = '';
+  });
+  document.querySelectorAll('.invalid').forEach(el=>el.classList.remove('invalid'));
+}
+
+function clearFormSilent(){
+  document.getElementById('ptForm').reset();
+  ['license','id','bank'].forEach(k=>{
+    uploadedFiles[k] = null;
+    document.getElementById('area_'+k).classList.remove('has-file');
+    document.getElementById('info_'+k).innerHTML = '';
+  });
+}
+
+document.getElementById('ptForm').addEventListener('submit', function(e){
+  e.preventDefault();
+
+  // ═══ Validate required fields ═══
+  const required = [
+    ['email','อีเมล'],
+    ['full_name','ชื่อ-นามสกุล'],
+    ['phone','เบอร์โทรศัพท์'],
+    ['car_plate','ป้ายทะเบียนรถ'],
+    ['tax_email','Email สำหรับหนังสือรับรองหักภาษี'],
+    ['tax_address','ที่อยู่สำหรับหนังสือรับรอง'],
+    ['position','ตำแหน่ง']
+  ];
+  document.querySelectorAll('.invalid').forEach(el=>el.classList.remove('invalid'));
+  for(const [id, label] of required){
+    const el = document.getElementById(id);
+    if(!el.value || !el.value.trim()){
+      el.classList.add('invalid');
+      el.focus();
+      showToast(`กรุณากรอก: ${label}`, true);
+      return;
+    }
+  }
+
+  // File uploads validation
+  const fileLabels = {license:'7. ใบประกอบวิชาชีพ', id:'8. บัตรประชาชน', bank:'9. บัญชีธนาคาร'};
+  for(const key of ['license','id','bank']){
+    if(!uploadedFiles[key]){
+      showToast(`กรุณาแนบเอกสาร: ${fileLabels[key]}`, true);
+      document.getElementById('area_'+key).scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+  }
+
+  // Email validate
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!emailRe.test(document.getElementById('email').value)){
+    document.getElementById('email').classList.add('invalid');
+    showToast('รูปแบบอีเมลไม่ถูกต้อง', true);
+    return;
+  }
+  if(!emailRe.test(document.getElementById('tax_email').value)){
+    document.getElementById('tax_email').classList.add('invalid');
+    showToast('รูปแบบ Email หนังสือรับรองหักภาษีไม่ถูกต้อง', true);
+    return;
+  }
+
+  // ═══ Build record (matching Google Form fields exactly) ═══
+  const now = new Date().toISOString();
+  const record = {
+    id: nextId(),
+    // อีเมล (Google Forms standard)
+    email: document.getElementById('email').value.trim(),
+    // 1-6 form fields
+    full_name: document.getElementById('full_name').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    car_plate: document.getElementById('car_plate').value.trim(),
+    tax_email: document.getElementById('tax_email').value.trim(),
+    tax_address: document.getElementById('tax_address').value.trim(),
+    position: document.getElementById('position').value,
+    // 7-9 documents (base64)
+    doc_license: uploadedFiles.license,
+    doc_id_card: uploadedFiles.id,
+    doc_bank_account: uploadedFiles.bank,
+    // Metadata
+    status: 'pending',
+    created_at: now,
+    updated_at: now,
+    recorded_by: 'Self-Register (RegisterPT.html)'
+  };
+
+  // Save to localStorage (Database connection with main app)
+  const rows = listPT();
+  rows.push(record);
+  const ok = savePT(rows);
+  if(!ok) return; // error toast already shown
+
+  showToast('✅ ส่งใบสมัครเรียบร้อย ขอบคุณค่ะ/ครับ');
+  setTimeout(()=>{
+    clearFormSilent();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }, 1500);
+});
+
+function escapeHtml(s){
+  return String(s||'').replace(/[<>&"']/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+// Remove .invalid class when user types
+document.querySelectorAll('input, select, textarea').forEach(el=>{
+  el.addEventListener('input', ()=>el.classList.remove('invalid'));
+  el.addEventListener('change', ()=>el.classList.remove('invalid'));
+});
+
+// Init
+</script>
+
+</body>
+</html>

@@ -394,10 +394,21 @@ body {
 }
 .nav-item .icon { width:17px; text-align:center; font-size:14px; flex-shrink:0; }
 .nav-badge, .nav-role-badge {
-  margin-left:auto; background:var(--c-danger); color:#fff;
+  margin-left:auto;
+  background:linear-gradient(180deg,#F87171,#DC2626);
+  color:#FFFFFF;
   border-radius:10px; padding:1px 7px;
   font-size:10px; font-weight:700;
+  font-family:'IBM Plex Mono', monospace;
+  min-width:18px; text-align:center;
+  box-shadow:0 0 0 1px rgba(252,165,165,.3), 0 2px 6px rgba(220,38,38,.35);
+  animation:navBadgePulse 2.5s ease-in-out infinite;
 }
+@keyframes navBadgePulse{
+  0%, 100% { box-shadow:0 0 0 1px rgba(252,165,165,.3), 0 2px 6px rgba(220,38,38,.35); }
+  50%      { box-shadow:0 0 0 2px rgba(252,165,165,.55), 0 2px 12px rgba(220,38,38,.55); }
+}
+.nav-role-badge { animation:none; }  /* role badge ไม่ใช่ alert ไม่ต้อง pulse */
 
 .sidebar-footer { padding:12px 14px 18px; border-top:1px solid var(--b-1); }
 .u-info-wrap { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
@@ -760,3 +771,7 @@ select option { background:var(--s-3); color:var(--t-bright); }
 /* ─── ANIMATIONS ─────────────────────────────── */
 @keyframes fade-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 #content > * { animation:fade-in .2s var(--ease); }
+
+
+/* Workflow Tracker — Department Cards */
+@keyframes wfDeptPulse{0%,100%{opacity:1}50%{opacity:.55}}
