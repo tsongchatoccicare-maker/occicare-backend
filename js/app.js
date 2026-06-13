@@ -30,7 +30,7 @@ const VEHICLES=['รถยนต์กะบะขาว','รถยนต์ก
 const PROFESSIONS=['เจ้าหน้าที่','RN','MT','แพทย์','เจ้าหน้าที่ ใบ Cer','อื่นๆ'];
 const STAFF_TYPES=['ในองค์กร','Part-time','Out Source'];
 const STATUS_FLOW=['Prospect','Closed','Onsite','Lab','Report','Billing','Completed'];
-const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',config:'⚙ Config ระบบ'};
+const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',assessment:'⭐ Gen Assessment',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config:'⚙ Config ระบบ'};
 const QT_APPROVE_ROLES=['admin','sales']; // roles that can approve quotations
 
 /* ===== UTILS ===== */
@@ -276,7 +276,7 @@ const Router={
     if(!DB.auth.can('view',page)&&page!=='calendar'&&page!=='op_report'){U.toast('⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้','danger');return;}
     this.current=page;
     document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time'}[page]||page;
+    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time',assessment:'⭐ Gen Assessment — สร้าง QR แบบประเมิน',assessment_report:'🌟 ผลประเมินความพึงพอใจ'}[page]||page;
     // Show loading indicator
     const content = document.getElementById('content');
     if(content) content.innerHTML = '<div class="empty" style="padding:60px"><div style="font-size:32px;margin-bottom:12px;opacity:.4">⏳</div><p style="color:var(--t-dim)">กำลังโหลด...</p></div>';
@@ -461,8 +461,11 @@ function buildNav(){
     {page:'medical',icon:'📋',label:'เวชระเบียน',mod:'medical'},
     {section:'การเงิน'},
     {page:'billing',icon:'💰',label:'Billing & Invoice',mod:'billing'},
+    {section:'Gen Assessment'},
+    {page:'assessment',icon:'⭐',label:'สร้าง QR แบบประเมิน',mod:'assessment'},
     {section:'รายงาน'},
     {page:'op_report',icon:'📊',label:'รายงานสรุปค่าใช้จ่าย',mod:'op_report'},
+    {page:'assessment_report',icon:'🌟',label:'ผลประเมินความพึงพอใจ',mod:'assessment_report'},
     {section:'ข้อมูล Part-Time'},
     {page:'parttime',icon:'⏰',label:'Part-Time',mod:'parttime'},
     {page:'parttime_history',icon:'📊',label:'รายงานประวัติ PT',mod:'parttime_history'},
@@ -1648,19 +1651,23 @@ Pages.dashboard={
   </div>
   ${aHtml?`<div class="mb4">${aHtml}</div>`:''}
   ${(()=>{
-    // ── KPI: Group Projects by job_type (จาก CRM ลูกค้า) ──
+    // ── KPI: Group Projects by job_type (จาก CRM ลูกค้า) — แสดงครบทุกประเภท ──
     const customers = DB.customer ? DB.customer.listCustomers() : [];
     const projects = projs;
-    // Map job_type → count of projects (ผ่าน customer_id)
-    const typeCounts = {};
+    // ประเภทงานทั้งหมด (fix list — แสดงครบเสมอ)
+    const ALL_TYPES = ['ตรวจสุขภาพ','OS XRAY','ตรวจซ้ำ','เก็บอาหาร ตัวอย่าง','อบรม First Aid','Consult','อื่นๆ'];
+    // Map job_type → count + project list
+    const typeData = {};
+    ALL_TYPES.forEach(t=>{typeData[t] = [];});
+    typeData['ไม่ระบุ'] = [];
     projects.forEach(p=>{
       const cust = customers.find(c=>c.id===p.customer_id);
       const jt = (cust && cust.job_type) ? cust.job_type : 'ไม่ระบุ';
-      typeCounts[jt] = (typeCounts[jt]||0) + 1;
+      if(!typeData[jt]) typeData[jt] = [];
+      typeData[jt].push(p);
     });
-    const sortedTypes = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
     const totalProj = projects.length;
-    const totalTypes = sortedTypes.length;
+    const usedTypes = Object.keys(typeData).filter(k=>typeData[k].length>0).length;
     // สีตามประเภทงาน
     const colorOf = (jt)=>{
       const map = {
@@ -1670,26 +1677,32 @@ Pages.dashboard={
         'เก็บอาหาร ตัวอย่าง': {c1:'#FCA5A5', c2:'#DC2626'},
         'อบรม First Aid': {c1:'#C4B5FD', c2:'#7C3AED'},
         'Consult': {c1:'#FDA4AF', c2:'#E11D48'},
-        'อื่นๆ': {c1:'#9CA3AF', c2:'#4B5563'},
-        'ไม่ระบุ': {c1:'#9CA3AF', c2:'#4B5563'}
+        'อื่นๆ': {c1:'#9CA3AF', c2:'#6B7280'},
+        'ไม่ระบุ': {c1:'#94A3B8', c2:'#475569'}
       };
       return map[jt] || {c1:'#94A3B8', c2:'#475569'};
     };
-    // Total card + รวบรายประเภท
-    const totalCard = `<div class="metric-card" style="background:rgba(240,205,127,.04);border:1px solid rgba(240,205,127,.3);position:relative;overflow:hidden">
+    // Total card (clickable → all)
+    const totalCard = `<div class="metric-card" onclick="Pages.dashboard.viewByJobType('__ALL__')" style="background:rgba(240,205,127,.04);border:1px solid rgba(240,205,127,.3);position:relative;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(240,205,127,.2)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
       <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F0CD7F,#D4A845)"></div>
       <div class="metric-label" style="color:#F0CD7F">ประเภทงานทั้งหมด</div>
       <div class="metric-value">${totalProj}</div>
-      <div class="metric-sub">${totalTypes} ประเภท</div>
+      <div class="metric-sub">${usedTypes} ประเภท</div>
     </div>`;
-    const typeCards = sortedTypes.map(([jt,n])=>{
+    // แสดงเฉพาะใน ALL_TYPES (always) + 'ไม่ระบุ' (ถ้ามี)
+    const showList = [...ALL_TYPES];
+    if(typeData['ไม่ระบุ'] && typeData['ไม่ระบุ'].length>0) showList.push('ไม่ระบุ');
+    const typeCards = showList.map(jt=>{
+      const list = typeData[jt] || [];
+      const n = list.length;
       const col = colorOf(jt);
       const pct = totalProj>0 ? Math.round(n*100/totalProj) : 0;
-      return `<div class="metric-card" style="position:relative;overflow:hidden">
+      const dimStyle = n===0 ? 'opacity:.5' : '';
+      return `<div class="metric-card" onclick="Pages.dashboard.viewByJobType('${U.esc(jt)}')" style="position:relative;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;${dimStyle}" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(${col.c1==='#6EE7B7'?'110,231,183':col.c1==='#7DD3FC'?'56,189,248':col.c1==='#FCD34D'?'252,211,77':col.c1==='#FCA5A5'?'252,165,165':col.c1==='#C4B5FD'?'196,181,253':col.c1==='#FDA4AF'?'253,164,175':'148,163,184'},.18)';this.style.opacity='1'" onmouseout="this.style.transform='';this.style.boxShadow='';this.style.opacity='${n===0?'.5':''}'">
         <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${col.c1},${col.c2})"></div>
         <div class="metric-label" style="color:${col.c1}">${U.esc(jt)}</div>
         <div class="metric-value">${n}</div>
-        <div class="metric-sub">${pct}% ของทั้งหมด</div>
+        <div class="metric-sub">${n===0?'ยังไม่มี':pct+'% ของทั้งหมด'}</div>
       </div>`;
     }).join('');
     return `<div class="metrics-grid">${totalCard}${typeCards}</div>`;
@@ -1790,6 +1803,82 @@ viewOnsiteSummary(pid){
   `👁 สรุปยอด Onsite — ${p.project_code}`, null, true);
 },
 filterStatus(s){this._filter=s;this._search='';this.render();},
+
+// ─── คลิก KPI card → ดูรายการ Projects ของประเภทงานนั้น ───
+viewByJobType(jt){
+  const projs = DB.sales.listProjects();
+  const customers = DB.customer ? DB.customer.listCustomers() : [];
+  const ALL_TYPES = ['ตรวจสุขภาพ','OS XRAY','ตรวจซ้ำ','เก็บอาหาร ตัวอย่าง','อบรม First Aid','Consult','อื่นๆ'];
+  // Filter list
+  let list = projs;
+  let title = '👁 ทุก Project (ทุกประเภทงาน)';
+  if(jt !== '__ALL__'){
+    list = projs.filter(p=>{
+      const c = customers.find(x=>x.id===p.customer_id);
+      const cjt = (c && c.job_type) ? c.job_type : 'ไม่ระบุ';
+      return cjt === jt;
+    });
+    title = `👁 ประเภทงาน: ${jt} (${list.length} Project)`;
+  }
+  if(list.length === 0){
+    Modal.open(`<div style="padding:30px;text-align:center;color:#FFFFFF;opacity:.55">
+      <div style="font-size:42px;margin-bottom:10px">📋</div>
+      <p style="font-size:14px;font-weight:600">ยังไม่มี Project ประเภทนี้</p>
+      <p style="font-size:11.5px;margin-top:6px">เริ่มต้นที่หน้า CRM ลูกค้า หรือสร้าง Project ใหม่</p>
+    </div>`, title, null, false);
+    return;
+  }
+  // Sort: newest onsite_date first
+  list = list.slice().sort((a,b)=>{
+    return new Date(b.onsite_date||0) - new Date(a.onsite_date||0);
+  });
+  // Build table rows
+  const rows = list.map(p=>{
+    const c = customers.find(x=>x.id===p.customer_id);
+    const customerName = c ? c.company_name : '-';
+    const customerJobType = (c && c.job_type) ? c.job_type : '-';
+    return `<tr style="cursor:pointer" onclick="Modal.close();Router.navigate('sales');setTimeout(()=>{const el=document.querySelector('[data-project-id=\'${p.id}\']');if(el)el.scrollIntoView({block:'center'});},300)" title="คลิกไปดูที่หน้า Sales">
+      <td style="padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-family:'IBM Plex Mono',monospace;color:#F0CD7F;font-weight:700;font-size:11.5px">${U.esc(p.project_code||'-')}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-weight:600;font-size:12px">${U.esc(p.company_name||'-')}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-size:11.5px;color:rgba(255,255,255,.75)">${U.esc(customerName)}<br><span style="font-size:9.5px;color:rgba(255,255,255,.5);font-family:'IBM Plex Mono',monospace">${U.esc(customerJobType)}</span></td>
+      <td style="padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-size:11.5px">${U.fmtD(p.onsite_date)}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.06);text-align:right;font-size:11.5px;font-family:'IBM Plex Mono',monospace">${(p.headcount||0).toLocaleString()}</td>
+      <td style="padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.06)">${U.badge(p.status||'Draft')}</td>
+    </tr>`;
+  }).join('');
+  // Summary stats
+  const totalHC = list.reduce((s,p)=>s+(p.headcount||0), 0);
+  const statusBreak = {};
+  list.forEach(p=>{ statusBreak[p.status||'Draft'] = (statusBreak[p.status||'Draft']||0)+1; });
+  const statusChips = Object.entries(statusBreak).map(([s,n])=>`${U.badge(s)} <span style="color:rgba(255,255,255,.7);font-size:11px;margin-right:8px">${n}</span>`).join('');
+  Modal.open(`
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;margin-bottom:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+      <div>
+        <div style="font-size:13px;font-weight:700">📊 รวม ${list.length} Project · ${totalHC.toLocaleString()} คน</div>
+        <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-top:3px;font-weight:500">เรียงจากวันออกตรวจล่าสุด</div>
+      </div>
+      <div style="font-size:11px">${statusChips}</div>
+    </div>
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden;max-height:55vh;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead style="position:sticky;top:0;background:#162338;z-index:1">
+          <tr>
+            <th style="padding:9px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">Project Code</th>
+            <th style="padding:9px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">บริษัท</th>
+            <th style="padding:9px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">ลูกค้า / ประเภท</th>
+            <th style="padding:9px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">วันออกตรวจ</th>
+            <th style="padding:9px 11px;text-align:right;font-size:10.5px;font-weight:700;color:#FFFFFF">จำนวนคน</th>
+            <th style="padding:9px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">สถานะ</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:10.5px;color:#FFFFFF;opacity:.55;margin-top:10px;text-align:center;font-style:italic">
+      คลิกที่ row เพื่อไปดูใน Sales — Project & Handover
+    </div>
+  `, title, null, false);
+},
 filterSearch(q){
   this._search=q.toLowerCase().trim();
   const cards=document.querySelectorAll('.wf-card');
@@ -7782,5 +7871,283 @@ Pages.parttime_history = {
         </table>
       </div>
     `, `💼 ${U.esc(pt.full_name)} · ${U.esc(job.project_code||'JO')}`, null, false);
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   Pages.assessment — Gen QR + PDF A4 (per Project)
+   ═══════════════════════════════════════════════════════════ */
+Pages.assessment = {
+  _search: '',
+  async render(){
+    const projs = DB.sales.listProjects().filter(p=>['Closed','Onsite','Lab','Report','Billing','Completed'].includes(p.status));
+    // Apply search
+    let list = projs;
+    if(this._search){
+      const q = this._search.toLowerCase().trim();
+      list = list.filter(p=>(p.project_code||'').toLowerCase().includes(q)||(p.company_name||'').toLowerCase().includes(q));
+    }
+    // Sort: newest onsite first
+    list = list.slice().sort((a,b)=>new Date(b.onsite_date||0)-new Date(a.onsite_date||0));
+
+    const rows = list.map(p=>{
+      const responses = DB.assessment.listByProject(p.project_code);
+      const n = responses.length;
+      const pct = p.headcount>0 ? Math.round(n*100/p.headcount) : 0;
+      return `<tr>
+        <td><span class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${U.esc(p.project_code||'-')}</span></td>
+        <td class="fw6">${U.esc(p.company_name||'-')}</td>
+        <td>${U.fmtD(p.onsite_date)}</td>
+        <td style="text-align:right">${(p.headcount||0).toLocaleString()}</td>
+        <td>${U.badge(p.status||'Draft')}</td>
+        <td style="text-align:center">
+          <span style="color:${n>0?'#6EE7B7':'rgba(255,255,255,.4)'};font-weight:700;font-family:'IBM Plex Mono',monospace">${n}</span>
+          <span style="font-size:10px;color:rgba(255,255,255,.5)"> / ${(p.headcount||0).toLocaleString()}</span>
+          ${n>0?`<div style="font-size:9.5px;color:#6EE7B7;font-weight:600">${pct}%</div>`:''}
+        </td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-out btn-xs" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.4);color:#7DD3FC" onclick="Pages.assessment.openQR('${U.esc(p.project_code||'')}',${p.id})">⭐ สร้าง QR</button>
+          <button class="btn btn-out btn-xs" style="background:rgba(252,165,165,.08);border-color:rgba(252,165,165,.35);color:#FCA5A5" onclick="Pages.assessment.exportPDF('${U.esc(p.project_code||'')}',${p.id})">📄 PDF A4</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('content').innerHTML=`
+      <div class="ph">
+        <div><h2>⭐ Gen Assessment — แบบประเมินความพึงพอใจ</h2><p>สร้าง QR Code แต่ละ Project ให้ลูกค้า scan ทำแบบประเมินหน้างาน</p></div>
+      </div>
+      <div class="card">
+        <div style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.06)">
+          <input id="as_search" placeholder="🔍 ค้นหา Project / บริษัท..." value="${U.esc(this._search)}"
+            style="width:100%;max-width:400px;padding:7px 12px;border:1.5px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;background:var(--s-3,#1D2B42);color:#FFFFFF;outline:none"
+            oninput="Pages.assessment._search=this.value;clearTimeout(Pages.assessment._t);Pages.assessment._t=setTimeout(()=>Pages.assessment.render(),200)"/>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Project Code</th><th>บริษัท</th><th>วันออกตรวจ</th><th style="text-align:right">จำนวนคน</th><th>สถานะ</th><th style="text-align:center">ผู้ตอบ</th><th></th></tr></thead>
+            <tbody>${rows||'<tr><td colspan="7" class="empty"><div class="icon">⭐</div><p>ยังไม่มี Project ที่พร้อมสร้างแบบประเมิน (ต้อง Status ≥ Closed)</p></td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>`;
+  },
+
+  _qrUrl(projectCode){
+    // QR ชี้ไปที่ assessment.html — ใช้ origin ปัจจุบัน
+    const base = window.location.origin + window.location.pathname.replace(/[^\/]*$/,'');
+    return `${base}assessment.html?p=${encodeURIComponent(projectCode)}`;
+  },
+
+  _genQRSVG(text, size){
+    // ใช้ qrcode-generator lib (โหลดจาก CDN ใน index.html)
+    if(typeof qrcode !== 'function'){
+      return `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:#FEE;color:#B00;font-size:11px;text-align:center;padding:10px">QRCode library not loaded.<br>กรุณา refresh หน้านี้</div>`;
+    }
+    try {
+      const qr = qrcode(0, 'M');
+      qr.addData(text);
+      qr.make();
+      return qr.createSvgTag({cellSize: Math.floor(size/qr.getModuleCount()), margin: 1, scalable: true});
+    } catch(e){
+      return `<div style="color:red;font-size:11px">Error: ${e.message}</div>`;
+    }
+  },
+
+  openQR(projectCode, projectId){
+    const p = DB.sales.getProject(projectId);
+    if(!p){U.toast('ไม่พบ Project','danger');return;}
+    const url = this._qrUrl(projectCode);
+    const responses = DB.assessment.listByProject(projectCode);
+
+    Modal.open(`
+      <div style="text-align:center">
+        <div style="background:linear-gradient(135deg,rgba(240,205,127,.08),rgba(56,189,248,.06));border:1px solid rgba(240,205,127,.25);padding:10px 14px;border-radius:8px;margin-bottom:13px">
+          <div style="font-size:14px;font-weight:700;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${U.esc(projectCode)}</div>
+          <div style="font-size:13px;font-weight:600;margin-top:3px">${U.esc(p.company_name)}</div>
+          <div style="font-size:11.5px;color:rgba(255,255,255,.7);margin-top:3px">📆 ${U.fmtD(p.onsite_date)} · 🧑‍💼 ${(p.headcount||0).toLocaleString()} คน</div>
+        </div>
+        <div style="background:#FFFFFF;padding:14px;border-radius:9px;display:inline-block;margin-bottom:13px">
+          <div id="qr_img_${projectId}" style="width:250px;height:250px;display:flex;align-items:center;justify-content:center">${this._genQRSVG(url, 250)}</div>
+        </div>
+        <div style="font-size:10.5px;color:rgba(255,255,255,.6);font-weight:500;margin-bottom:5px">QR Link:</div>
+        <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.25);padding:7px 11px;border-radius:6px;font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:#7DD3FC;margin-bottom:13px;word-break:break-all">${url}</div>
+        <div style="display:flex;gap:7px;justify-content:center">
+          <button class="btn btn-out" onclick="navigator.clipboard.writeText('${url}').then(()=>U.toast('✅ คัดลอก link แล้ว'))" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.4);color:#7DD3FC">📋 Copy Link</button>
+          <button class="btn btn-gold" onclick="Pages.assessment.exportPDF('${U.esc(projectCode)}',${projectId})">📄 Export PDF A4</button>
+        </div>
+        <div style="margin-top:13px;font-size:11.5px;color:rgba(255,255,255,.7);font-weight:500">📊 มีผู้ทำแบบประเมินแล้ว: <span style="color:#6EE7B7;font-weight:700">${responses.length}</span> / ${(p.headcount||0).toLocaleString()} คน</div>
+      </div>
+    `, `⭐ QR Code — แบบประเมิน`, null, false);
+  },
+
+  exportPDF(projectCode, projectId){
+    const p = DB.sales.getProject(projectId);
+    if(!p){U.toast('ไม่พบ Project','danger');return;}
+    const url = this._qrUrl(projectCode);
+    const qrSVG = this._genQRSVG(url, 380);
+    const today = new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>แบบประเมินความพึงพอใจ — ${U.esc(projectCode)}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;font-family:'Sarabun','IBM Plex Sans Thai',sans-serif}
+      @media print { @page { size:A4; margin:15mm 12mm; } button{display:none!important} }
+      body{padding:18mm 13mm;background:#FFFFFF;color:#1A1A1A}
+      .header{background:linear-gradient(135deg,#0B2340,#1A3C65);color:#FFF;padding:16px 22px;border-radius:9px;margin-bottom:18px;text-align:center}
+      .header h1{font-size:24px;font-weight:700;margin-bottom:4px;color:#FFF}
+      .header p{font-size:13px;opacity:.9;color:#FFF}
+      .proj-info{text-align:center;margin-bottom:20px;padding:13px 18px;background:#F0FDF4;border:2px solid #86EFAC;border-radius:8px}
+      .proj-code{display:inline-block;background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;padding:4px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:18px;margin-bottom:6px}
+      .proj-name{font-size:18px;font-weight:700;color:#0B2340;margin-bottom:3px}
+      .proj-meta{font-size:13px;color:#374151;font-weight:500}
+      .qr-wrap{text-align:center;margin:23px 0}
+      .qr-frame{display:inline-block;background:#FFFFFF;border:4px solid #0B2340;padding:12px;border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+      .qr-frame svg{width:380px;height:380px;display:block}
+      .qr-label{font-size:17px;font-weight:700;color:#0B2340;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px}
+      .qr-link{font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:#6B7280;margin-top:5px;word-break:break-all;max-width:380px;margin-left:auto;margin-right:auto}
+      .instructions{background:#F0FDF4;border-left:4px solid #10B981;padding:13px 18px;border-radius:6px;margin-top:20px;text-align:left}
+      .instructions h3{font-size:14px;font-weight:700;color:#065F46;margin-bottom:7px}
+      .instructions .item{font-size:12.5px;color:#1A2332;line-height:1.7;margin-bottom:3px}
+      .footer{text-align:center;font-size:10px;color:#9CA3AF;margin-top:18px;font-weight:500}
+      .print-btn{position:fixed;top:13px;right:13px;background:#0B2340;color:#FFF;border:0;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+    </style>
+    </head><body>
+      <button class="print-btn" onclick="window.print()">🖨️ Print / Export PDF</button>
+      <div class="header">
+        <h1>⭐ แบบประเมินความพึงพอใจ</h1>
+        <p>การเข้ารับการตรวจสุขภาพ 2569 · OcciCare Mobile Checkup</p>
+      </div>
+      <div class="proj-info">
+        <div class="proj-code">${U.esc(projectCode)}</div>
+        <div class="proj-name">${U.esc(p.company_name||'-')}</div>
+        <div class="proj-meta">📆 ${U.fmtD(p.onsite_date)} · 🧑‍💼 ${(p.headcount||0).toLocaleString()} คน · 📍 ${U.esc(p.location||'-')}</div>
+      </div>
+      <div class="qr-wrap">
+        <div class="qr-frame">${qrSVG}</div>
+        <div class="qr-label">📱 สแกน QR Code เพื่อทำแบบประเมิน</div>
+        <div class="qr-link">${url}</div>
+      </div>
+      <div class="instructions">
+        <h3>📋 หลักเกณฑ์การให้คะแนน</h3>
+        <div class="item"><strong style="color:#10B981">5</strong> = พึงพอใจมากที่สุด &nbsp;·&nbsp; <strong style="color:#10B981">4</strong> = พึงพอใจมาก &nbsp;·&nbsp; <strong style="color:#F59E0B">3</strong> = ปานกลาง</div>
+        <div class="item"><strong style="color:#F59E0B">2</strong> = พึงพอใจน้อย &nbsp;·&nbsp; <strong style="color:#DC2626">1</strong> = พึงพอใจน้อยที่สุด &nbsp;·&nbsp; <strong style="color:#6B7280">0</strong> = ไม่มีตรวจ</div>
+        <div class="item" style="margin-top:7px;color:#065F46;font-weight:600">📊 ข้อมูลของท่านจะถูกใช้เพื่อพัฒนาและปรับปรุงคุณภาพการให้บริการเท่านั้น</div>
+      </div>
+      <div class="footer">© OcciCare Mobile Checkup System · พิมพ์เมื่อ ${today}</div>
+    </body></html>`;
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>{ try{ w.print(); }catch(e){} }, 600);
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   Pages.assessment_report — ผลประเมินความพึงพอใจ
+   ═══════════════════════════════════════════════════════════ */
+Pages.assessment_report = {
+  _selectedProjectCode: '',
+  async render(){
+    const projs = DB.sales.listProjects();
+    const allResponses = DB.assessment.list();
+    // Auto-select first project with responses if not selected
+    if(!this._selectedProjectCode){
+      const projsWithResp = projs.filter(p=>allResponses.some(r=>r.project_code===p.project_code));
+      if(projsWithResp.length>0) this._selectedProjectCode = projsWithResp[0].project_code;
+      else if(projs.length>0) this._selectedProjectCode = projs[0].project_code;
+    }
+    // Project options
+    const projOpts = projs.map(p=>{
+      const n = allResponses.filter(r=>r.project_code===p.project_code).length;
+      return `<option value="${U.esc(p.project_code||'')}" ${this._selectedProjectCode===p.project_code?'selected':''}>${U.esc(p.project_code)} — ${U.esc(p.company_name)} (${n} ผู้ตอบ)</option>`;
+    }).join('');
+    // Get summary
+    const summary = this._selectedProjectCode ? DB.assessment.summary(this._selectedProjectCode) : null;
+    const proj = projs.find(p=>p.project_code===this._selectedProjectCode);
+
+    const renderBar = (label, avg, count, color='#6EE7B7')=>{
+      if(avg === null) return `<div style="display:flex;justify-content:space-between;padding:7px 11px;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px"><span>${U.esc(label)}</span><span style="color:rgba(255,255,255,.4);font-style:italic;font-size:11px">— ไม่มีข้อมูล —</span></div>`;
+      const pct = (avg/5)*100;
+      const barColor = avg>=4 ? '#10B981' : avg>=3 ? '#F59E0B' : '#DC2626';
+      const txtColor = avg>=4 ? '#6EE7B7' : avg>=3 ? '#FCD34D' : '#FCA5A5';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 11px;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;gap:11px">
+        <span style="flex:1;min-width:0">${U.esc(label)} <span style="font-size:10px;color:rgba(255,255,255,.5)">(${count} คน)</span></span>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div style="width:140px;height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,${barColor}cc,${barColor});border-radius:4px"></div>
+          </div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${txtColor};min-width:32px;text-align:right;font-size:12.5px">${avg.toFixed(1)}</span>
+        </div>
+      </div>`;
+    };
+
+    const content = !summary
+      ? `<div style="padding:50px;text-align:center;color:rgba(255,255,255,.55)">
+          <div style="font-size:42px;margin-bottom:11px">⭐</div>
+          <p style="font-size:14px;font-weight:600">ยังไม่มีผลประเมินสำหรับ Project นี้</p>
+          <p style="font-size:11.5px;margin-top:7px">ไปที่ <strong style="color:#7DD3FC">Gen Assessment</strong> เพื่อสร้าง QR ให้ลูกค้าทำแบบประเมิน</p>
+        </div>`
+      : `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="metric-card" style="background:rgba(110,231,183,.06);border:1px solid rgba(110,231,183,.3);position:relative;overflow:hidden">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6EE7B7,#10B981)"></div>
+            <div class="metric-label" style="color:#6EE7B7">คะแนนเฉลี่ย</div>
+            <div class="metric-value" style="font-size:32px">${summary.totalAvg.toFixed(2)}</div>
+            <div class="metric-sub">จาก 5.00</div>
+          </div>
+          <div class="metric-card" style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.3);position:relative;overflow:hidden">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7DD3FC,#0EA5E9)"></div>
+            <div class="metric-label" style="color:#7DD3FC">ผู้ตอบ</div>
+            <div class="metric-value">${summary.count}</div>
+            <div class="metric-sub">/ ${(proj?.headcount||0).toLocaleString()} คน (${proj?.headcount>0?Math.round(summary.count*100/proj.headcount):0}%)</div>
+          </div>
+          <div class="metric-card" style="background:rgba(240,205,127,.06);border:1px solid rgba(240,205,127,.3);position:relative;overflow:hidden">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F0CD7F,#D4A845)"></div>
+            <div class="metric-label" style="color:#F0CD7F">พึงพอใจ (4-5)</div>
+            <div class="metric-value">${summary.satisfiedPct}%</div>
+            <div class="metric-sub">ของคะแนนทั้งหมด</div>
+          </div>
+          <div class="metric-card" style="background:rgba(252,211,77,.06);border:1px solid rgba(252,211,77,.3);position:relative;overflow:hidden">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FCD34D,#F59E0B)"></div>
+            <div class="metric-label" style="color:#FCD34D">ข้อเสนอแนะ</div>
+            <div class="metric-value">${summary.suggestions.length}</div>
+            <div class="metric-sub">รายการ</div>
+          </div>
+        </div>
+        <div class="card mb4">
+          <div class="card-header"><span class="card-title">👥 การให้บริการของเจ้าหน้าที่ (5 ข้อ)</span></div>
+          <div>${summary.staff.map(s=>renderBar(s.label,s.avg,s.count)).join('')}</div>
+        </div>
+        <div class="card mb4">
+          <div class="card-header"><span class="card-title">🏥 จุดตรวจสุขภาพ (12 จุด)</span></div>
+          <div>${summary.stations.map(s=>renderBar(s.label,s.avg,s.count)).join('')}</div>
+        </div>
+        ${summary.suggestions.length>0 ? `<div class="card mb4">
+          <div class="card-header"><span class="card-title">💬 ข้อเสนอแนะ (${summary.suggestions.length} รายการ)</span></div>
+          <div style="padding:11px 14px;max-height:300px;overflow-y:auto">
+            ${summary.suggestions.map((s,i)=>`<div style="background:rgba(255,255,255,.03);border-left:3px solid #7DD3FC;padding:9px 13px;border-radius:5px;margin-bottom:7px;font-size:12px;line-height:1.6">
+              <div style="color:#FFFFFF">${U.esc(s.text)}</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;font-family:'IBM Plex Mono',monospace">${new Date(s.date).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+            </div>`).join('')}
+          </div>
+        </div>`:''}
+      `;
+
+    document.getElementById('content').innerHTML=`
+      <div class="ph">
+        <div><h2>🌟 ผลประเมินความพึงพอใจ</h2><p>สรุปคะแนนจาก QR แบบประเมินที่ลูกค้าตอบหน้างาน</p></div>
+      </div>
+      <div class="card mb4">
+        <div style="padding:13px 16px;display:flex;gap:11px;align-items:center;flex-wrap:wrap">
+          <label style="font-size:12.5px;font-weight:600;color:#F0CD7F">เลือก Project:</label>
+          <select onchange="Pages.assessment_report._selectedProjectCode=this.value;Pages.assessment_report.render()"
+            style="padding:7px 12px;border:1.5px solid rgba(240,205,127,.3);border-radius:7px;font-size:12.5px;background:var(--s-3,#1D2B42);color:#FFFFFF;font-family:inherit;min-width:340px;outline:none">
+            <option value="">-- เลือก Project --</option>
+            ${projOpts}
+          </select>
+        </div>
+      </div>
+      ${content}
+    `;
   }
 };

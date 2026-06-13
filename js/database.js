@@ -741,6 +741,83 @@ const DB={
     }
   },
 
+  // ═══ ASSESSMENT — แบบประเมินความพึงพอใจ (จาก QR Code) ═══
+  assessment:{
+    list(){return DB._get('assessment_db','responses')||[];},
+    listByProject(projectCode){
+      return (DB._get('assessment_db','responses')||[]).filter(r=>r.project_code===projectCode);
+    },
+    listByProjectId(projectId){
+      return (DB._get('assessment_db','responses')||[]).filter(r=>r.project_id===projectId);
+    },
+    get(id){return (DB._get('assessment_db','responses')||[]).find(r=>r.id===id)||null;},
+    save(data){
+      data = DB._stampUser(data, !data.id);
+      const rows = DB._get('assessment_db','responses')||[];
+      if(data.id){
+        const i = rows.findIndex(r=>r.id===data.id);
+        if(i>=0) rows[i] = {...rows[i], ...data, updated_at:DB._now()};
+        else { data.created_at=DB._now(); data.updated_at=DB._now(); rows.push(data); }
+      } else {
+        data.id = DB._nextId('assessment_db','responses');
+        data.created_at = DB._now();
+        data.updated_at = DB._now();
+        rows.push(data);
+      }
+      DB._set('assessment_db','responses',rows);
+      return data;
+    },
+    remove(id){
+      DB._set('assessment_db','responses',(DB._get('assessment_db','responses')||[]).filter(r=>r.id!==id));
+    },
+    // คำนวณ summary สำหรับ project
+    summary(projectCode){
+      const responses = this.listByProject(projectCode);
+      if(responses.length === 0) return null;
+      const STAFF_KEYS = ['s_speed','s_polite','s_advise','s_attentive','s_organized'];
+      const STAFF_LABELS = {
+        s_speed:'ความรวดเร็วในการให้บริการ',
+        s_polite:'พูดจาสุภาพ มีอัธยาศัยดี แต่งกายเรียบร้อย',
+        s_advise:'แนะนำ ให้คำปรึกษา ตอบคำถามได้ชัดเจน',
+        s_attentive:'กระตือรือร้น เอาใจใส่ในการให้บริการ',
+        s_organized:'ความเป็นระเบียบเรียบร้อย วางอุปกรณ์'
+      };
+      const STATION_KEYS = ['t_register','t_weight','t_history','t_blood','t_urine','t_eye','t_ear','t_lung','t_ekg','t_xray','t_doctor','t_return'];
+      const STATION_LABELS = {
+        t_register:'จุดลงทะเบียน',
+        t_weight:'จุดชั่งน้ำหนัก วัดส่วนสูง',
+        t_history:'จุดซักประวัติ และวัดความดันโลหิต',
+        t_blood:'จุดเจาะเลือด',
+        t_urine:'จุดเก็บปัสสาวะ (UA)',
+        t_eye:'จุดตรวจสมรรถภาพการมองเห็น',
+        t_ear:'จุดตรวจสมรรถภาพการได้ยิน',
+        t_lung:'จุดตรวจสมรรถภาพปอด',
+        t_ekg:'จุดตรวจคลื่นไฟฟ้าหัวใจ',
+        t_xray:'จุดเอกซเรย์ทรวงอก',
+        t_doctor:'จุดตรวจร่างกายโดยแพทย์',
+        t_return:'จุดคืนเอกสาร'
+      };
+      const avgOf = (key) => {
+        const vals = responses.map(r=>parseInt(r[key])).filter(v=>!isNaN(v) && v>0);
+        if(vals.length === 0) return null;
+        return vals.reduce((s,v)=>s+v, 0) / vals.length;
+      };
+      const staff = STAFF_KEYS.map(k=>({key:k, label:STAFF_LABELS[k], avg:avgOf(k), count:responses.filter(r=>parseInt(r[k])>0).length}));
+      const stations = STATION_KEYS.map(k=>({key:k, label:STATION_LABELS[k], avg:avgOf(k), count:responses.filter(r=>parseInt(r[k])>0).length}));
+      const allScores = [];
+      responses.forEach(r=>{
+        [...STAFF_KEYS, ...STATION_KEYS].forEach(k=>{
+          const v = parseInt(r[k]);
+          if(!isNaN(v) && v>0) allScores.push(v);
+        });
+      });
+      const totalAvg = allScores.length>0 ? allScores.reduce((s,v)=>s+v, 0)/allScores.length : 0;
+      const satisfiedPct = allScores.length>0 ? Math.round((allScores.filter(v=>v>=4).length / allScores.length) * 100) : 0;
+      const suggestions = responses.map(r=>({text:r.suggestion||'', date:r.created_at, id:r.id})).filter(x=>x.text.trim());
+      return { responses, count:responses.length, staff, stations, totalAvg, satisfiedPct, suggestions };
+    }
+  },
+
   // ═══ STAFF DIRECTORY (รายชื่อพนักงาน) ═══
   staff: {
     list(){return DB._get('hr_db','staff')||[];},
@@ -1169,7 +1246,7 @@ const DB={
         dashboard:full, customers:full, sales:full, quotation:full,
         op_prep:full, op_onsite:full, op_report:full, op_checklist:full,
         lab:full, xray:full, report:full, opd:full, billing:full, medical:full,
-        config:full, staff:full, parttime:full, parttime_history:full
+        config:full, staff:full, parttime:full, parttime_history:full, assessment:full, assessment_report:full
       },created_at:DB._now(),updated_at:DB._now()},
 
       // sales — ทีมขาย: CRM, ใบเสนอราคา, Project & Handover
@@ -1178,7 +1255,7 @@ const DB={
       {role:'sales',modules:{
         dashboard:viewOnly, customers:fullNoDel, sales:fullNoDel, quotation:full,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly,
        
        
        
@@ -1191,7 +1268,7 @@ const DB={
       {role:'operation',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:full, op_onsite:full, op_report:full, op_checklist:fullNoDel,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly,
        
        
         config:none
@@ -1203,7 +1280,7 @@ const DB={
       {role:'lab',modules:{
         dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
         op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
-        lab:fullNoDel, xray:viewOnly, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly,
+        lab:fullNoDel, xray:viewOnly, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly,
        
        
        
@@ -1216,7 +1293,7 @@ const DB={
       {role:'xray',modules:{
         dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:viewOnly, op_report:none,
-        lab:none, xray:fullNoDel, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly,
+        lab:none, xray:fullNoDel, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly,
        
        
        
@@ -1229,7 +1306,7 @@ const DB={
       {role:'report',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
-        lab:viewOnly, xray:none, report:fullNoDel, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly,
+        lab:viewOnly, xray:none, report:fullNoDel, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly,
        
        
        
@@ -1242,7 +1319,7 @@ const DB={
       {role:'billing',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:viewOnly, opd:none, billing:fullNoDel, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly,
+        lab:none, xray:none, report:viewOnly, opd:none, billing:fullNoDel, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly,
        
        
        
@@ -1253,7 +1330,7 @@ const DB={
       {role:'opd',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:viewOnly, op_report:none,
-        lab:none, xray:none, report:none, opd:fullNoDel, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly,
+        lab:none, xray:none, report:none, opd:fullNoDel, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly,
        
        
         config:none
@@ -1263,7 +1340,7 @@ const DB={
       {role:'medical',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:fullNoDel, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:fullNoDel, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly,
        
        
         config:none

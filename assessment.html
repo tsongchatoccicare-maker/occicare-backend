@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>แบบประเมินความพึงพอใจ — OcciCare MCK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Sarabun','IBM Plex Sans Thai',sans-serif}
+:root{
+  --primary:#673AB7;
+  --primary-dk:#4527A0;
+  --suc:#10B981;
+  --warn:#F59E0B;
+  --danger:#DC2626;
+  --bg:#F5F3FF;
+  --card:#FFFFFF;
+  --text:#1F2937;
+  --muted:#6B7280;
+  --border:#E5E7EB;
+}
+html,body{background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+body{padding-bottom:30px}
+.container{max-width:560px;margin:0 auto;padding:0 14px}
+.header{background:linear-gradient(135deg,var(--primary),#9C27B0);color:#FFF;padding:22px 18px;border-radius:0 0 16px 16px;text-align:center;box-shadow:0 4px 14px rgba(103,58,183,.25)}
+.header h1{font-size:20px;font-weight:700;margin-bottom:5px}
+.header p{font-size:13px;opacity:.92}
+.proj-card{background:#FFF;border-radius:11px;margin:16px 0;padding:13px 17px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:2px solid #C4B5FD}
+.proj-code{display:inline-block;background:linear-gradient(180deg,#F59E0B,#D97706);color:#FFF;padding:3px 11px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;margin-bottom:5px}
+.proj-name{font-size:16px;font-weight:700;color:var(--primary-dk)}
+.proj-meta{font-size:11.5px;color:var(--muted);margin-top:3px}
+.intro{background:#FEF3C7;border-left:4px solid #F59E0B;padding:11px 14px;border-radius:6px;margin-bottom:16px;font-size:12px;line-height:1.65;color:#92400E}
+.intro strong{color:#78350F;font-weight:700}
+.section{background:#FFF;border-radius:11px;margin-bottom:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.section-title{font-size:15px;font-weight:700;color:var(--primary-dk);margin-bottom:11px;padding-bottom:8px;border-bottom:2px solid #EDE9FE;display:flex;align-items:center;gap:7px}
+.q-item{padding:10px 0;border-bottom:1px solid #F3F4F6}
+.q-item:last-child{border-bottom:none}
+.q-label{font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px;line-height:1.45}
+.q-label .star{color:#DC2626;margin-left:4px}
+.radio-row{display:grid;gap:5px}
+.radio-row.r5{grid-template-columns:repeat(5,1fr)}
+.radio-row.r6{grid-template-columns:repeat(6,1fr)}
+.radio-opt{position:relative}
+.radio-opt input{position:absolute;opacity:0;pointer-events:none}
+.radio-opt label{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 0;background:#F9FAFB;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);transition:all .15s;min-height:50px}
+.radio-opt label .num{font-size:16px;line-height:1}
+.radio-opt label .desc{font-size:9px;margin-top:2px;font-weight:600;opacity:.7;line-height:1}
+.radio-opt input:checked + label{background:linear-gradient(180deg,#10B981,#059669);border-color:#10B981;color:#FFF;box-shadow:0 2px 8px rgba(16,185,129,.3);transform:scale(1.03)}
+.radio-opt.r5 input:checked + label{background:linear-gradient(180deg,#673AB7,#4527A0);border-color:#673AB7;color:#FFF;box-shadow:0 2px 8px rgba(103,58,183,.35)}
+.radio-opt.bad input:checked + label{background:linear-gradient(180deg,#DC2626,#991B1B);border-color:#DC2626}
+.radio-opt.mid input:checked + label{background:linear-gradient(180deg,#F59E0B,#D97706);border-color:#F59E0B}
+.radio-opt.zero input:checked + label{background:#6B7280;border-color:#6B7280}
+.suggestion-area{width:100%;min-height:90px;padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;background:#F9FAFB;color:var(--text)}
+.suggestion-area:focus{outline:0;border-color:var(--primary);background:#FFF;box-shadow:0 0 0 3px rgba(103,58,183,.1)}
+.submit-btn{width:100%;background:linear-gradient(180deg,#10B981,#059669);color:#FFF;border:0;padding:15px;border-radius:11px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:14px;box-shadow:0 4px 12px rgba(16,185,129,.35);transition:transform .15s,box-shadow .15s}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(16,185,129,.45)}
+.submit-btn:active{transform:translateY(0)}
+.submit-btn:disabled{opacity:.6;cursor:not-allowed;background:#9CA3AF;box-shadow:none;transform:none}
+.success{background:#FFF;border-radius:13px;padding:35px 22px;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.1)}
+.success .icon{font-size:62px;margin-bottom:13px}
+.success h2{font-size:21px;font-weight:700;color:var(--suc);margin-bottom:8px}
+.success p{font-size:13px;color:var(--muted);line-height:1.65}
+.error-banner{background:#FEE2E2;border:1.5px solid #DC2626;color:#991B1B;padding:13px 16px;border-radius:9px;margin:14px 0;font-size:13px;font-weight:600;text-align:center}
+.footer{text-align:center;font-size:10.5px;color:var(--muted);margin-top:22px;font-weight:500}
+.footer .brand{color:var(--primary);font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⭐ แบบประเมินความพึงพอใจ</h1>
+  <p>การเข้ารับการตรวจสุขภาพ 2569</p>
+</div>
+
+<div class="container">
+  <div id="error" style="display:none"></div>
+  <div id="proj_info"></div>
+  <div id="form_area"></div>
+  <div id="success_area" style="display:none"></div>
+</div>
+
+<div class="footer">
+  © <span class="brand">OcciCare Mobile Checkup System</span> · ข้อมูลใช้เพื่อพัฒนาบริการเท่านั้น
+</div>
+
+<script src="js/database.js"></script>
+<script>
+// ─────────────────────────────────────────────
+// แบบประเมิน — มาตรฐาน 2 sections + suggestions
+// ─────────────────────────────────────────────
+const STAFF_QUESTIONS = [
+  {key:'s_speed',     label:'ความรวดเร็วในการให้บริการ'},
+  {key:'s_polite',    label:'พูดจาสุภาพ มีอัธยาศัยดี แต่งกายเรียบร้อย และวางตัวเหมาะสม'},
+  {key:'s_advise',    label:'สามารถแนะนำ ให้คำปรึกษา และตอบคำถามได้ชัดเจน'},
+  {key:'s_attentive', label:'มีความกระตือรือร้น และเอาใจใส่ในการให้บริการ'},
+  {key:'s_organized', label:'ความเป็นระเบียบเรียบร้อยในการวางอุปกรณ์ และเครื่องมือ'}
+];
+const STATION_QUESTIONS = [
+  {key:'t_register', label:'จุดลงทะเบียน'},
+  {key:'t_weight',   label:'จุดชั่งน้ำหนัก วัดส่วนสูง'},
+  {key:'t_history',  label:'จุดซักประวัติ และวัดความดันโลหิต'},
+  {key:'t_blood',    label:'จุดเจาะเลือด'},
+  {key:'t_urine',    label:'จุดเก็บปัสสาวะ (UA)'},
+  {key:'t_eye',      label:'จุดตรวจสมรรถภาพการมองเห็น'},
+  {key:'t_ear',      label:'จุดตรวจสมรรถภาพการได้ยิน'},
+  {key:'t_lung',     label:'จุดตรวจสมรรถภาพปอด'},
+  {key:'t_ekg',      label:'จุดตรวจคลื่นไฟฟ้าหัวใจ'},
+  {key:'t_xray',     label:'จุดเอกซเรย์ทรวงอก'},
+  {key:'t_doctor',   label:'จุดตรวจร่างกายโดยแพทย์'},
+  {key:'t_return',   label:'จุดคืนเอกสาร'}
+];
+
+const params = new URLSearchParams(window.location.search);
+const projectCode = params.get('p') || params.get('project') || '';
+
+function getProject(code){
+  if(!code) return null;
+  // หาจาก DB.sales.listProjects() — ใช้ project_code
+  try {
+    const projs = DB.sales.listProjects();
+    return projs.find(p=>p.project_code===code) || null;
+  } catch(e){ return null; }
+}
+
+const project = getProject(projectCode);
+
+function renderError(msg){
+  document.getElementById('error').style.display='';
+  document.getElementById('error').innerHTML = `<div class="error-banner">⚠️ ${msg}</div>`;
+}
+
+function renderProjInfo(){
+  if(!project){
+    renderError(projectCode ? `ไม่พบ Project: ${projectCode}` : 'ลิงก์ไม่ถูกต้อง — กรุณาสแกน QR Code อีกครั้ง');
+    return false;
+  }
+  document.getElementById('proj_info').innerHTML = `
+    <div class="proj-card">
+      <div class="proj-code">${project.project_code}</div>
+      <div class="proj-name">${project.company_name||'-'}</div>
+      <div class="proj-meta">📆 ${formatDate(project.onsite_date)} · 🧑‍💼 ${(project.headcount||0).toLocaleString()} คน</div>
+    </div>
+    <div class="intro">
+      <strong>📋 หลักเกณฑ์การให้คะแนน:</strong><br>
+      <strong style="color:#10B981">5</strong>=มากที่สุด · <strong style="color:#10B981">4</strong>=มาก · <strong style="color:#F59E0B">3</strong>=ปานกลาง · <strong style="color:#F59E0B">2</strong>=น้อย · <strong style="color:#DC2626">1</strong>=น้อยที่สุด · <strong style="color:#6B7280">0</strong>=ไม่มีตรวจ
+    </div>`;
+  return true;
+}
+
+function formatDate(d){
+  if(!d) return '-';
+  const dt = new Date(d);
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function radioOptions(key, includeZero){
+  // includeZero: true → 0-5 (6 options), false → 1-5 (5 options)
+  const opts = includeZero ? [0,1,2,3,4,5] : [5,4,3,2,1];
+  const desc = {5:'มากสุด',4:'มาก',3:'กลาง',2:'น้อย',1:'น้อยสุด',0:'ไม่มีตรวจ'};
+  return `<div class="radio-row ${includeZero?'r6':'r5'}">
+    ${opts.map(v=>{
+      const cls = v===0 ? 'zero' : v<=2 ? 'bad' : v===3 ? 'mid' : '';
+      return `<div class="radio-opt ${includeZero?'':'r5'} ${cls}">
+        <input type="radio" name="${key}" id="${key}_${v}" value="${v}">
+        <label for="${key}_${v}"><span class="num">${v}</span><span class="desc">${desc[v]}</span></label>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderForm(){
+  if(!project) return;
+  let html = `
+    <div class="section">
+      <div class="section-title">👥 ความพึงพอใจต่อการให้บริการของเจ้าหน้าที่</div>
+      ${STAFF_QUESTIONS.map(q=>`<div class="q-item">
+        <div class="q-label">${q.label}<span class="star">*</span></div>
+        ${radioOptions(q.key, false)}
+      </div>`).join('')}
+    </div>
+    <div class="section">
+      <div class="section-title">🏥 ความพึงพอใจต่อจุดตรวจสุขภาพ</div>
+      ${STATION_QUESTIONS.map(q=>`<div class="q-item">
+        <div class="q-label">${q.label}<span class="star">*</span></div>
+        ${radioOptions(q.key, true)}
+      </div>`).join('')}
+    </div>
+    <div class="section">
+      <div class="section-title">💬 ข้อเสนอแนะเพิ่มเติม (ถ้ามี)</div>
+      <textarea class="suggestion-area" id="suggestion" placeholder="แสดงความคิดเห็น หรือข้อเสนอแนะของท่าน..."></textarea>
+    </div>
+    <button class="submit-btn" id="submit_btn" onclick="submitForm()">✓ ส่งแบบประเมิน</button>
+  `;
+  document.getElementById('form_area').innerHTML = html;
+}
+
+function submitForm(){
+  if(!project) return;
+  // เก็บค่าตอบ
+  const data = { project_code: project.project_code, project_id: project.id };
+  const missing = [];
+  // Staff
+  STAFF_QUESTIONS.forEach(q=>{
+    const v = document.querySelector(`input[name="${q.key}"]:checked`);
+    if(!v){ missing.push(q.label); }
+    else { data[q.key] = v.value; }
+  });
+  // Stations
+  STATION_QUESTIONS.forEach(q=>{
+    const v = document.querySelector(`input[name="${q.key}"]:checked`);
+    if(!v){ missing.push(q.label); }
+    else { data[q.key] = v.value; }
+  });
+  if(missing.length > 0){
+    alert('กรุณาตอบให้ครบทุกข้อก่อนส่ง:\n\n• ' + missing.slice(0,3).join('\n• ') + (missing.length>3?`\n... (อีก ${missing.length-3} ข้อ)`:''));
+    // Scroll to first missing
+    const firstMissing = STAFF_QUESTIONS.concat(STATION_QUESTIONS).find(q=>!document.querySelector(`input[name="${q.key}"]:checked`));
+    if(firstMissing){
+      const el = document.querySelector(`input[name="${firstMissing.key}"]`);
+      if(el && el.parentElement && el.parentElement.parentElement){
+        el.parentElement.parentElement.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    }
+    return;
+  }
+  data.suggestion = (document.getElementById('suggestion').value||'').trim();
+  data.user_agent = navigator.userAgent.substr(0,150);
+  // Save
+  try {
+    DB.assessment.save(data);
+    showSuccess();
+  } catch(e){
+    alert('เกิดข้อผิดพลาดในการบันทึก: ' + e.message);
+  }
+}
+
+function showSuccess(){
+  document.getElementById('form_area').style.display = 'none';
+  document.getElementById('success_area').style.display = '';
+  document.getElementById('success_area').innerHTML = `
+    <div class="success">
+      <div class="icon">🎉</div>
+      <h2>ขอบคุณสำหรับการประเมิน</h2>
+      <p>ระบบได้บันทึกแบบประเมินของท่านเรียบร้อยแล้ว<br>ข้อมูลของท่านจะถูกใช้เพื่อพัฒนาคุณภาพการให้บริการต่อไป</p>
+      <p style="margin-top:14px;color:var(--primary);font-weight:700">— OcciCare MCK Team —</p>
+    </div>
+  `;
+  // Scroll to top
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// Init
+if(renderProjInfo()){
+  renderForm();
+}
+</script>
+
+</body>
+</html>
