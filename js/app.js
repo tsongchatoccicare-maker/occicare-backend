@@ -30,7 +30,7 @@ const VEHICLES=['รถยนต์กะบะขาว','รถยนต์ก
 const PROFESSIONS=['เจ้าหน้าที่','RN','MT','แพทย์','เจ้าหน้าที่ ใบ Cer','อื่นๆ'];
 const STAFF_TYPES=['ในองค์กร','Part-time','Out Source'];
 const STATUS_FLOW=['Prospect','Closed','Onsite','Lab','Report','Billing','Completed'];
-const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',config:'⚙ Config ระบบ'};
+const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',config:'⚙ Config ระบบ'};
 const QT_APPROVE_ROLES=['admin','sales']; // roles that can approve quotations
 
 /* ===== UTILS ===== */
@@ -89,9 +89,9 @@ const U={
   // ═══ Staff Autocomplete helper ═══
   // Returns HTML <input> + dropdown. Usage:
   //   ${U.staffAutocomplete('jo_dir', jo.director, 'พิมพ์ชื่อ ชื่อเล่น แผนก ตำแหน่ง หรือรหัส...')}
-  staffAutocomplete(inputId, value='', placeholder='พิมพ์เพื่อค้นหาพนักงาน...'){
-    return `<div style="position:relative" data-staff-ac="${inputId}">
-      <input id="${inputId}" value="${this.esc(value||'')}" placeholder="${this.esc(placeholder)}" autocomplete="off"
+  staffAutocomplete(inputId, value='', placeholder='พิมพ์เพื่อค้นหาพนักงาน...', source='all'){
+    return `<div style="position:relative" data-staff-ac="${inputId}" data-source="${source}">
+      <input id="${inputId}" value="${this.esc(value||'')}" placeholder="${this.esc(placeholder)}" autocomplete="off" data-source="${source}"
         oninput="U.staffAutocompleteShow('${inputId}',this.value)"
         onfocus="U.staffAutocompleteShow('${inputId}',this.value)"
         onblur="setTimeout(()=>U.staffAutocompleteHide('${inputId}'),200)"
@@ -101,14 +101,68 @@ const U={
   },
   staffAutocompleteShow(inputId, query){
     const drop = document.getElementById(inputId+'_drop');
-    if(!drop) return;
-    const results = DB.staff.search(query).slice(0,8);
+    const inp = document.getElementById(inputId);
+    if(!drop || !inp) return;
+    // อ่าน source filter จาก dataset · default 'all'
+    let source = inp.dataset.source || 'all';
+    // ถ้า source = 'auto' → อ่านจาก staff_type ของ person card
+    // inputId pattern: 'sm_name_{idx}' — แยก idx จาก suffix
+    if(source === 'auto'){
+      const m = inputId.match(/^sm_name_(\d+)$/);
+      let staffType = '';
+      if(m){
+        const idx = m[1];
+        const sel = document.querySelector(`[data-pidx="${idx}"][data-person="staff_type"]`);
+        if(sel) staffType = sel.value;
+      }
+      source = (staffType === 'Part-time') ? 'parttime' : (staffType === 'ในองค์กร' ? 'staff' : 'all');
+    }
+    // ดึงผลตาม source
+    const q = (query||'').toLowerCase();
+    let results = [];
+    if(source === 'parttime'){
+      // PT directory: status === 'approved' ขึ้นเฉพาะอนุมัติแล้ว · OR pending ก็ขึ้น
+      results = DB.parttime.list().filter(r=>{
+        if(!q) return true;
+        const fields=[r.full_name, r.phone, r.position, r.email, r.car_plate];
+        return fields.some(f=>(f||'').toString().toLowerCase().includes(q));
+      }).slice(0,8).map(r=>({
+        _src: 'pt',
+        id: r.id,
+        employee_id: 'PT-'+String(r.id).padStart(3,'0'),
+        full_name: r.full_name||'-',
+        nickname: '',
+        department: r.position||'-',
+        position: r.position||'-',
+        phone: r.phone||''
+      }));
+    } else if(source === 'staff'){
+      results = DB.staff.search(query).slice(0,8).map(r=>({...r, _src:'staff'}));
+    } else {
+      // all = both
+      const staff = DB.staff.search(query).slice(0,5).map(r=>({...r, _src:'staff'}));
+      const pt = DB.parttime.list().filter(r=>{
+        if(!q) return true;
+        const fields=[r.full_name, r.phone, r.position, r.email, r.car_plate];
+        return fields.some(f=>(f||'').toString().toLowerCase().includes(q));
+      }).slice(0,3).map(r=>({
+        _src:'pt',
+        id: r.id,
+        employee_id: 'PT-'+String(r.id).padStart(3,'0'),
+        full_name: r.full_name||'-',
+        nickname: '',
+        department: r.position||'-',
+        position: r.position||'-',
+        phone: r.phone||''
+      }));
+      results = [...staff, ...pt];
+    }
     if(results.length===0){
-      drop.innerHTML = '<div style="padding:11px 13px;font-size:11.5px;color:#FFFFFF;opacity:.6;text-align:center">ไม่พบรายชื่อ — พิมพ์เพิ่มเพื่อค้นหา หรือไปที่ "ตั้งค่ารายชื่อ" เพื่อเพิ่ม</div>';
+      const sourceLabel = source==='staff'?'พนักงาน (ในองค์กร)':source==='parttime'?'Part-Time':'รายชื่อ';
+      drop.innerHTML = `<div style="padding:11px 13px;font-size:11.5px;color:#FFFFFF;opacity:.6;text-align:center">ไม่พบ${sourceLabel} — พิมพ์เพิ่มเพื่อค้นหา</div>`;
       drop.style.display='block';
       return;
     }
-    const q = (query||'').toLowerCase();
     const highlight = (txt)=>{
       if(!txt) return '';
       if(!q) return this.esc(txt);
@@ -117,35 +171,85 @@ const U={
       if(i<0) return this.esc(s);
       return this.esc(s.substr(0,i)) + '<span style="background:rgba(240,205,127,.3);color:#F0CD7F;font-weight:700">'+this.esc(s.substr(i,q.length))+'</span>' + this.esc(s.substr(i+q.length));
     };
-    drop.innerHTML = results.map((s,i)=>`
-      <div onmousedown="U.staffAutocompletePick('${inputId}',${s.id})"
+    drop.innerHTML = results.map((s,i)=>{
+      const srcBadge = s._src==='pt'
+        ? '<span style="font-size:9.5px;color:#F0CD7F;background:rgba(240,205,127,.15);padding:1px 6px;border-radius:4px;font-family:monospace;font-weight:700">PT</span>'
+        : '<span style="font-size:9.5px;color:#7DD3FC;background:rgba(56,189,248,.15);padding:1px 6px;border-radius:4px;font-family:monospace;font-weight:700">STAFF</span>';
+      return `
+      <div onmousedown="U.staffAutocompletePick('${inputId}','${s._src}',${s.id})"
         style="padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;display:flex;align-items:center;gap:10px;${i===0?'background:rgba(240,205,127,.06)':''}"
         onmouseover="this.style.background='rgba(240,205,127,.1)'"
         onmouseout="this.style.background='${i===0?'rgba(240,205,127,.06)':'transparent'}'">
         <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#F0CD7F;background:rgba(240,205,127,.12);padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0;min-width:65px;text-align:center">${highlight(s.employee_id)}</span>
         <div style="flex:1;min-width:0">
           <div style="font-size:12.5px;color:#FFFFFF;font-weight:600;line-height:1.3">${highlight(s.full_name)} ${s.nickname?'· '+highlight(s.nickname):''}</div>
-          <div style="font-size:10.5px;color:#FFFFFF;opacity:.7;margin-top:2px;font-weight:400">${highlight(s.department||'-')} · ${highlight(s.position||'-')}${s.phone?' · '+this.esc(s.phone):''}</div>
+          <div style="font-size:10.5px;color:#FFFFFF;opacity:.7;margin-top:2px;font-weight:400">${highlight(s.department||'-')}${s.phone?' · '+this.esc(s.phone):''}</div>
         </div>
-      </div>`).join('');
+        ${srcBadge}
+      </div>`;
+    }).join('');
     drop.style.display='block';
   },
   staffAutocompleteHide(inputId){
     const drop = document.getElementById(inputId+'_drop');
     if(drop) drop.style.display='none';
   },
-  staffAutocompletePick(inputId, staffId){
-    const s = DB.staff.get(staffId);
-    if(!s) return;
+  staffAutocompletePick(inputId, src, recordId){
     const inp = document.getElementById(inputId);
-    if(inp){
-      inp.value = s.full_name;
-      // เก็บ employee_id ใน data attribute สำหรับ traceability
+    if(!inp) return;
+    let name = '', empId = '', phone = '';
+    if(src === 'pt'){
+      const r = DB.parttime.get(parseInt(recordId));
+      if(!r) return;
+      name = r.full_name;
+      empId = 'PT-'+String(r.id).padStart(3,'0');
+      phone = r.phone||'';
+      inp.dataset.ptId = r.id;
+    } else {
+      const s = DB.staff.get(parseInt(recordId));
+      if(!s) return;
+      name = s.full_name;
+      empId = s.employee_id;
+      phone = s.phone||'';
       inp.dataset.staffId = s.id;
-      inp.dataset.empId = s.employee_id;
+    }
+    inp.value = name;
+    inp.dataset.empId = empId;
+    inp.dataset.src = src;
+    // ถ้าอยู่ใน person card — auto-fill phone ด้วย (ถ้าช่องว่าง)
+    const m = inputId.match(/^sm_name_(\d+)$/);
+    if(m && phone){
+      const idx = m[1];
+      const phoneInput = document.querySelector(`[data-pidx="${idx}"][data-person="phone"]`);
+      if(phoneInput && !phoneInput.value) phoneInput.value = phone;
     }
     U.staffAutocompleteHide(inputId);
+  },
+  // ─── Hide all dropdown when window resize/scroll ───
+  staffAutocompleteHideAll(){
+    document.querySelectorAll('[id$="_drop"]').forEach(d=>{
+      if(d.style.display === 'block' || d.style.display === ''){
+        d.style.display = 'none';
+      }
+    });
   }};
+
+// Global listener: ปิด dropdown ทั้งหมดเมื่อ resize/scroll (กัน dropdown ค้างผิดที่)
+if(typeof window !== 'undefined' && !window._mck_ac_listener_installed){
+  window._mck_ac_listener_installed = true;
+  let _rt;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(_rt);
+    _rt = setTimeout(()=>{ try{ U.staffAutocompleteHideAll(); }catch(e){} }, 60);
+  });
+  document.addEventListener('click', (e)=>{
+    // ปิด dropdown ทั้งหมดถ้าคลิกข้างนอก autocomplete
+    const ac = e.target.closest('[data-staff-ac]');
+    if(!ac){
+      try{ U.staffAutocompleteHideAll(); }catch(e){}
+    }
+  }, true);
+}
 
 /* ===== MODAL ===== */
 const Modal={
@@ -172,7 +276,7 @@ const Router={
     if(!DB.auth.can('view',page)&&page!=='calendar'&&page!=='op_report'){U.toast('⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้','danger');return;}
     this.current=page;
     document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร'}[page]||page;
+    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time'}[page]||page;
     // Show loading indicator
     const content = document.getElementById('content');
     if(content) content.innerHTML = '<div class="empty" style="padding:60px"><div style="font-size:32px;margin-bottom:12px;opacity:.4">⏳</div><p style="color:var(--t-dim)">กำลังโหลด...</p></div>';
@@ -345,7 +449,6 @@ function buildNav(){
     {page:'op_station_checklist',icon:'📋',label:'Checklist Station',mod:'op_checklist'},
     {page:'op_prep',icon:'📋',label:'ใบแจ้งงาน',mod:'op_prep'},
     {page:'op_onsite',icon:'🚑',label:'Onsite',mod:'op_onsite'},
-    {page:'op_report',icon:'📊',label:'รายงานสรุปค่าใช้จ่าย',mod:'op_report'},
     {section:'ห้องปฏิบัติการ'},
     {page:'lab',icon:'🔬',label:'Lab & TAT',mod:'lab'},
     {section:'เอกซเรย์ X-ray'},
@@ -358,14 +461,18 @@ function buildNav(){
     {page:'medical',icon:'📋',label:'เวชระเบียน',mod:'medical'},
     {section:'การเงิน'},
     {page:'billing',icon:'💰',label:'Billing & Invoice',mod:'billing'},
+    {section:'รายงาน'},
+    {page:'op_report',icon:'📊',label:'รายงานสรุปค่าใช้จ่าย',mod:'op_report'},
+    {section:'ข้อมูล Part-Time'},
+    {page:'parttime',icon:'⏰',label:'Part-Time',mod:'parttime'},
+    {page:'parttime_history',icon:'📊',label:'รายงานประวัติ PT',mod:'parttime_history'},
     {section:'ระบบ'},
     {page:'exam_config',icon:'🧪',label:'รายการตรวจ',mod:'config'},
     {page:'config',icon:'⚙',label:'ตั้งค่าระบบ',mod:'config'},
     {page:'config_checklist',icon:'📋',label:'ตั้งค่า Checklist',mod:'config'},
     {page:'config_stations',icon:'🩺',label:'ตั้งค่า Station',mod:'config'},
     {page:'config_station_checklist',icon:'📋',label:'ตั้งค่า Checklist Station',mod:'config'},
-    {page:'staff',icon:'👤',label:'ตั้งค่ารายชื่อ',mod:'staff'},
-    {page:'parttime',icon:'⏰',label:'Part-Time',mod:'parttime'}
+    {page:'staff',icon:'👤',label:'ตั้งค่ารายชื่อ',mod:'staff'}
   ];
   let html='';
   items.forEach(it=>{
@@ -669,25 +776,67 @@ Pages.op_report={
     const sts=DB.operation.listStations(jo.id);
     const eqs=DB.operation.listEquipments(jo.id);
     const mp=DB.manpowerCost.list();
-    // คิดเฉพาะ Part-time และกรองตาม selProfs (ถ้ามี)
-    const parttimeSts=sts.filter(s=>{
-      if(!s.staff_type||!s.staff_type.toLowerCase().includes('part')) return false;
-      if(selProfs&&selProfs.length&&!selProfs.includes(s.profession||'ไม่ระบุ')) return false;
-      return true;
-    });
-    let laborCost=0;
-    parttimeSts.forEach(s=>{
-      // ใช้ wage_per_day จาก station ก่อน — ถ้าไม่ได้ตั้งค่าเลย (undefined/null) ถึง fallback
-      let wage=s.wage_per_day;
-      if(wage===undefined||wage===null||wage===''){
-        const r=mp.find(m=>m.role===s.profession||m.role===s.staff_name);
-        wage=r?r.cost_per_day:0;
+    // ───── สร้าง list ของ Part-time persons (1 entry ต่อคน) จาก staff_list[] ของแต่ละ Station ─────
+    const ptPersons = [];
+    sts.forEach(s=>{
+      const list = s.staff_list || [];
+      if(list.length > 0){
+        // Modern format: iterate each person
+        list.forEach(p=>{
+          if(!p.staff_type || !p.staff_type.toLowerCase().includes('part')) return;
+          if(selProfs && selProfs.length && !selProfs.includes(p.profession||'ไม่ระบุ')) return;
+          let wage = p.wage_per_day;
+          if(wage===undefined||wage===null||wage===''){
+            const r=mp.find(m=>m.role===p.profession);
+            wage=r?r.cost_per_day:0;
+          }
+          ptPersons.push({
+            station: s,
+            profession: p.profession||'-',
+            staff_name: p.staff_name||'-',
+            staff_type: p.staff_type,
+            phone: p.phone||'',
+            remark: p.remark||'',
+            wage: parseFloat(wage)||0
+          });
+        });
+      } else {
+        // Legacy fallback: station-level fields (multiply by staff_count if no list)
+        if(!s.staff_type||!s.staff_type.toLowerCase().includes('part')) return;
+        if(selProfs&&selProfs.length&&!selProfs.includes(s.profession||'ไม่ระบุ')) return;
+        let wage=s.wage_per_day;
+        if(wage===undefined||wage===null||wage===''){
+          const r=mp.find(m=>m.role===s.profession||m.role===s.staff_name);
+          wage=r?r.cost_per_day:0;
+        }
+        wage=parseFloat(wage)||0;
+        const cnt = parseInt(s.staff_count)||1;
+        for(let i=0;i<cnt;i++){
+          ptPersons.push({
+            station: s,
+            profession: s.profession||'-',
+            staff_name: i===0?(s.staff_name||'-'):'',
+            staff_type: s.staff_type,
+            phone: s.phone||'',
+            remark: '',
+            wage
+          });
+        }
       }
-      wage=parseFloat(wage)||0;
-      laborCost+=wage*(s.staff_count||1);
     });
-    const eqCost=eqs.reduce((sum,e)=>sum+(e.price||0),0);
-    return{parttimeSts,laborCost,eqCost,total:laborCost+eqCost};
+    const laborCost = ptPersons.reduce((sum,p)=>sum+p.wage, 0);
+    const eqCost = eqs.reduce((sum,e)=>sum+(e.price||0), 0);
+    // Backward compat: parttimeSts = distinct stations that have any Part-time
+    const stationIds = new Set(ptPersons.map(p=>p.station.id));
+    const parttimeSts = sts.filter(s=>stationIds.has(s.id));
+    return{
+      parttimeSts,
+      ptPersons,
+      laborCost,
+      eqCost,
+      total: laborCost+eqCost,
+      ptCount: ptPersons.length  // นับเป็นคน (ไม่ใช่ stations)
+    };
   },
 
   render(){
@@ -706,13 +855,13 @@ Pages.op_report={
     });
     const rows=filtered.map(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const {parttimeSts,laborCost,eqCost,total}=this._calcJob(jo);
+      const {parttimeSts,ptPersons,laborCost,eqCost,total}=this._calcJob(jo);
       const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
       return`<tr style="cursor:pointer" onclick="Pages.op_report.viewDetail(${jo.id})">
         <td class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${U.esc(p.project_code||'-')}</td>
         <td class="fw6">${U.esc(p.company_name||jo.company_name||'-')}</td>
         <td>${U.fmtD(p.onsite_date)}</td>
-        <td style="text-align:right">${parttimeSts.length} คน</td>
+        <td style="text-align:right">${ptPersons.length} คน</td>
         <td style="text-align:right">฿${U.fmt(laborCost)}</td>
         <td style="text-align:right">฿${U.fmt(eqCost)}</td>
         <td style="text-align:right;font-weight:700;color:var(--c-gold-lt,#E2C46A)">฿${U.fmt(total)}</td>
@@ -782,31 +931,52 @@ Pages.op_report={
     const sts=DB.operation.listStations(jo.id);
     const eqs=DB.operation.listEquipments(jo.id);
     const mp=DB.manpowerCost.list();
-    const parttimeRows=sts.filter(s=>s.staff_type&&s.staff_type.toLowerCase().includes('part'));
-    const inOrgRows=sts.filter(s=>!s.staff_type||!s.staff_type.toLowerCase().includes('part'));
-    let laborTotal=0;
-    const ptTable=parttimeRows.map(s=>{
-      const wage=(s.wage_per_day!==undefined&&s.wage_per_day!==null&&s.wage_per_day!=='')?parseFloat(s.wage_per_day)||0:(()=>{const r=mp.find(m=>m.role===s.profession);return r?r.cost_per_day:0;})();
-      const cost=wage*(s.staff_count||1);
-      laborTotal+=cost;
-      return`<tr>
-        <td>${U.esc(s.station_code||'')}</td>
-        <td>${U.esc(s.station_name)}</td>
-        <td>${U.esc(s.profession||'-')}</td>
-        <td>${U.esc(s.staff_name||'-')}</td>
-        <td style="text-align:center">${s.staff_count}</td>
-        <td style="text-align:right">฿${U.fmt(wage)}</td>
-        <td style="text-align:right;font-weight:600">฿${U.fmt(cost)}</td>
-      </tr>`;
+    // ใช้ _calcJob ที่ปรับใหม่ → ได้ ptPersons (1 entry ต่อคน)
+    const {ptPersons, laborCost: laborTotal} = this._calcJob(jo);
+    // Group ptPersons by station (เพื่อโชว์ rowspan สวยขึ้น)
+    const personsByStation = {};
+    ptPersons.forEach(p=>{
+      const sid = p.station.id;
+      if(!personsByStation[sid]) personsByStation[sid] = {station: p.station, persons: []};
+      personsByStation[sid].persons.push(p);
+    });
+    const ptTable = Object.values(personsByStation).map(({station, persons})=>{
+      return persons.map((p,i)=>{
+        const cost = p.wage; // ต่อคน
+        const isFirst = i === 0;
+        return `<tr>
+          ${isFirst?`<td rowspan="${persons.length}" style="vertical-align:middle">${U.esc(station.station_code||'')}</td>
+          <td rowspan="${persons.length}" style="vertical-align:middle">${U.esc(station.station_name)}</td>`:''}
+          <td>${U.esc(p.profession||'-')}</td>
+          <td>${U.esc(p.staff_name||'-')}</td>
+          <td style="text-align:center">1</td>
+          <td style="text-align:right">฿${U.fmt(p.wage)}</td>
+          <td style="text-align:right;font-weight:600">฿${U.fmt(cost)}</td>
+        </tr>`;
+      }).join('');
     }).join('');
+    // In-org rows (สำหรับโชว์เฉยๆ ไม่คิดเงิน) — เช็คจาก staff_list หรือ legacy
+    const inOrgPersons = [];
+    sts.forEach(s=>{
+      const list = s.staff_list || [];
+      if(list.length > 0){
+        list.forEach(p=>{
+          if(!p.staff_type || !p.staff_type.toLowerCase().includes('part')){
+            inOrgPersons.push({station: s, profession: p.profession||'', staff_name: p.staff_name||''});
+          }
+        });
+      } else if(!s.staff_type || !s.staff_type.toLowerCase().includes('part')){
+        inOrgPersons.push({station: s, profession: s.profession||'', staff_name: s.staff_name||''});
+      }
+    });
     let eqTotal=0;
     const eqTable=eqs.map(e=>{eqTotal+=(e.price||0);
       return`<tr><td colspan="4">${U.esc(e.item_name)}</td><td colspan="2" style="color:var(--t-muted)">${U.esc(e.remark||'-')}</td><td style="text-align:right;font-weight:600">฿${U.fmt(e.price||0)}</td></tr>`;
     }).join('');
     const grandTotal=laborTotal+eqTotal;
-    const inOrgHtml=inOrgRows.length?`<div style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:var(--t-muted)">
-      <div style="font-weight:500;margin-bottom:6px;color:var(--t-dim)">👥 พนักงานในองค์กร (ไม่คิดค่าใช้จ่าย)</div>
-      ${inOrgRows.map(s=>`<div style="display:flex;gap:8px;padding:3px 0"><span>${U.esc(s.station_name)}</span><span>—</span><span>${U.esc(s.profession||'')}</span><span>${U.esc(s.staff_name||'')}</span></div>`).join('')}
+    const inOrgHtml=inOrgPersons.length?`<div style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:var(--t-muted)">
+      <div style="font-weight:500;margin-bottom:6px;color:var(--t-dim)">👥 พนักงานในองค์กร (ไม่คิดค่าใช้จ่าย) — ${inOrgPersons.length} คน</div>
+      ${inOrgPersons.map(p=>`<div style="display:flex;gap:8px;padding:3px 0"><span>${U.esc(p.station.station_name)}</span><span>—</span><span>${U.esc(p.profession||'')}</span><span>${U.esc(p.staff_name||'-')}</span></div>`).join('')}
     </div>`:'';
     Modal.open(`
     <div style="background:var(--s-2);border-radius:9px;padding:12px 14px;margin-bottom:14px">
@@ -814,7 +984,7 @@ Pages.op_report={
       <div class="fw6" style="font-size:15px">${U.esc(p.company_name||jo.company_name||'-')}</div>
       <div class="t-sm t-muted">วันตรวจ: ${U.fmtD(p.onsite_date)} | ${(p.headcount||0).toLocaleString()} คน</div>
     </div>
-    ${parttimeRows.length?`
+    ${ptPersons.length?`
     <div style="font-size:12px;font-weight:600;color:var(--t-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">💼 ค่าแรง Part-time</div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Code</th><th>Station</th><th>วิชาชีพ</th><th>ชื่อ</th><th style="text-align:center">คน</th><th style="text-align:right">ราคา/วัน</th><th style="text-align:right">รวม</th></tr></thead>
@@ -993,19 +1163,56 @@ Pages.op_report={
         return t===s;
       });
     };
-    const filteredSts=sts.filter(s=>matchType(s.staff_type));
-    let laborCost=0;
-    filteredSts.forEach(s=>{
-      let wage=s.wage_per_day;
-      if(wage===undefined||wage===null||wage===''){
-        const r=mp.find(m=>m.role===s.profession||m.role===s.staff_name);
-        wage=r?r.cost_per_day:0;
+    // Iterate staff_list[] per person — modern format
+    const personList = [];
+    sts.forEach(s=>{
+      const list = s.staff_list || [];
+      if(list.length > 0){
+        list.forEach(p=>{
+          if(!matchType(p.staff_type)) return;
+          let wage = p.wage_per_day;
+          if(wage===undefined||wage===null||wage===''){
+            const r=mp.find(m=>m.role===p.profession);
+            wage=r?r.cost_per_day:0;
+          }
+          personList.push({
+            station: s,
+            profession: p.profession||'-',
+            staff_name: p.staff_name||'-',
+            staff_type: p.staff_type||'',
+            phone: p.phone||'',
+            remark: p.remark||'',
+            wage: parseFloat(wage)||0
+          });
+        });
+      } else if(matchType(s.staff_type)){
+        // Legacy fallback: station-level fields
+        let wage = s.wage_per_day;
+        if(wage===undefined||wage===null||wage===''){
+          const r=mp.find(m=>m.role===s.profession||m.role===s.staff_name);
+          wage=r?r.cost_per_day:0;
+        }
+        wage=parseFloat(wage)||0;
+        const cnt = parseInt(s.staff_count)||1;
+        for(let i=0;i<cnt;i++){
+          personList.push({
+            station: s,
+            profession: s.profession||'-',
+            staff_name: i===0?(s.staff_name||'-'):'',
+            staff_type: s.staff_type||'',
+            phone: s.phone||'',
+            remark: '',
+            wage
+          });
+        }
       }
-      wage=parseFloat(wage)||0;
-      laborCost+=wage*(s.staff_count||1);
     });
-    const eqCost=eqs.reduce((sum,e)=>sum+(e.price||0),0);
-    return{filteredSts,laborCost,eqCost,total:laborCost+eqCost};
+    const laborCost = personList.reduce((sum,p)=>sum+p.wage, 0);
+    const eqCost = eqs.reduce((sum,e)=>sum+(e.price||0), 0);
+    // Backward compat: filteredSts = stations that have any matching person
+    const stationIds = new Set(personList.map(p=>p.station.id));
+    const filteredSts = sts.filter(s=>stationIds.has(s.id));
+    return{filteredSts, personList, laborCost, eqCost, total: laborCost+eqCost};
   },
 
   _exportCSV(jos,from,to,selTypes){
@@ -1019,10 +1226,10 @@ Pages.op_report={
     let grand=0;
     jos.forEach(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const {filteredSts,laborCost,eqCost,total}=this._calcByTypes(jo,selTypes);
+      const {personList,laborCost,eqCost,total}=this._calcByTypes(jo,selTypes);
       const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
       grand+=total;
-      csv+=`"${p.project_code||'-'}","${(p.company_name||jo.company_name||'-').replace(/"/g,'""')}","${p.onsite_date||'-'}",${filteredSts.length},${laborCost},${eqCost},${total},"${isComplete?'Complete':'Onsite'}"\n`;
+      csv+=`"${p.project_code||'-'}","${(p.company_name||jo.company_name||'-').replace(/"/g,'""')}","${p.onsite_date||'-'}",${personList.length},${laborCost},${eqCost},${total},"${isComplete?'Complete':'Onsite'}"\n`;
     });
     csv+=`\n"รวมทั้งหมด",,,,,,"${grand}",""\n`;
     csv+='\n"รายละเอียดพนักงานแต่ละ Project"\n';
@@ -1030,12 +1237,10 @@ Pages.op_report={
     const mp=DB.manpowerCost.list();
     jos.forEach(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const {filteredSts}=this._calcByTypes(jo,selTypes);
-      filteredSts.forEach(s=>{
-        let wage=s.wage_per_day;
-        if(wage===undefined||wage===null||wage===''){const r=mp.find(m=>m.role===s.profession);wage=r?r.cost_per_day:0;}
-        wage=parseFloat(wage)||0;
-        csv+=`"${p.project_code||'-'}","${(s.station_name||'').replace(/"/g,'""')}","${s.profession||'-'}","${(s.staff_name||'-').replace(/"/g,'""')}","${s.staff_type||''}",${s.staff_count||1},${wage},${wage*(s.staff_count||1)}\n`;
+      const {personList}=this._calcByTypes(jo,selTypes);
+      personList.forEach(person=>{
+        const cost = person.wage;
+        csv+=`"${p.project_code||'-'}","${(person.station.station_name||'').replace(/"/g,'""')}","${person.profession||'-'}","${(person.staff_name||'-').replace(/"/g,'""')}","${person.staff_type||''}",1,${person.wage},${cost}\n`;
       });
     });
     try{
@@ -1061,14 +1266,14 @@ Pages.op_report={
     let grandTotal=0;
     const summaryRows=jos.map(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const {filteredSts,laborCost,eqCost,total}=this._calcByTypes(jo,selTypes);
+      const {filteredSts,personList,laborCost,eqCost,total}=this._calcByTypes(jo,selTypes);
       grandTotal+=total;
       const isComplete=['Lab','Report','Billing','Completed'].includes(p.status||'');
       return`<tr>
         <td>${p.project_code||'-'}</td>
         <td>${p.company_name||jo.company_name||'-'}</td>
         <td style="text-align:center">${p.onsite_date||'-'}</td>
-        <td style="text-align:center">${filteredSts.length}</td>
+        <td style="text-align:center">${personList.length}</td>
         <td style="text-align:right">${U.fmt(laborCost)}</td>
         <td style="text-align:right">${U.fmt(eqCost)}</td>
         <td style="text-align:right;font-weight:700">${U.fmt(total)}</td>
@@ -1078,16 +1283,32 @@ Pages.op_report={
     let detailHTML='';
     jos.forEach(jo=>{
       const p=DB.sales.getProject(jo.project_id)||{};
-      const {filteredSts}=this._calcByTypes(jo,selTypes);
+      const {filteredSts, personList}=this._calcByTypes(jo,selTypes);
       const eqs=DB.operation.listEquipments(jo.id);
-      if(!filteredSts.length&&!eqs.length)return;
+      if(!personList.length&&!eqs.length)return;
       let labSum=0;
-      const ptRows=filteredSts.map(s=>{
-        let wage=s.wage_per_day;
-        if(wage===undefined||wage===null||wage===''){const r=mp.find(m=>m.role===s.profession);wage=r?r.cost_per_day:0;}
-        wage=parseFloat(wage)||0;
-        const cost=wage*(s.staff_count||1); labSum+=cost;
-        return`<tr><td>${s.station_name||'-'}</td><td>${s.profession||'-'}</td><td>${s.staff_name||'-'}</td><td style="text-align:center">${s.staff_type||'-'}</td><td style="text-align:center">${s.staff_count||1}</td><td style="text-align:right">${U.fmt(wage)}</td><td style="text-align:right">${U.fmt(cost)}</td></tr>`;
+      // Group persons by station
+      const groupByStation = {};
+      personList.forEach(p=>{
+        const sid = p.station.id;
+        if(!groupByStation[sid]) groupByStation[sid] = {station: p.station, persons: []};
+        groupByStation[sid].persons.push(p);
+      });
+      const ptRows = Object.values(groupByStation).map(({station, persons})=>{
+        return persons.map((p,i)=>{
+          const cost = p.wage; // ต่อคน
+          labSum += cost;
+          const isFirst = (i === 0);
+          return `<tr>
+            ${isFirst?`<td rowspan="${persons.length}" style="vertical-align:middle">${station.station_name||'-'}</td>`:''}
+            <td>${p.profession||'-'}</td>
+            <td>${p.staff_name||'-'}</td>
+            <td style="text-align:center">${p.staff_type||'-'}</td>
+            <td style="text-align:center">1</td>
+            <td style="text-align:right">${U.fmt(p.wage)}</td>
+            <td style="text-align:right">${U.fmt(cost)}</td>
+          </tr>`;
+        }).join('');
       }).join('');
       let eqSum=0;
       const eqRows=eqs.map(e=>{eqSum+=(e.price||0);return`<tr><td colspan="5">${e.item_name||'-'}</td><td style="color:#6B7280">${e.remark||'-'}</td><td style="text-align:right">${U.fmt(e.price||0)}</td></tr>`;}).join('');
@@ -1172,7 +1393,33 @@ Pages.dashboard={
   async render(){
   const projs=DB.sales.listProjects();
   const invs=DB.billing.listInvoices();
-  const alerts=DB.checkAlerts();
+  const allAlerts=DB.checkAlerts();
+  // ─── Filter alerts by current user's role permissions ───
+  // Category → required module mapping
+  const categoryToModule = {
+    'TAT-Lab':     'lab',
+    'SLA-Report':  'report',
+    'Billing':     'billing',
+    'Onsite':      'op_onsite',
+    'X-Ray':       'xray',
+    'OPD':         'opd',
+    'Medical':     'medical',
+    'CRM':         'customers',
+    'Quotation':   'sales',
+    'Sales':       'sales',
+    'Op-Prep':     'op_prep',
+    'PT':          'parttime'
+  };
+  const alerts = allAlerts.filter(a=>{
+    const cat = a.category || '';
+    // ไม่มี category mapping → admin เท่านั้น (กรณีไม่รู้)
+    const mod = categoryToModule[cat];
+    if(!mod){
+      // ดูจาก type 'danger'/'warning' — ทุก role เห็น
+      return DB.auth.can('view','dashboard');
+    }
+    return DB.auth.can('view', mod);
+  });
   const rev=invs.reduce((s,i)=>s+(i.revenue||0),0);
   const prf=invs.reduce((s,i)=>s+(i.profit||0),0);
   const pend=invs.filter(i=>i.status==='Pending');
@@ -1400,27 +1647,53 @@ Pages.dashboard={
     </div>
   </div>
   ${aHtml?`<div class="mb4">${aHtml}</div>`:''}
-  <div class="metrics-grid">
-    <div class="metric-card acc"><div class="metric-label">Project ทั้งหมด</div><div class="metric-value">${projs.length}</div></div>
-    <div class="metric-card suc"><div class="metric-label">รายได้รวม</div><div class="metric-value">฿${U.fmt(Math.round(rev/1000))}K</div></div>
-    <div class="metric-card gold"><div class="metric-label">กำไรรวม</div><div class="metric-value">฿${U.fmt(Math.round(prf/1000))}K</div></div>
-    <div class="metric-card warn"><div class="metric-label">Invoice ค้าง</div><div class="metric-value">${pend.length}</div><div class="metric-sub">฿${U.fmt(Math.round(pend.reduce((s,i)=>s+i.total,0)/1000))}K</div></div>
-    <div class="metric-card ${alerts.length>0?'danger':''}"><div class="metric-label">แจ้งเตือน</div><div class="metric-value">${alerts.length}</div></div>
-  </div>
-  <div class="g2 mb4">
-    <div class="card"><div class="card-header"><span class="card-title">สถานะ Project</span></div>
-      ${STATUS_FLOW.map(s=>`<div class="sr" style="cursor:pointer" onclick="Pages.dashboard.filterStatus('${s}')"><span>${U.badge(s)}</span><span class="fw6">${sc[s]||0}</span></div>`).join('')}
-    </div>
-    <div class="card"><div class="card-header"><span class="card-title">⚡ Quick Actions</span></div>
-      <div class="btn-grp" style="flex-direction:column;align-items:stretch">
-        ${DB.auth.can('view','customers')?`<button class="btn btn-out" onclick="Router.navigate('customers')">👥 จัดการลูกค้า</button>`:''}
-        <button class="btn btn-out" onclick="Router.navigate('calendar')">📅 ปฏิทินงาน</button>
-        ${DB.auth.can('view','op_prep')?`<button class="btn btn-out" onclick="Router.navigate('op_prep')">📋 ใบแจ้งงาน</button>`:''}
-        ${DB.auth.can('view','lab')?`<button class="btn btn-out" onclick="Router.navigate('lab')">🔬 ดู Lab & TAT</button>`:''}
-        ${DB.auth.can('view','billing')?`<button class="btn btn-out" onclick="Router.navigate('billing')">💰 ออก Invoice</button>`:''}
-      </div>
-    </div>
-  </div>
+  ${(()=>{
+    // ── KPI: Group Projects by job_type (จาก CRM ลูกค้า) ──
+    const customers = DB.customer ? DB.customer.listCustomers() : [];
+    const projects = projs;
+    // Map job_type → count of projects (ผ่าน customer_id)
+    const typeCounts = {};
+    projects.forEach(p=>{
+      const cust = customers.find(c=>c.id===p.customer_id);
+      const jt = (cust && cust.job_type) ? cust.job_type : 'ไม่ระบุ';
+      typeCounts[jt] = (typeCounts[jt]||0) + 1;
+    });
+    const sortedTypes = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
+    const totalProj = projects.length;
+    const totalTypes = sortedTypes.length;
+    // สีตามประเภทงาน
+    const colorOf = (jt)=>{
+      const map = {
+        'ตรวจสุขภาพ': {c1:'#6EE7B7', c2:'#10B981'},
+        'OS XRAY': {c1:'#7DD3FC', c2:'#0EA5E9'},
+        'ตรวจซ้ำ': {c1:'#FCD34D', c2:'#F59E0B'},
+        'เก็บอาหาร ตัวอย่าง': {c1:'#FCA5A5', c2:'#DC2626'},
+        'อบรม First Aid': {c1:'#C4B5FD', c2:'#7C3AED'},
+        'Consult': {c1:'#FDA4AF', c2:'#E11D48'},
+        'อื่นๆ': {c1:'#9CA3AF', c2:'#4B5563'},
+        'ไม่ระบุ': {c1:'#9CA3AF', c2:'#4B5563'}
+      };
+      return map[jt] || {c1:'#94A3B8', c2:'#475569'};
+    };
+    // Total card + รวบรายประเภท
+    const totalCard = `<div class="metric-card" style="background:rgba(240,205,127,.04);border:1px solid rgba(240,205,127,.3);position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F0CD7F,#D4A845)"></div>
+      <div class="metric-label" style="color:#F0CD7F">ประเภทงานทั้งหมด</div>
+      <div class="metric-value">${totalProj}</div>
+      <div class="metric-sub">${totalTypes} ประเภท</div>
+    </div>`;
+    const typeCards = sortedTypes.map(([jt,n])=>{
+      const col = colorOf(jt);
+      const pct = totalProj>0 ? Math.round(n*100/totalProj) : 0;
+      return `<div class="metric-card" style="position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${col.c1},${col.c2})"></div>
+        <div class="metric-label" style="color:${col.c1}">${U.esc(jt)}</div>
+        <div class="metric-value">${n}</div>
+        <div class="metric-sub">${pct}% ของทั้งหมด</div>
+      </div>`;
+    }).join('');
+    return `<div class="metrics-grid">${totalCard}${typeCards}</div>`;
+  })()}
   <div class="card">
     <div class="card-header">
       <span class="card-title">📊 สถานะงานทุก Project (Workflow Tracker)</span>
@@ -2299,22 +2572,24 @@ Pages.sales={async render(){
       <td>${U.fmtD(p.onsite_date)}</td>
       <td>${p.due_date?U.fmtD(p.due_date):'<span class="t-muted t-sm">-</span>'}</td>
       <td>${U.badge(p.status)}</td>
-      <td style="text-align:center;vertical-align:middle">
+      <td style="text-align:center;vertical-align:middle;padding:6px 4px">
         ${ticked
-          ?`<div style="display:inline-flex;flex-direction:column;align-items:center;gap:1px">
-              <span style="font-size:18px">✅</span>
-              ${p.handover_date?`<span style="font-size:9px;color:var(--suc);font-weight:600">${U.fmtD(p.handover_date)}</span>`:''}
+          ?`<div style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="${canEdit?`Pages.sales.tickHandover(${p.id},false)`:''}" title="${canEdit?'คลิกเพื่อยกเลิก':''}">
+              <span style="font-size:16px">✅</span>
+              ${p.handover_date?`<div style="font-size:9.5px;color:#6EE7B7;font-weight:600">${U.fmtD(p.handover_date)}</div>`:''}
             </div>`
           :(canEdit
-            ?`<input type="checkbox" style="width:16px;height:16px;accent-color:var(--suc);cursor:pointer" onchange="Pages.sales.tickHandover(${p.id},this.checked)" title="คลิกเพื่อบันทึกส่งเวียนเอกสาร"/>`
+            ?`<input type="checkbox" style="width:16px;height:16px;cursor:pointer" onchange="Pages.sales.tickHandover(${p.id},this.checked)" title="คลิกเพื่อบันทึกเวียนเอกสาร"/>`
             :'⬜')}
       </td>
       <td>${U.recordedByCell(p.recorded_by)}</td>
+      <td style="text-align:center">
+        ${canEdit?`<button class="btn btn-xs" onclick="Pages.sales.openStaffing(${p.id})" title="${(()=>{const st=DB.sales.getStaffing(p.id);return st&&st.stations&&st.stations.length>0?'อัตรากำลัง: '+st.stations.length+' Station':'ลงอัตรากำลัง';})()}" style="${(()=>{const st=DB.sales.getStaffing(p.id);const has=st&&st.stations&&st.stations.length>0;return has?'background:rgba(110,231,183,.12);border:1px solid rgba(110,231,183,.4);color:#6EE7B7':'background:rgba(240,205,127,.08);border:1px solid rgba(240,205,127,.3);color:#F0CD7F';})()};border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">${(()=>{const st=DB.sales.getStaffing(p.id);const has=st&&st.stations&&st.stations.length>0;return has?'👥 '+st.stations.length+' Station':'👤 ลงอัตรากำลัง';})()}</button>`:'-'}
+      </td>
       <td>
         ${canEdit?`<button class="btn btn-out btn-xs" onclick="Pages.sales.editProject(${p.id})">แก้ไข</button>`:''}
         <button class="btn btn-out btn-xs" onclick="Pages.sales.viewHandover(${p.id})">เอกสาร</button>
         <button class="btn btn-out btn-xs" onclick="Pages.sales.manageFiles(${p.id})" title="ไฟล์แนบ">${hasFiles?'📎✓':'📎'}</button>
-        ${canEdit?`<button class="btn btn-xs" onclick="Pages.sales.openStaffing(${p.id})" title="${(()=>{const st=DB.sales.getStaffing(p.id);return st&&st.stations&&st.stations.length>0?'อัตรากำลัง: '+st.stations.length+' Station':'ลงอัตรากำลัง';})()}" style="${(()=>{const st=DB.sales.getStaffing(p.id);const has=st&&st.stations&&st.stations.length>0;return has?'background:rgba(110,231,183,.15);border:1px solid rgba(110,231,183,.4);color:#6EE7B7':'background:rgba(240,205,127,.12);border:1px solid rgba(240,205,127,.3);color:#F0CD7F';})()};border-radius:50%;width:28px;height:28px;padding:0;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer">${(()=>{const st=DB.sales.getStaffing(p.id);return st&&st.stations&&st.stations.length>0?'👥':'👤';})()}</button>`:''}
         ${canDel?`<button class="btn btn-danger btn-xs" onclick="Pages.sales.deleteProj(${p.id})">ลบ</button>`:''}
       </td>
     </tr>`;
@@ -2328,7 +2603,7 @@ Pages.sales={async render(){
         onfocus="this.style.borderColor='var(--c-teal,#00B8AA)'" onblur="this.style.borderColor='rgba(255,255,255,.1)'"/>
     </div>
     <div style="height:10px"></div>
-    <div class="tbl-wrap"><table id="sales_table"><thead><tr><th>Project Code</th><th>บริษัท</th><th>จำนวน</th><th>วันตรวจ</th><th>กำหนดส่งผล</th><th>สถานะ</th><th style="text-align:center;min-width:90px">เวียนเอกสาร</th><th>ผู้บันทึก</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="8" class="empty"><div class="icon">💼</div><p>ยังไม่มี Project</p></td></tr>'}</tbody></table></div></div>`;
+    <div class="tbl-wrap"><table id="sales_table"><thead><tr><th>Project Code</th><th>บริษัท</th><th>จำนวน</th><th>วันตรวจ</th><th>กำหนดส่งผล</th><th>สถานะ</th><th style="text-align:center;min-width:90px">เวียนเอกสาร</th><th>ผู้บันทึก</th><th style="text-align:center;min-width:130px;color:#6EE7B7">👥 อัตรากำลัง</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="empty"><div class="icon">💼</div><p>ยังไม่มี Project</p></td></tr>'}</tbody></table></div></div>`;
 },
 // ═══ ลงอัตรากำลัง — Staffing modal ═══
 openStaffing(pid){
@@ -3287,13 +3562,13 @@ Pages.op_prep={
           </div>
           <div class="fg" style="margin-bottom:0">
             <label style="font-size:10.5px;color:#FFFFFF;opacity:.85;margin-bottom:3px;font-weight:600;display:block">ชื่อ-สกุล <span style="color:#FCA5A5">*</span></label>
-            ${U.staffAutocomplete('sm_name_'+idx, person.staff_name||'', 'ค้นหา ชื่อ/ชื่อเล่น/แผนก/ตำแหน่ง/รหัส')}
+            ${U.staffAutocomplete('sm_name_'+idx, person.staff_name||'', 'พิมพ์เพื่อค้นหา (กรองตามประเภท)', 'auto')}
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div class="fg" style="margin-bottom:0">
             <label style="font-size:10.5px;color:#FFFFFF;opacity:.85;margin-bottom:3px;font-weight:600;display:block">ประเภท</label>
-            <select data-pidx="${idx}" data-person="staff_type" style="width:100%;padding:6px 9px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:11.5px;font-family:inherit">
+            <select data-pidx="${idx}" data-person="staff_type" onchange="(function(idx){const inp=document.getElementById('sm_name_'+idx);if(inp){inp.value='';inp.dataset.staffId='';inp.dataset.ptId='';inp.dataset.empId='';inp.dataset.src='';inp.focus();}})(${idx})" style="width:100%;padding:6px 9px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:11.5px;font-family:inherit">
               ${U.sel(STAFF_TYPES, person.staff_type||'ในองค์กร')}
             </select>
           </div>
@@ -6873,6 +7148,34 @@ Pages.parttime = {
       }[s||'pending']||{bg:'rgba(255,255,255,.06)',c:'#FFFFFF',lbl:s||'-'};
       return `<span style="background:${cfg.bg};color:${cfg.c};padding:2px 8px;border-radius:4px;font-size:10.5px;font-weight:700;white-space:nowrap">${cfg.lbl}</span>`;
     };
+    // สถานะงาน (work_status): Active/Give a chance/Blacklist — แสดงเฉพาะรายที่ approved
+    // ★ Inline editable <select> styled as badge (กดคลิกเลือกได้ทันที)
+    const workStatusBadge = (r)=>{
+      if(r.status !== 'approved') return '<span style="color:#FFFFFF;opacity:.35">—</span>';
+      if(!canEdit){
+        // ดู-อย่างเดียว: span badge เหมือนเดิม
+        const ws = r.work_status || 'Active';
+        const cfg = {
+          Active:           {bg:'rgba(110,231,183,.18)', c:'#6EE7B7', lbl:'● Active'},
+          'Give a chance':  {bg:'rgba(252,211,77,.15)',  c:'#FCD34D', lbl:'⚠ Give a chance'},
+          Blacklist:        {bg:'rgba(252,165,165,.18)', c:'#FCA5A5', lbl:'⛔ Blacklist'}
+        }[ws] || {bg:'rgba(255,255,255,.06)', c:'#FFFFFF', lbl:ws};
+        return `<span style="background:${cfg.bg};color:${cfg.c};padding:2px 8px;border-radius:4px;font-size:10.5px;font-weight:700;white-space:nowrap">${cfg.lbl}</span>`;
+      }
+      // canEdit: <select> styled as badge
+      const ws = r.work_status || 'Active';
+      const cfg = {
+        Active:           {bg:'rgba(110,231,183,.18)', c:'#6EE7B7'},
+        'Give a chance':  {bg:'rgba(252,211,77,.15)',  c:'#FCD34D'},
+        Blacklist:        {bg:'rgba(252,165,165,.18)', c:'#FCA5A5'}
+      }[ws] || {bg:'rgba(255,255,255,.06)', c:'#FFFFFF'};
+      return `<select onchange="Pages.parttime.updateWorkStatus(${r.id}, this.value)" title="คลิกเปลี่ยนสถานะงาน"
+        style="background:${cfg.bg};color:${cfg.c};padding:3px 22px 3px 8px;border-radius:4px;font-size:10.5px;font-weight:700;font-family:inherit;border:1px solid ${cfg.c}55;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;8&quot; height=&quot;5&quot; viewBox=&quot;0 0 8 5&quot;><path fill=&quot;${encodeURIComponent(cfg.c)}&quot; d=&quot;M4 5L0 0h8z&quot;/></svg>');background-repeat:no-repeat;background-position:right 6px center;background-size:8px 5px">
+        <option value="Active"           ${ws==='Active'?'selected':''}           style="background:#162338;color:#6EE7B7">● Active</option>
+        <option value="Give a chance"    ${ws==='Give a chance'?'selected':''}    style="background:#162338;color:#FCD34D">⚠ Give a chance</option>
+        <option value="Blacklist"        ${ws==='Blacklist'?'selected':''}        style="background:#162338;color:#FCA5A5">⛔ Blacklist</option>
+      </select>`;
+    };
     const docBadge = (d) => d ? `<span title="${U.esc(d.name)}" style="font-size:11px;color:#6EE7B7">✅</span>` : '<span style="font-size:11px;color:#FCA5A5">—</span>';
 
     const rows = list.map(r=>`<tr>
@@ -6885,6 +7188,7 @@ Pages.parttime = {
       <td style="text-align:center" title="บัตรประชาชน">${docBadge(r.doc_id_card)}</td>
       <td style="text-align:center" title="หน้าบัญชีธนาคาร">${docBadge(r.doc_bank_account)}</td>
       <td>${statusBadge(r.status)}</td>
+      <td>${workStatusBadge(r)}</td>
       <td style="font-size:11px;color:#FFFFFF;opacity:.7">${U.fmtD(r.created_at)}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-out btn-xs" onclick="Pages.parttime.view(${r.id})">ดู</button>
@@ -6932,14 +7236,15 @@ Pages.parttime = {
             <th>ตำแหน่ง</th>
             <th>เบอร์โทร</th>
             <th>ทะเบียนรถ</th>
-            <th style="text-align:center" title="ใบประกอบวิชาชีพ">📜</th>
-            <th style="text-align:center" title="บัตรประชาชน">🪪</th>
-            <th style="text-align:center" title="หน้าบัญชี">🏦</th>
+            <th style="text-align:center;font-size:10.5px;min-width:75px" title="เอกสารใบประกอบวิชาชีพ">ใบประกอบ</th>
+            <th style="text-align:center;font-size:10.5px;min-width:75px" title="เอกสารบัตรประชาชน">บัตร ปชช.</th>
+            <th style="text-align:center;font-size:10.5px;min-width:80px" title="เอกสารหน้าบัญชีธนาคาร">หน้าบัญชี ธ.</th>
             <th>สถานะ</th>
+            <th style="background:rgba(110,231,183,.06);color:#6EE7B7">สถานะงาน</th>
             <th>วันที่สมัคร</th>
             <th></th>
           </tr></thead>
-          <tbody>${rows||`<tr><td colspan="11" class="empty"><div class="icon">⏰</div><p style="color:#FFFFFF;opacity:.7">ยังไม่มีใบสมัคร — ส่งลิงก์ <code>RegisterPT.html</code> ให้ผู้สมัคร</p></td></tr>`}</tbody>
+          <tbody>${rows||`<tr><td colspan="12" class="empty"><div class="icon">⏰</div><p style="color:#FFFFFF;opacity:.7">ยังไม่มีใบสมัคร — ส่งลิงก์ <code>RegisterPT.html</code> ให้ผู้สมัคร</p></td></tr>`}</tbody>
         </table></div>
       </div>`;
   },
@@ -7004,28 +7309,42 @@ Pages.parttime = {
     ];
     Modal.open(`
       <div style="margin-bottom:11px;font-size:13px">เปลี่ยนสถานะของ <strong>${U.esc(r.full_name)}</strong></div>
-      <div class="fg"><label style="font-size:11px;color:#FFFFFF;margin-bottom:5px;font-weight:600;display:block">สถานะ</label>
+      <div class="fg"><label style="font-size:11px;color:#FFFFFF;margin-bottom:5px;font-weight:600;display:block">สถานะใบสมัคร</label>
       <select id="pt_status" style="width:100%;padding:8px 11px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:13px;font-family:inherit">
         ${opts.map(o=>`<option value="${o.v}" ${r.status===o.v?'selected':''}>${o.l}</option>`).join('')}
       </select></div>
+      ${(r.status==='approved' || r.status === undefined) ? `<div class="fg"><label style="font-size:11px;color:#6EE7B7;margin-bottom:5px;font-weight:600;display:block">สถานะงาน</label>
+      <select id="pt_work_status" style="width:100%;padding:8px 11px;background:var(--s-3,#1D2B42);border:1px solid rgba(110,231,183,.3);border-radius:5px;color:#FFFFFF;font-size:13px;font-family:inherit">
+        <option value="Active" ${(r.work_status||'Active')==='Active'?'selected':''}>● Active — ใช้งานได้ปกติ</option>
+        <option value="Give a chance" ${r.work_status==='Give a chance'?'selected':''}>⚠ Give a chance — ให้โอกาส (เฝ้าระวัง)</option>
+        <option value="Blacklist" ${r.work_status==='Blacklist'?'selected':''}>⛔ Blacklist — ห้ามจ้างต่อ</option>
+      </select>
+      <div style="font-size:10.5px;color:#FFFFFF;opacity:.6;margin-top:3px;font-weight:400">เลือก Give a chance ถ้ามีข้อสังเกตแต่ยังให้โอกาส · Blacklist หากต้องการห้ามจ้างต่อ</div></div>` : ''}
       <div class="fg"><label style="font-size:11px;color:#FFFFFF;margin-bottom:5px;font-weight:600;display:block">เหตุผล / หมายเหตุ</label>
       <textarea id="pt_reason" style="width:100%;min-height:60px;padding:8px 11px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-family:inherit;font-size:12.5px;resize:vertical">${U.esc(r.status_note||'')}</textarea></div>
     `, 'เปลี่ยนสถานะ', ()=>{
       const newStatus = document.getElementById('pt_status').value;
       const reason = document.getElementById('pt_reason').value.trim();
-      if(newStatus==='approved'){
+      const wsEl = document.getElementById('pt_work_status');
+      const workStatus = wsEl ? wsEl.value : (r.work_status||'Active');
+      if(newStatus==='approved' && r.status !== 'approved'){
+        // First-time approve → create Staff entry
         const newStaff = DB.parttime.approveAsStaff(id);
-        DB.parttime.save({...r, status:'approved', status_note:reason});
+        DB.parttime.save({...r, status:'approved', status_note:reason, work_status: workStatus});
         Modal.close();
         this.render();
         if(typeof updateNavBadges==='function') updateNavBadges();
         U.toast(`✅ อนุมัติแล้ว — เพิ่มเข้า Staff Directory (${newStaff.employee_id})`);
       } else {
-        DB.parttime.save({...r, status:newStatus, status_note:reason});
+        DB.parttime.save({...r, status:newStatus, status_note:reason, work_status: workStatus});
         Modal.close();
         this.render();
         if(typeof updateNavBadges==='function') updateNavBadges();
-        U.toast('✅ อัปเดตสถานะแล้ว');
+        U.toast(
+          workStatus==='Blacklist' ? '⛔ ตั้งเป็น Blacklist แล้ว' :
+          workStatus==='Give a chance' ? '⚠ ตั้งเป็น Give a chance แล้ว' :
+          '✅ อัปเดตสถานะแล้ว'
+        );
       }
     });
   },
@@ -7050,6 +7369,418 @@ Pages.parttime = {
     this.render();
     if(typeof updateNavBadges==='function') updateNavBadges();
     U.toast('✅ ลบแล้ว');
+  },
+
+  // ★ Inline update work_status (Active/Give a chance/Blacklist) จาก dropdown ในตาราง
+  updateWorkStatus(id, newValue){
+    const r = DB.parttime.get(id);
+    if(!r) return;
+    if(r.status !== 'approved'){
+      U.toast('แก้สถานะงานได้เฉพาะรายที่ "อนุมัติ" แล้ว','warning');
+      this.render();
+      return;
+    }
+    if(['Active','Give a chance','Blacklist'].indexOf(newValue) < 0){
+      U.toast('ค่าไม่ถูกต้อง','danger');
+      return;
+    }
+    DB.parttime.save({...r, work_status: newValue});
+    this.render();
+    const toastMsg = newValue==='Blacklist' ? '⛔ ตั้งเป็น Blacklist แล้ว'
+                   : newValue==='Give a chance' ? '⚠ ตั้งเป็น Give a chance แล้ว'
+                   : '✅ ตั้งเป็น Active แล้ว';
+    U.toast(toastMsg);
+  },
+
+  // ═══ รายงานประวัติ Part-Time — งานที่เคยร่วม ═══
+  openHistoryReport(){
+    const allPT = DB.parttime.list();
+    if(allPT.length === 0){
+      U.toast('ยังไม่มีรายชื่อ Part-Time','warning');
+      return;
+    }
+    // Build PT → JO mapping by matching staff_name in stations
+    const ptHistory = allPT.map(pt => {
+      const found = []; // [{joid, jo, station, day_no, ...}]
+      DB.operation.listJobOrders().forEach(jo => {
+        const stations = DB.operation.listStations(jo.id);
+        stations.forEach(st => {
+          const staffList = st.staff_list || [];
+          let matched = false;
+          staffList.forEach(p => {
+            // Match by full_name (case-insensitive) + staff_type='Part-time' as supporting hint
+            if(p.staff_name && p.staff_name.trim() === pt.full_name.trim()){
+              matched = true;
+            }
+          });
+          // Also check legacy single-staff field
+          if(!matched && st.staff_name && st.staff_name.trim() === pt.full_name.trim()){
+            matched = true;
+          }
+          if(matched){
+            found.push({
+              joid: jo.id,
+              project_id: jo.project_id,
+              onsite_date: jo.onsite_date,
+              day_no: jo.day_no || 0,
+              station_code: st.station_code,
+              station_name: st.station_name,
+              company_name: jo.company_name,
+              project_code: (DB.sales.getProject(jo.project_id)?.project_code) || ''
+            });
+          }
+        });
+      });
+      return {pt, jobs: found};
+    });
+    // Sort: PTs with jobs first, by count desc; then by name
+    ptHistory.sort((a,b)=>{
+      if(b.jobs.length !== a.jobs.length) return b.jobs.length - a.jobs.length;
+      return (a.pt.full_name||'').localeCompare(b.pt.full_name||'', 'th');
+    });
+
+    const workStatusBadge = (r)=>{
+      if(r.status !== 'approved') return '';
+      const ws = r.work_status || 'Active';
+      if(ws === 'Blacklist'){
+        return '<span style="background:rgba(252,165,165,.18);color:#FCA5A5;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">⛔ Blacklist</span>';
+      }
+      if(ws === 'Give a chance'){
+        return '<span style="background:rgba(252,211,77,.15);color:#FCD34D;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">⚠ Give a chance</span>';
+      }
+      return '<span style="background:rgba(110,231,183,.18);color:#6EE7B7;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">● Active</span>';
+    };
+
+    // Render PT rows
+    const rows = ptHistory.map(({pt, jobs}) => {
+      const jobsHtml = jobs.length === 0
+        ? '<div style="font-size:11px;color:#FFFFFF;opacity:.45;font-style:italic;margin-top:5px">— ยังไม่เคยร่วมงาน —</div>'
+        : `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px">${jobs.map(j=>`
+            <span title="${U.esc(j.station_code)} ${U.esc(j.station_name||'')}" style="font-size:10.5px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.3);color:#7DD3FC;padding:3px 9px;border-radius:5px;font-family:'IBM Plex Mono',monospace;display:inline-flex;align-items:center;gap:5px">
+              <strong>${U.esc(j.project_code||'JO-'+j.joid)}</strong>
+              ${j.day_no>0?`<span style="background:rgba(240,205,127,.2);color:#F0CD7F;padding:0 5px;border-radius:3px;font-size:9px">วันที่ ${j.day_no}</span>`:''}
+              <span style="opacity:.75;font-size:9.5px">${U.fmtD(j.onsite_date)}</span>
+            </span>`).join('')}</div>`;
+      const jobCount = jobs.length > 0
+        ? `<span style="background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;font-family:'IBM Plex Mono',monospace;margin-left:8px">${jobs.length} ใบ</span>`
+        : '';
+      const wsBadge = workStatusBadge(pt);
+      const wsBadgeHtml = wsBadge ? `<span style="margin-left:8px">${wsBadge}</span>` : '';
+      const statusBadge = pt.status==='pending'
+        ? '<span style="background:rgba(252,211,77,.15);color:#FCD34D;padding:1px 7px;border-radius:4px;font-size:9.5px;font-weight:700;margin-left:8px">⏳ รอพิจารณา</span>'
+        : pt.status==='rejected'
+        ? '<span style="background:rgba(252,165,165,.18);color:#FCA5A5;padding:1px 7px;border-radius:4px;font-size:9.5px;font-weight:700;margin-left:8px">✗ ปฏิเสธ</span>'
+        : '';
+      return `<div style="padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px">
+          <span style="font-family:'IBM Plex Mono',monospace;color:#F0CD7F;background:rgba(240,205,127,.12);padding:2px 8px;border-radius:4px;font-size:10.5px;font-weight:700">PT-${String(pt.id).padStart(3,'0')}</span>
+          <span style="font-size:13px;font-weight:700;margin-left:8px">${U.esc(pt.full_name)}</span>
+          <span style="font-size:11px;color:#FFFFFF;opacity:.65;margin-left:6px">${U.esc(pt.position||'')}</span>
+          ${jobCount}
+          ${wsBadgeHtml}
+          ${statusBadge}
+        </div>
+        ${jobsHtml}
+      </div>`;
+    }).join('');
+
+    // Summary stats
+    const totalPT = allPT.length;
+    const approvedPT = allPT.filter(p=>p.status==='approved').length;
+    const blacklistPT = allPT.filter(p=>p.work_status==='Blacklist').length;
+    const ptWithJobs = ptHistory.filter(x=>x.jobs.length>0).length;
+
+    Modal.open(`
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);padding:9px;border-radius:7px;text-align:center">
+          <div style="font-size:18px;font-weight:700;color:#FFFFFF">${totalPT}</div>
+          <div style="font-size:10px;color:#FFFFFF;opacity:.7;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace">รวม PT</div>
+        </div>
+        <div style="background:rgba(110,231,183,.06);border:1px solid rgba(110,231,183,.3);padding:9px;border-radius:7px;text-align:center">
+          <div style="font-size:18px;font-weight:700;color:#6EE7B7">${approvedPT}</div>
+          <div style="font-size:10px;color:#6EE7B7;opacity:.85;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace">อนุมัติแล้ว</div>
+        </div>
+        <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.3);padding:9px;border-radius:7px;text-align:center">
+          <div style="font-size:18px;font-weight:700;color:#7DD3FC">${ptWithJobs}</div>
+          <div style="font-size:10px;color:#7DD3FC;opacity:.85;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace">เคยร่วมงาน</div>
+        </div>
+        <div style="background:rgba(252,165,165,.06);border:1px solid rgba(252,165,165,.3);padding:9px;border-radius:7px;text-align:center">
+          <div style="font-size:18px;font-weight:700;color:#FCA5A5">${blacklistPT}</div>
+          <div style="font-size:10px;color:#FCA5A5;opacity:.85;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace">Blacklist</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:0 14px;max-height:55vh;overflow-y:auto">
+        ${rows || '<div style="padding:30px;text-align:center;color:#FFFFFF;opacity:.6">ไม่มีข้อมูล</div>'}
+      </div>
+      <div style="font-size:10.5px;color:#FFFFFF;opacity:.55;margin-top:10px;text-align:center;font-style:italic">
+        ค้นจากชื่อ-สกุล ใน Stations ของทุกใบแจ้งงาน (matching exact name)
+      </div>
+    `, '📊 รายงานประวัติ Part-Time — งานที่เคยร่วม', null, false);
   }
 };
 
+
+/* ═══════════════════════════════════════════════════════════
+   Pages.parttime_history — รายงานประวัติ PT (separate nav page)
+   ═══════════════════════════════════════════════════════════ */
+Pages.parttime_history = {
+  _search: '',
+  _filter: 'all',
+  async render(){
+    const allPT = DB.parttime.list();
+    const mp = DB.manpowerCost.list();
+    const ptHistory = allPT.map(pt => {
+      const found = [];
+      DB.operation.listJobOrders().forEach(jo => {
+        const stations = DB.operation.listStations(jo.id);
+        stations.forEach(st => {
+          const staffList = st.staff_list || [];
+          // หา person ที่ตรงชื่อ PT — เพื่อดึง wage จริง
+          let matchedPersons = staffList.filter(p => p.staff_name && p.staff_name.trim() === pt.full_name.trim());
+          // Legacy fallback
+          if(matchedPersons.length === 0 && st.staff_name && st.staff_name.trim() === pt.full_name.trim()){
+            matchedPersons = [{
+              profession: st.profession,
+              staff_name: st.staff_name,
+              staff_type: st.staff_type,
+              wage_per_day: st.wage_per_day,
+              phone: st.phone
+            }];
+          }
+          matchedPersons.forEach(p => {
+            // หา wage — ใช้ wage_per_day จาก person ก่อน · fallback manpower config
+            let wage = p.wage_per_day;
+            if(wage===undefined||wage===null||wage===''){
+              const r = mp.find(m=>m.role===p.profession);
+              wage = r?r.cost_per_day:0;
+            }
+            wage = parseFloat(wage)||0;
+            found.push({
+              joid: jo.id,
+              project_id: jo.project_id,
+              onsite_date: jo.onsite_date,
+              day_no: jo.day_no || 0,
+              station_code: st.station_code,
+              station_name: st.station_name,
+              company_name: jo.company_name,
+              project_code: (DB.sales.getProject(jo.project_id)?.project_code) || '',
+              profession: p.profession||'-',
+              staff_type: p.staff_type||'-',
+              wage: wage
+            });
+          });
+        });
+      });
+      // คำนวณยอดรวมที่จ้าง PT คนนี้
+      const totalWage = found.reduce((s,j)=>s+(j.wage||0), 0);
+      return {pt, jobs: found, totalWage};
+    });
+
+    let filtered = ptHistory;
+    if(this._search){
+      const q = this._search.toLowerCase().trim();
+      filtered = filtered.filter(({pt, jobs})=>{
+        if((pt.full_name||'').toLowerCase().includes(q)) return true;
+        if((pt.phone||'').toLowerCase().includes(q)) return true;
+        if((pt.position||'').toLowerCase().includes(q)) return true;
+        if(jobs.some(j=>(j.project_code||'').toLowerCase().includes(q) || (j.company_name||'').toLowerCase().includes(q))) return true;
+        return false;
+      });
+    }
+
+    if(this._filter === 'active') filtered = filtered.filter(x=>x.pt.status==='approved' && (x.pt.work_status||'Active')==='Active');
+    else if(this._filter === 'give') filtered = filtered.filter(x=>x.pt.status==='approved' && x.pt.work_status==='Give a chance');
+    else if(this._filter === 'blacklist') filtered = filtered.filter(x=>x.pt.status==='approved' && x.pt.work_status==='Blacklist');
+    else if(this._filter === 'with_jobs') filtered = filtered.filter(x=>x.jobs.length>0);
+    else if(this._filter === 'no_jobs') filtered = filtered.filter(x=>x.jobs.length===0);
+
+    filtered.sort((a,b)=>{
+      if(b.jobs.length !== a.jobs.length) return b.jobs.length - a.jobs.length;
+      return (a.pt.full_name||'').localeCompare(b.pt.full_name||'', 'th');
+    });
+
+    const workStatusBadge = (r)=>{
+      if(r.status !== 'approved') {
+        if(r.status === 'pending') return '<span style="background:rgba(252,211,77,.15);color:#FCD34D;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">⏳ รอพิจารณา</span>';
+        if(r.status === 'rejected') return '<span style="background:rgba(252,165,165,.18);color:#FCA5A5;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">✗ ปฏิเสธ</span>';
+        return '<span style="opacity:.5">—</span>';
+      }
+      const ws = r.work_status || 'Active';
+      if(ws === 'Blacklist') return '<span style="background:rgba(252,165,165,.18);color:#FCA5A5;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">⛔ Blacklist</span>';
+      if(ws === 'Give a chance') return '<span style="background:rgba(252,211,77,.15);color:#FCD34D;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">⚠ Give a chance</span>';
+      return '<span style="background:rgba(110,231,183,.18);color:#6EE7B7;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">● Active</span>';
+    };
+
+    const cards = filtered.map(({pt, jobs, totalWage}) => {
+      const jobsHtml = jobs.length === 0
+        ? '<div style="font-size:11.5px;color:#FFFFFF;opacity:.45;font-style:italic;margin-top:7px;padding:6px 12px;background:rgba(255,255,255,.02);border-radius:6px">— ยังไม่เคยร่วมงาน —</div>'
+        : `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">${jobs.map((j,idx)=>`
+            <span onclick="Pages.parttime_history.openJobDetail(${pt.id},${idx})" title="${U.esc(j.station_code)} ${U.esc(j.station_name||'')} — คลิกดูรายละเอียด" style="font-size:11px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.3);color:#7DD3FC;padding:4px 10px;border-radius:5px;font-family:'IBM Plex Mono',monospace;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(56,189,248,.18)';this.style.borderColor='rgba(56,189,248,.6)'" onmouseout="this.style.background='rgba(56,189,248,.08)';this.style.borderColor='rgba(56,189,248,.3)'">
+              <strong>${U.esc(j.project_code||'JO-'+j.joid)}</strong>
+              ${j.day_no>0?`<span style="background:rgba(240,205,127,.2);color:#F0CD7F;padding:0 6px;border-radius:3px;font-size:9.5px">วันที่ ${j.day_no}</span>`:''}
+              <span style="opacity:.75;font-size:10px">${U.fmtD(j.onsite_date)}</span>
+              <span style="opacity:.55;font-size:9.5px;font-family:'IBM Plex Sans Thai',sans-serif">${U.esc(j.company_name||'')}</span>
+              ${j.wage>0?`<span style="opacity:.85;font-size:9.5px;color:#6EE7B7;font-weight:700">฿${U.fmt(j.wage)}</span>`:''}
+            </span>`).join('')}</div>`;
+      const jobCount = jobs.length > 0
+        ? `<span style="background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:9px;font-family:'IBM Plex Mono',monospace;margin-left:8px">${jobs.length} ใบ</span>`
+        : '';
+      const totalWageBadge = totalWage > 0
+        ? `<span style="background:rgba(110,231,183,.12);color:#6EE7B7;font-size:11px;font-weight:700;padding:2px 10px;border-radius:5px;font-family:'IBM Plex Mono',monospace;margin-left:8px;border:1px solid rgba(110,231,183,.3)" title="ยอดรวมค่าจ้าง PT คนนี้">💰 ฿${U.fmt(totalWage)}</span>`
+        : '';
+      return `<div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.01)">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:5px">
+          <span style="font-family:'IBM Plex Mono',monospace;color:#F0CD7F;background:rgba(240,205,127,.12);padding:2px 9px;border-radius:4px;font-size:11px;font-weight:700">PT-${String(pt.id).padStart(3,'0')}</span>
+          <span style="font-size:14px;font-weight:700;margin-left:9px">${U.esc(pt.full_name)}</span>
+          <span style="font-size:11.5px;color:#FFFFFF;opacity:.65;margin-left:7px">${U.esc(pt.position||'')}</span>
+          ${pt.phone?`<span style="font-size:11px;color:#7DD3FC;opacity:.85;margin-left:7px;font-family:'IBM Plex Mono',monospace">📞 ${U.esc(pt.phone)}</span>`:''}
+          ${jobCount}
+          <span style="margin-left:8px">${workStatusBadge(pt)}</span>
+          ${totalWageBadge}
+        </div>
+        ${jobsHtml}
+      </div>`;
+    }).join('');
+    // เก็บข้อมูลไว้ใช้ใน openJobDetail
+    this._ptHistoryCache = ptHistory;
+
+    const totalPT = allPT.length;
+    const activePT = allPT.filter(p=>p.status==='approved' && (p.work_status||'Active')==='Active').length;
+    const givePT = allPT.filter(p=>p.status==='approved' && p.work_status==='Give a chance').length;
+    const blacklistPT = allPT.filter(p=>p.status==='approved' && p.work_status==='Blacklist').length;
+    const ptWithJobs = ptHistory.filter(x=>x.jobs.length>0).length;
+
+    const filterBtn = (key, label, count)=>{
+      const active = this._filter===key;
+      const colorStyle = active ? 'background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;border-color:#F0CD7F' : 'background:transparent;color:#FFFFFF;border-color:rgba(255,255,255,.18)';
+      return `<button onclick="Pages.parttime_history._filter='${key}';Pages.parttime_history.render()" style="padding:6px 12px;border:1.5px solid;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;${colorStyle};display:inline-flex;align-items:center;gap:6px">${label} <span style="background:${active?'rgba(0,0,0,.2)':'rgba(255,255,255,.1)'};padding:1px 7px;border-radius:9px;font-size:10.5px">${count}</span></button>`;
+    };
+
+    document.getElementById('content').innerHTML=`
+      <div class="ph">
+        <div><h2>📊 รายงานประวัติ Part-Time</h2><p>ข้อมูล PT ทั้งหมด + ประวัติงานที่เคยร่วม</p></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-out btn-sm" onclick="Router.go('parttime')">⏰ กลับไปหน้า Part-Time</button>
+          <a href="RegisterPT.html" target="_blank" class="btn btn-out btn-sm">📋 เปิดฟอร์ม</a>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);padding:11px 13px;border-radius:8px">
+          <div style="font-size:21px;font-weight:700;color:#FFFFFF;line-height:1">${totalPT}</div>
+          <div style="font-size:10px;color:#FFFFFF;opacity:.7;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace;margin-top:5px">รวม PT</div>
+        </div>
+        <div style="background:rgba(110,231,183,.06);border:1px solid rgba(110,231,183,.3);padding:11px 13px;border-radius:8px">
+          <div style="font-size:21px;font-weight:700;color:#6EE7B7;line-height:1">${activePT}</div>
+          <div style="font-size:10px;color:#6EE7B7;opacity:.85;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace;margin-top:5px">● Active</div>
+        </div>
+        <div style="background:rgba(252,211,77,.06);border:1px solid rgba(252,211,77,.3);padding:11px 13px;border-radius:8px">
+          <div style="font-size:21px;font-weight:700;color:#FCD34D;line-height:1">${givePT}</div>
+          <div style="font-size:10px;color:#FCD34D;opacity:.85;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace;margin-top:5px">⚠ Give a chance</div>
+        </div>
+        <div style="background:rgba(252,165,165,.06);border:1px solid rgba(252,165,165,.3);padding:11px 13px;border-radius:8px">
+          <div style="font-size:21px;font-weight:700;color:#FCA5A5;line-height:1">${blacklistPT}</div>
+          <div style="font-size:10px;color:#FCA5A5;opacity:.85;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace;margin-top:5px">⛔ Blacklist</div>
+        </div>
+        <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.3);padding:11px 13px;border-radius:8px">
+          <div style="font-size:21px;font-weight:700;color:#7DD3FC;line-height:1">${ptWithJobs}</div>
+          <div style="font-size:10px;color:#7DD3FC;opacity:.85;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-family:'IBM Plex Mono',monospace;margin-top:5px">เคยร่วมงาน</div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+          <input id="pth_search" placeholder="🔍 ค้นหา ชื่อ/เบอร์/ตำแหน่ง/Project..." value="${U.esc(this._search)}"
+            style="flex:1;min-width:220px;max-width:400px;padding:7px 12px;border:1.5px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-family:'Sarabun',sans-serif;background:var(--s-3,#1D2B42);color:#FFFFFF;outline:none"
+            oninput="Pages.parttime_history._search=this.value;clearTimeout(Pages.parttime_history._t);Pages.parttime_history._t=setTimeout(()=>Pages.parttime_history.render(),200)"/>
+        </div>
+        <div style="padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;gap:6px;flex-wrap:wrap">
+          ${filterBtn('all','ทั้งหมด',totalPT)}
+          ${filterBtn('active','● Active',activePT)}
+          ${filterBtn('give','⚠ Give a chance',givePT)}
+          ${filterBtn('blacklist','⛔ Blacklist',blacklistPT)}
+          ${filterBtn('with_jobs','เคยร่วมงาน',ptWithJobs)}
+          ${filterBtn('no_jobs','ไม่เคยร่วม',totalPT-ptWithJobs)}
+        </div>
+        <div style="max-height:calc(100vh - 380px);overflow-y:auto">
+          ${cards || '<div style="padding:40px;text-align:center;color:#FFFFFF;opacity:.55"><div style="font-size:30px;margin-bottom:8px">📊</div><p>ไม่พบข้อมูลตามตัวกรอง</p></div>'}
+        </div>
+        <div style="padding:9px 16px;background:rgba(255,255,255,.02);border-top:1px solid rgba(255,255,255,.06);font-size:10.5px;color:#FFFFFF;opacity:.6;font-style:italic;text-align:center">
+          ค้นจากชื่อ-สกุล ใน Stations ของทุกใบแจ้งงาน · แสดง ${filtered.length} จากทั้งหมด ${totalPT} คน
+        </div>
+      </div>`;
+  },
+
+  // ★ Popup รายละเอียด: PT คนนี้ทำงานใน Project นี้ ที่ Station ไหน + ราคาจ้าง
+  openJobDetail(ptId, jobIdx){
+    const cache = this._ptHistoryCache || [];
+    const ptEntry = cache.find(e => e.pt.id === ptId);
+    if(!ptEntry){ U.toast('ไม่พบข้อมูล','danger'); return; }
+    const { pt, jobs } = ptEntry;
+    const job = jobs[jobIdx];
+    if(!job){ U.toast('ไม่พบงานนี้','danger'); return; }
+    // หางาน JO อื่นๆ ของ PT คนนี้ใน project เดียวกัน (รวมหลายวัน)
+    const sameProjJobs = jobs.filter(j => j.project_id === job.project_id);
+    const sameProjTotal = sameProjJobs.reduce((s,j)=>s+(j.wage||0), 0);
+    const proj = DB.sales.getProject(job.project_id) || {};
+
+    // รายละเอียดในแต่ละวัน
+    const dayRows = sameProjJobs.sort((a,b)=>{
+      if(a.day_no !== b.day_no) return (a.day_no||0)-(b.day_no||0);
+      return new Date(a.onsite_date||0)-new Date(b.onsite_date||0);
+    }).map(j=>`<tr>
+      <td style="padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06);text-align:center">${j.day_no>0?`<span style="background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:4px;font-family:'IBM Plex Mono',monospace">วันที่ ${j.day_no}</span>`:'—'}</td>
+      <td style="padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px">${U.fmtD(j.onsite_date)}</td>
+      <td style="padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-family:'IBM Plex Mono',monospace;color:#F0CD7F;font-size:11.5px;font-weight:700">${U.esc(j.station_code||'-')}</td>
+      <td style="padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px">${U.esc(j.station_name||'-')}</td>
+      <td style="padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-size:11.5px">${U.esc(j.profession||'-')}</td>
+      <td style="padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06);font-size:11px"><span style="background:rgba(240,205,127,.15);color:#F0CD7F;padding:1px 7px;border-radius:4px;font-weight:600">${U.esc(j.staff_type||'-')}</span></td>
+      <td style="padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06);text-align:right;font-family:'IBM Plex Mono',monospace;color:#6EE7B7;font-weight:700;font-size:12.5px">฿${U.fmt(j.wage||0)}</td>
+    </tr>`).join('');
+
+    Modal.open(`
+      <!-- Project info card -->
+      <div style="background:linear-gradient(135deg,rgba(240,205,127,.08),rgba(56,189,248,.06));border:1px solid rgba(240,205,127,.25);padding:13px 16px;border-radius:9px;margin-bottom:13px">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+          <span style="font-family:'IBM Plex Mono',monospace;color:#F0CD7F;background:rgba(240,205,127,.15);padding:3px 11px;border-radius:5px;font-size:13px;font-weight:700">${U.esc(job.project_code||'JO-'+job.joid)}</span>
+          <span style="font-size:15px;font-weight:700">${U.esc(job.company_name||proj.company_name||'-')}</span>
+          ${sameProjJobs.length>1?`<span style="background:rgba(56,189,248,.15);color:#7DD3FC;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:4px">📅 ${sameProjJobs.length} วัน</span>`:''}
+        </div>
+        <div style="font-size:11.5px;color:#FFFFFF;opacity:.75;font-weight:500">
+          📆 ${U.fmtD(proj.onsite_date)} · 🧑‍💼 ${(proj.headcount||0).toLocaleString()} คน · 📍 ${U.esc(proj.location||'-')}
+        </div>
+      </div>
+
+      <!-- PT info -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);padding:11px 14px;border-radius:8px;margin-bottom:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+        <span style="font-family:'IBM Plex Mono',monospace;color:#F0CD7F;background:rgba(240,205,127,.12);padding:2px 9px;border-radius:4px;font-size:11px;font-weight:700">PT-${String(pt.id).padStart(3,'0')}</span>
+        <span style="font-size:13px;font-weight:700">${U.esc(pt.full_name)}</span>
+        <span style="font-size:11.5px;color:#FFFFFF;opacity:.65">${U.esc(pt.position||'')}</span>
+        ${pt.phone?`<span style="font-size:11px;color:#7DD3FC;opacity:.85;font-family:'IBM Plex Mono',monospace">📞 ${U.esc(pt.phone)}</span>`:''}
+      </div>
+
+      <!-- Detail table -->
+      <div style="font-size:11px;color:#F0CD7F;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px;font-family:'IBM Plex Mono',monospace">รายละเอียดการทำงานใน Project นี้</div>
+      <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#162338">
+              <th style="padding:8px 11px;text-align:center;font-size:10.5px;font-weight:700;color:#FFFFFF">วัน</th>
+              <th style="padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">วันที่</th>
+              <th style="padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">Code</th>
+              <th style="padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">Station</th>
+              <th style="padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">วิชาชีพ</th>
+              <th style="padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:#FFFFFF">ประเภท</th>
+              <th style="padding:8px 11px;text-align:right;font-size:10.5px;font-weight:700;color:#FFFFFF">ค่าจ้าง</th>
+            </tr>
+          </thead>
+          <tbody>${dayRows}</tbody>
+          <tfoot>
+            <tr style="background:rgba(110,231,183,.06)">
+              <td colspan="6" style="padding:10px 11px;text-align:right;font-weight:700;font-size:12.5px">รวมที่จ้างใน Project นี้</td>
+              <td style="padding:10px 11px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:15px;color:#6EE7B7">฿${U.fmt(sameProjTotal)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    `, `💼 ${U.esc(pt.full_name)} · ${U.esc(job.project_code||'JO')}`, null, false);
+  }
+};

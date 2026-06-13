@@ -535,7 +535,7 @@ th { padding:11px 13px; text-align:left; font-size:9.5px; font-weight:700; color
 td { padding:10px 13px; border-bottom:1px solid var(--b-1); font-size:13px; vertical-align:middle; color:var(--t-body); }
 tr:last-child td { border-bottom:none; }
 tbody tr { transition:background .12s; }
-tbody tr:hover td { background:var(--s-2); }
+tbody tr:hover td { background:rgba(255,255,255,.025); }  /* subtle hover — no dramatic highlight */
 tfoot td { background:var(--s-3); font-weight:700; border-top:1px solid var(--b-2); font-size:13px; }
 .tbl-ck-done td { background:rgba(14,159,110,.08)!important; }
 
@@ -775,3 +775,60 @@ select option { background:var(--s-3); color:var(--t-bright); }
 
 /* Workflow Tracker — Department Cards */
 @keyframes wfDeptPulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+
+/* ═══ Checkbox — bright green when checked (global) ═══ */
+input[type="checkbox"]{
+  appearance:none;
+  -webkit-appearance:none;
+  width:18px;
+  height:18px;
+  border:1.5px solid rgba(255,255,255,.25);
+  border-radius:4px;
+  background:#162338;
+  cursor:pointer;
+  position:relative;
+  margin:0;
+  vertical-align:middle;
+  transition:all .15s ease;
+  flex-shrink:0;
+}
+input[type="checkbox"]:hover{
+  border-color:rgba(110,231,183,.45);
+}
+input[type="checkbox"]:checked{
+  background:linear-gradient(180deg,#10B981,#059669);
+  border-color:#10B981;
+  box-shadow:0 0 0 1px rgba(110,231,183,.25), 0 2px 5px rgba(16,185,129,.35);
+}
+input[type="checkbox"]:checked::after{
+  content:'';
+  position:absolute;
+  left:5px;
+  top:1px;
+  width:5px;
+  height:10px;
+  border:solid #FFFFFF;
+  border-width:0 2.5px 2.5px 0;
+  transform:rotate(45deg);
+}
+input[type="checkbox"]:focus-visible{
+  outline:2px solid rgba(110,231,183,.4);
+  outline-offset:2px;
+}
+input[type="checkbox"]:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+/* Larger variant for accessibility */
+input[type="checkbox"].cb-lg{
+  width:22px;
+  height:22px;
+}
+input[type="checkbox"].cb-lg:checked::after{
+  left:7px;
+  top:2px;
+  width:6px;
+  height:12px;
+}
