@@ -30,7 +30,7 @@ const VEHICLES=['รถยนต์กะบะขาว','รถยนต์ก
 const PROFESSIONS=['เจ้าหน้าที่','RN','MT','แพทย์','เจ้าหน้าที่ ใบ Cer','อื่นๆ'];
 const STAFF_TYPES=['ในองค์กร','Part-time','Out Source'];
 const STATUS_FLOW=['Prospect','Closed','Onsite','Lab','Report','Billing','Completed'];
-const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',assessment:'⭐ Gen Assessment',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config:'⚙ Config ระบบ'};
+const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',assessment:'⭐ Gen Assessment',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config_assessment:'🎯 ตั้งค่าแบบประเมิน',config:'⚙ Config ระบบ'};
 const QT_APPROVE_ROLES=['admin','sales']; // roles that can approve quotations
 
 /* ===== UTILS ===== */
@@ -276,7 +276,7 @@ const Router={
     if(!DB.auth.can('view',page)&&page!=='calendar'&&page!=='op_report'){U.toast('⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้','danger');return;}
     this.current=page;
     document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time',assessment:'⭐ Gen Assessment — สร้าง QR แบบประเมิน',assessment_report:'🌟 ผลประเมินความพึงพอใจ'}[page]||page;
+    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time',assessment:'⭐ Gen Assessment — สร้าง QR แบบประเมิน',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config_assessment:'🎯 ตั้งค่าแบบประเมิน'}[page]||page;
     // Show loading indicator
     const content = document.getElementById('content');
     if(content) content.innerHTML = '<div class="empty" style="padding:60px"><div style="font-size:32px;margin-bottom:12px;opacity:.4">⏳</div><p style="color:var(--t-dim)">กำลังโหลด...</p></div>';
@@ -475,7 +475,8 @@ function buildNav(){
     {page:'config_checklist',icon:'📋',label:'ตั้งค่า Checklist',mod:'config'},
     {page:'config_stations',icon:'🩺',label:'ตั้งค่า Station',mod:'config'},
     {page:'config_station_checklist',icon:'📋',label:'ตั้งค่า Checklist Station',mod:'config'},
-    {page:'staff',icon:'👤',label:'ตั้งค่ารายชื่อ',mod:'staff'}
+    {page:'staff',icon:'👤',label:'ตั้งค่ารายชื่อ',mod:'staff'},
+    {page:'config_assessment',icon:'🎯',label:'ตั้งค่าแบบประเมิน',mod:'config_assessment'}
   ];
   let html='';
   items.forEach(it=>{
@@ -1796,7 +1797,7 @@ viewOnsiteSummary(pid){
     </div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Code</th><th>Station</th><th style="text-align:center">เป้า</th><th style="text-align:center">สำเร็จ</th><th style="text-align:center">เก็บตก</th><th style="text-align:center">ปฏิเสธ</th><th>หมายเหตุ</th></tr></thead>
-      <tbody>${logRows||'<tr><td colspan="7" class="empty"><p style="color:var(--t-muted)">ยังไม่มีข้อมูล Station</p></td></tr>'}</tbody>
+      <tbody>${logRows||'<tr><td colspan="8" class="empty"><p style="color:var(--t-muted)">ยังไม่มีข้อมูล Station</p></td></tr>'}</tbody>
     </table></div>
   </div>
   <div id="dvs_t2" class="tp">${qHtml}</div>`,
@@ -4022,7 +4023,7 @@ Pages.op_prep={
         const isFirst = pi===0;
         return `<tr>
           ${isFirst?`<td rowspan="${cnt}" style="text-align:center;vertical-align:middle;font-weight:600">${s.order_no}</td>
-          <td rowspan="${cnt}" style="vertical-align:middle"><span style="background:#EFF6FF;color:#1E40AF;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;font-family:monospace;margin-right:5px">${s.station_code}</span>${s.station_name}</td>
+          <td rowspan="${cnt}" style="vertical-align:middle">${s.station_name}</td>
           <td rowspan="${cnt}" style="text-align:center;vertical-align:middle;font-weight:600">${cnt}</td>
           <td rowspan="${cnt}" style="text-align:center;vertical-align:middle;color:${s.exam_count?'#065F46':'#B0BAC8'}">${s.exam_count||'-'}</td>`:''}
           <td style="font-weight:600">${p.staff_name?U.esc(p.staff_name):'<span style="color:#C9A84C">ยังไม่ได้กรอก</span>'}</td>
@@ -4071,7 +4072,7 @@ Pages.op_prep={
       .jo-table th{padding:4px 7px;font-size:8.5px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.04em;text-align:left;border:none;}
       .jo-table td{padding:4px 7px;border-bottom:1px solid #E4E9F0;vertical-align:middle;font-size:10px;line-height:1.3;}
       .jo-table tr:last-child td{border-bottom:none;}
-      .jo-table tbody tr:nth-child(even) td{background:#F9FAFB;}
+      .jo-table tbody tr:nth-child(even) td{background:#FFFFFF;}
       .jo-sign-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;padding-top:8px;border-top:1px solid #E4E9F0;page-break-inside:avoid;}
       .jo-sign-box{text-align:center;}
       .sign-line{height:38px;border-bottom:1px solid #C8D0DC;margin-bottom:4px;}
@@ -4197,7 +4198,7 @@ Pages.op_prep={
     .jo-table th{padding:7px 9px;font-size:9px;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.06em;text-align:left;border:none;}
     .jo-table td{padding:7px 9px;border-bottom:1px solid #E4E9F0;vertical-align:middle;}
     .jo-table tr:last-child td{border-bottom:none;}
-    .jo-table tbody tr:nth-child(even) td{background:#F9FAFB;}
+    .jo-table tbody tr:nth-child(even) td{background:#FFFFFF;}
     .jo-sign-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px;padding-top:14px;border-top:1px solid #E4E9F0;}
     .jo-sign-box{text-align:center;}
     .sign-line{height:38px;border-bottom:1px solid #C8D0DC;margin-bottom:4px;}
@@ -7881,40 +7882,54 @@ Pages.assessment = {
   _search: '',
   async render(){
     const projs = DB.sales.listProjects().filter(p=>['Closed','Onsite','Lab','Report','Billing','Completed'].includes(p.status));
-    // Apply search
     let list = projs;
     if(this._search){
       const q = this._search.toLowerCase().trim();
       list = list.filter(p=>(p.project_code||'').toLowerCase().includes(q)||(p.company_name||'').toLowerCase().includes(q));
     }
-    // Sort: newest onsite first
     list = list.slice().sort((a,b)=>new Date(b.onsite_date||0)-new Date(a.onsite_date||0));
 
+    const canEdit = DB.auth.can('add','assessment') || DB.auth.can('edit','assessment');
     const rows = list.map(p=>{
       const responses = DB.assessment.listByProject(p.project_code);
       const n = responses.length;
       const pct = p.headcount>0 ? Math.round(n*100/p.headcount) : 0;
+      const qrCfg = DB.assessment.getQRConfig(p.id);
+      const isGenerated = !!qrCfg;
+      // Generate button states
+      const genBtn = canEdit
+        ? (isGenerated
+            ? `<button class="btn btn-out btn-xs" style="background:rgba(110,231,183,.1);border-color:rgba(110,231,183,.4);color:#6EE7B7" onclick="Pages.assessment.viewQR(${p.id})">👁 ดู QR</button> <button class="btn btn-xs" style="background:rgba(252,165,165,.06);border:1px solid rgba(252,165,165,.3);color:#FCA5A5" onclick="Pages.assessment.regenerateQR(${p.id},'${U.esc(p.project_code||'')}')" title="สร้างใหม่ (token เก่าจะใช้ไม่ได้)">🔄</button>`
+            : `<button class="btn btn-pri btn-xs" onclick="Pages.assessment.generateQR(${p.id},'${U.esc(p.project_code||'')}')">⭐ สร้าง QR</button>`)
+        : '';
+      const pdfBtn = isGenerated
+        ? `<button class="btn btn-out btn-xs" style="background:rgba(252,165,165,.08);border-color:rgba(252,165,165,.35);color:#FCA5A5" onclick="Pages.assessment.exportPDF(${p.id})">📄 PDF A4</button>`
+        : `<button class="btn btn-xs" disabled style="background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.15);color:rgba(255,255,255,.35);cursor:not-allowed" title="กรุณาสร้าง QR ก่อน">📄 PDF A4</button>`;
+
+      // Generated info badge
+      const genInfo = isGenerated
+        ? `<div style="font-size:9.5px;color:#6EE7B7;font-weight:600" title="Token: ${qrCfg.token}">✅ สร้างแล้ว · ${new Date(qrCfg.generated_at).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}</div>`
+        : `<div style="font-size:9.5px;color:#FCD34D;font-weight:600">⏳ ยังไม่สร้าง</div>`;
+
       return `<tr>
         <td><span class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${U.esc(p.project_code||'-')}</span></td>
         <td class="fw6">${U.esc(p.company_name||'-')}</td>
         <td>${U.fmtD(p.onsite_date)}</td>
         <td style="text-align:right">${(p.headcount||0).toLocaleString()}</td>
         <td>${U.badge(p.status||'Draft')}</td>
+        <td>${genInfo}</td>
         <td style="text-align:center">
           <span style="color:${n>0?'#6EE7B7':'rgba(255,255,255,.4)'};font-weight:700;font-family:'IBM Plex Mono',monospace">${n}</span>
           <span style="font-size:10px;color:rgba(255,255,255,.5)"> / ${(p.headcount||0).toLocaleString()}</span>
           ${n>0?`<div style="font-size:9.5px;color:#6EE7B7;font-weight:600">${pct}%</div>`:''}
         </td>
-        <td style="white-space:nowrap">
-          <button class="btn btn-out btn-xs" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.4);color:#7DD3FC" onclick="Pages.assessment.openQR('${U.esc(p.project_code||'')}',${p.id})">⭐ สร้าง QR</button>
-          <button class="btn btn-out btn-xs" style="background:rgba(252,165,165,.08);border-color:rgba(252,165,165,.35);color:#FCA5A5" onclick="Pages.assessment.exportPDF('${U.esc(p.project_code||'')}',${p.id})">📄 PDF A4</button>
-        </td>
+        <td style="white-space:nowrap">${genBtn} ${pdfBtn}</td>
       </tr>`;
     }).join('');
 
     document.getElementById('content').innerHTML=`
       <div class="ph">
-        <div><h2>⭐ Gen Assessment — แบบประเมินความพึงพอใจ</h2><p>สร้าง QR Code แต่ละ Project ให้ลูกค้า scan ทำแบบประเมินหน้างาน</p></div>
+        <div><h2>⭐ Gen Assessment — แบบประเมินความพึงพอใจ</h2><p>กดปุ่ม "สร้าง QR" → ระบบ generate token เฉพาะแต่ละ Project → Export PDF A4 ติดที่หน้างาน</p></div>
       </div>
       <div class="card">
         <div style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.06)">
@@ -7924,21 +7939,20 @@ Pages.assessment = {
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Project Code</th><th>บริษัท</th><th>วันออกตรวจ</th><th style="text-align:right">จำนวนคน</th><th>สถานะ</th><th style="text-align:center">ผู้ตอบ</th><th></th></tr></thead>
-            <tbody>${rows||'<tr><td colspan="7" class="empty"><div class="icon">⭐</div><p>ยังไม่มี Project ที่พร้อมสร้างแบบประเมิน (ต้อง Status ≥ Closed)</p></td></tr>'}</tbody>
+            <thead><tr><th>Project Code</th><th>บริษัท</th><th>วันออกตรวจ</th><th style="text-align:right">จำนวนคน</th><th>สถานะ</th><th>QR Status</th><th style="text-align:center">ผู้ตอบ</th><th></th></tr></thead>
+            <tbody>${rows||'<tr><td colspan="8" class="empty"><div class="icon">⭐</div><p>ยังไม่มี Project พร้อมสร้างแบบประเมิน (ต้อง Status ≥ Closed)</p></td></tr>'}</tbody>
           </table>
         </div>
       </div>`;
   },
 
-  _qrUrl(projectCode){
-    // QR ชี้ไปที่ assessment.html — ใช้ origin ปัจจุบัน
+  // URL จาก token (unique ต่อ Project)
+  _tokenUrl(token){
     const base = window.location.origin + window.location.pathname.replace(/[^\/]*$/,'');
-    return `${base}assessment.html?p=${encodeURIComponent(projectCode)}`;
+    return `${base}assessment.html?t=${encodeURIComponent(token)}`;
   },
 
   _genQRSVG(text, size){
-    // ใช้ qrcode-generator lib (โหลดจาก CDN ใน index.html)
     if(typeof qrcode !== 'function'){
       return `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:#FEE;color:#B00;font-size:11px;text-align:center;padding:10px">QRCode library not loaded.<br>กรุณา refresh หน้านี้</div>`;
     }
@@ -7952,88 +7966,122 @@ Pages.assessment = {
     }
   },
 
-  openQR(projectCode, projectId){
+  // ★ Generate QR (first time)
+  generateQR(projectId, projectCode){
     const p = DB.sales.getProject(projectId);
     if(!p){U.toast('ไม่พบ Project','danger');return;}
-    const url = this._qrUrl(projectCode);
-    const responses = DB.assessment.listByProject(projectCode);
+    if(!U.confirm(`สร้าง QR Code สำหรับ Project ${projectCode}?\n\nลิงก์ที่ลูกค้าใช้สแกนจะถูก generate ใหม่ (unique token)`)) return;
+    const cfg = DB.assessment.generateQRConfig(projectId, projectCode);
+    U.toast(`✅ สร้าง QR แล้ว — Token: ${cfg.token}`);
+    this.render();
+    setTimeout(()=>this.viewQR(projectId), 200);
+  },
+
+  // ★ Regenerate QR (สร้างใหม่ — token เก่าจะใช้ไม่ได้)
+  regenerateQR(projectId, projectCode){
+    if(!U.confirm(`⚠️ สร้าง QR ใหม่สำหรับ ${projectCode}?\n\nToken เก่าจะใช้งานไม่ได้ทันที — QR ที่พิมพ์ติดไว้แล้วต้องเปลี่ยน`)) return;
+    const cfg = DB.assessment.generateQRConfig(projectId, projectCode);
+    U.toast(`🔄 สร้าง QR ใหม่แล้ว — Token: ${cfg.token}`);
+    this.render();
+    setTimeout(()=>this.viewQR(projectId), 200);
+  },
+
+  // ★ View existing QR
+  viewQR(projectId){
+    const p = DB.sales.getProject(projectId);
+    if(!p){U.toast('ไม่พบ Project','danger');return;}
+    const cfg = DB.assessment.getQRConfig(projectId);
+    if(!cfg){
+      U.toast('ยังไม่ได้สร้าง QR — กรุณากด "⭐ สร้าง QR" ก่อน','warning');
+      return;
+    }
+    const url = this._tokenUrl(cfg.token);
+    const responses = DB.assessment.listByProject(p.project_code);
 
     Modal.open(`
       <div style="text-align:center">
         <div style="background:linear-gradient(135deg,rgba(240,205,127,.08),rgba(56,189,248,.06));border:1px solid rgba(240,205,127,.25);padding:10px 14px;border-radius:8px;margin-bottom:13px">
-          <div style="font-size:14px;font-weight:700;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${U.esc(projectCode)}</div>
+          <div style="font-size:14px;font-weight:700;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${U.esc(p.project_code)}</div>
           <div style="font-size:13px;font-weight:600;margin-top:3px">${U.esc(p.company_name)}</div>
           <div style="font-size:11.5px;color:rgba(255,255,255,.7);margin-top:3px">📆 ${U.fmtD(p.onsite_date)} · 🧑‍💼 ${(p.headcount||0).toLocaleString()} คน</div>
         </div>
         <div style="background:#FFFFFF;padding:14px;border-radius:9px;display:inline-block;margin-bottom:13px">
-          <div id="qr_img_${projectId}" style="width:250px;height:250px;display:flex;align-items:center;justify-content:center">${this._genQRSVG(url, 250)}</div>
+          <div style="width:250px;height:250px;display:flex;align-items:center;justify-content:center">${this._genQRSVG(url, 250)}</div>
         </div>
-        <div style="font-size:10.5px;color:rgba(255,255,255,.6);font-weight:500;margin-bottom:5px">QR Link:</div>
-        <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.25);padding:7px 11px;border-radius:6px;font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:#7DD3FC;margin-bottom:13px;word-break:break-all">${url}</div>
-        <div style="display:flex;gap:7px;justify-content:center">
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);padding:8px 12px;border-radius:6px;font-size:10.5px;color:rgba(255,255,255,.7);font-family:'IBM Plex Mono',monospace;margin-bottom:13px">
+          🔑 Token: <span style="color:#F0CD7F;font-weight:700">${cfg.token}</span> · สร้างเมื่อ ${new Date(cfg.generated_at).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'})}
+        </div>
+        <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap">
           <button class="btn btn-out" onclick="navigator.clipboard.writeText('${url}').then(()=>U.toast('✅ คัดลอก link แล้ว'))" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.4);color:#7DD3FC">📋 Copy Link</button>
-          <button class="btn btn-gold" onclick="Pages.assessment.exportPDF('${U.esc(projectCode)}',${projectId})">📄 Export PDF A4</button>
+          <button class="btn btn-gold" onclick="Pages.assessment.exportPDF(${projectId})">📄 Export PDF A4</button>
         </div>
         <div style="margin-top:13px;font-size:11.5px;color:rgba(255,255,255,.7);font-weight:500">📊 มีผู้ทำแบบประเมินแล้ว: <span style="color:#6EE7B7;font-weight:700">${responses.length}</span> / ${(p.headcount||0).toLocaleString()} คน</div>
       </div>
     `, `⭐ QR Code — แบบประเมิน`, null, false);
   },
 
-  exportPDF(projectCode, projectId){
+  // ★ Export PDF A4 (compact, 1 page, no link below QR)
+  exportPDF(projectId){
     const p = DB.sales.getProject(projectId);
     if(!p){U.toast('ไม่พบ Project','danger');return;}
-    const url = this._qrUrl(projectCode);
-    const qrSVG = this._genQRSVG(url, 380);
+    const cfg = DB.assessment.getQRConfig(projectId);
+    if(!cfg){
+      U.toast('ยังไม่ได้สร้าง QR — กรุณากด "⭐ สร้าง QR" ก่อน','warning');
+      return;
+    }
+    const url = this._tokenUrl(cfg.token);
+    const qrSVG = this._genQRSVG(url, 340);
     const today = new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>แบบประเมินความพึงพอใจ — ${U.esc(projectCode)}</title>
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>แบบประเมินความพึงพอใจ — ${U.esc(p.project_code)}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-      *{box-sizing:border-box;margin:0;padding:0;font-family:'Sarabun','IBM Plex Sans Thai',sans-serif}
-      @media print { @page { size:A4; margin:15mm 12mm; } button{display:none!important} }
-      body{padding:18mm 13mm;background:#FFFFFF;color:#1A1A1A}
-      .header{background:linear-gradient(135deg,#0B2340,#1A3C65);color:#FFF;padding:16px 22px;border-radius:9px;margin-bottom:18px;text-align:center}
-      .header h1{font-size:24px;font-weight:700;margin-bottom:4px;color:#FFF}
-      .header p{font-size:13px;opacity:.9;color:#FFF}
-      .proj-info{text-align:center;margin-bottom:20px;padding:13px 18px;background:#F0FDF4;border:2px solid #86EFAC;border-radius:8px}
-      .proj-code{display:inline-block;background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;padding:4px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:18px;margin-bottom:6px}
-      .proj-name{font-size:18px;font-weight:700;color:#0B2340;margin-bottom:3px}
-      .proj-meta{font-size:13px;color:#374151;font-weight:500}
-      .qr-wrap{text-align:center;margin:23px 0}
-      .qr-frame{display:inline-block;background:#FFFFFF;border:4px solid #0B2340;padding:12px;border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
-      .qr-frame svg{width:380px;height:380px;display:block}
-      .qr-label{font-size:17px;font-weight:700;color:#0B2340;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px}
-      .qr-link{font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:#6B7280;margin-top:5px;word-break:break-all;max-width:380px;margin-left:auto;margin-right:auto}
-      .instructions{background:#F0FDF4;border-left:4px solid #10B981;padding:13px 18px;border-radius:6px;margin-top:20px;text-align:left}
-      .instructions h3{font-size:14px;font-weight:700;color:#065F46;margin-bottom:7px}
-      .instructions .item{font-size:12.5px;color:#1A2332;line-height:1.7;margin-bottom:3px}
-      .footer{text-align:center;font-size:10px;color:#9CA3AF;margin-top:18px;font-weight:500}
-      .print-btn{position:fixed;top:13px;right:13px;background:#0B2340;color:#FFF;border:0;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+      *{box-sizing:border-box;margin:0;padding:0;font-family:'Sarabun',sans-serif}
+      @media print { @page { size:A4; margin:8mm 10mm; } button{display:none!important} }
+      body{padding:8mm 10mm;background:#FFFFFF;color:#1A1A1A;width:210mm;min-height:auto}
+      .container{max-width:190mm;margin:0 auto}
+      .header{background:linear-gradient(135deg,#0B2340,#1A3C65);color:#FFF;padding:11px 16px;border-radius:7px;margin-bottom:10px;text-align:center}
+      .header h1{font-size:19px;font-weight:700;color:#FFF;letter-spacing:.3px}
+      .header p{font-size:11.5px;opacity:.92;color:#FFF;margin-top:1px}
+      .proj-info{text-align:center;margin-bottom:11px;padding:9px 13px;background:#F0FDF4;border:2px solid #86EFAC;border-radius:7px}
+      .proj-code{display:inline-block;background:linear-gradient(180deg,#F0CD7F,#D4A845);color:#1A1A1A;padding:3px 12px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;margin-bottom:3px}
+      .proj-name{font-size:16px;font-weight:700;color:#0B2340;margin-bottom:1px}
+      .proj-meta{font-size:11.5px;color:#374151;font-weight:500}
+      .qr-wrap{text-align:center;margin:8px 0 11px}
+      .qr-frame{display:inline-block;background:#FFFFFF;border:3px solid #0B2340;padding:9px;border-radius:11px}
+      .qr-frame svg{width:340px;height:340px;display:block}
+      .qr-label{font-size:15px;font-weight:700;color:#0B2340;margin-top:9px}
+      .instructions{background:#F0FDF4;border-left:4px solid #10B981;padding:9px 14px;border-radius:5px;margin-top:9px;text-align:left}
+      .instructions h3{font-size:12.5px;font-weight:700;color:#065F46;margin-bottom:4px}
+      .instructions .item{font-size:11.5px;color:#1A2332;line-height:1.55;margin-bottom:2px}
+      .instructions .note{margin-top:5px;color:#065F46;font-weight:600;font-size:11px}
+      .footer{text-align:center;font-size:9.5px;color:#9CA3AF;margin-top:9px;font-weight:500}
+      .print-btn{position:fixed;top:10px;right:10px;background:#0B2340;color:#FFF;border:0;padding:9px 15px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:1000}
     </style>
     </head><body>
       <button class="print-btn" onclick="window.print()">🖨️ Print / Export PDF</button>
-      <div class="header">
-        <h1>⭐ แบบประเมินความพึงพอใจ</h1>
-        <p>การเข้ารับการตรวจสุขภาพ 2569 · OcciCare Mobile Checkup</p>
+      <div class="container">
+        <div class="header">
+          <h1>⭐ แบบประเมินความพึงพอใจ</h1>
+          <p>การเข้ารับการตรวจสุขภาพ 2569 · OcciCare Mobile Checkup</p>
+        </div>
+        <div class="proj-info">
+          <div class="proj-code">${U.esc(p.project_code)}</div>
+          <div class="proj-name">${U.esc(p.company_name||'-')}</div>
+          <div class="proj-meta">📆 ${U.fmtD(p.onsite_date)} · 🧑‍💼 ${(p.headcount||0).toLocaleString()} คน · 📍 ${U.esc(p.location||'-')}</div>
+        </div>
+        <div class="qr-wrap">
+          <div class="qr-frame">${qrSVG}</div>
+          <div class="qr-label">📱 สแกน QR Code เพื่อทำแบบประเมิน</div>
+        </div>
+        <div class="instructions">
+          <h3>📋 หลักเกณฑ์การให้คะแนน</h3>
+          <div class="item"><strong style="color:#10B981">5</strong>=พึงพอใจมากที่สุด · <strong style="color:#10B981">4</strong>=พึงพอใจมาก · <strong style="color:#F59E0B">3</strong>=ปานกลาง · <strong style="color:#F59E0B">2</strong>=น้อย · <strong style="color:#DC2626">1</strong>=น้อยที่สุด · <strong style="color:#6B7280">0</strong>=ไม่มีตรวจ</div>
+          <div class="note">📊 ข้อมูลของท่านจะถูกใช้เพื่อพัฒนาและปรับปรุงคุณภาพการให้บริการเท่านั้น</div>
+        </div>
+        <div class="footer">© OcciCare Mobile Checkup System · พิมพ์เมื่อ ${today}</div>
       </div>
-      <div class="proj-info">
-        <div class="proj-code">${U.esc(projectCode)}</div>
-        <div class="proj-name">${U.esc(p.company_name||'-')}</div>
-        <div class="proj-meta">📆 ${U.fmtD(p.onsite_date)} · 🧑‍💼 ${(p.headcount||0).toLocaleString()} คน · 📍 ${U.esc(p.location||'-')}</div>
-      </div>
-      <div class="qr-wrap">
-        <div class="qr-frame">${qrSVG}</div>
-        <div class="qr-label">📱 สแกน QR Code เพื่อทำแบบประเมิน</div>
-        <div class="qr-link">${url}</div>
-      </div>
-      <div class="instructions">
-        <h3>📋 หลักเกณฑ์การให้คะแนน</h3>
-        <div class="item"><strong style="color:#10B981">5</strong> = พึงพอใจมากที่สุด &nbsp;·&nbsp; <strong style="color:#10B981">4</strong> = พึงพอใจมาก &nbsp;·&nbsp; <strong style="color:#F59E0B">3</strong> = ปานกลาง</div>
-        <div class="item"><strong style="color:#F59E0B">2</strong> = พึงพอใจน้อย &nbsp;·&nbsp; <strong style="color:#DC2626">1</strong> = พึงพอใจน้อยที่สุด &nbsp;·&nbsp; <strong style="color:#6B7280">0</strong> = ไม่มีตรวจ</div>
-        <div class="item" style="margin-top:7px;color:#065F46;font-weight:600">📊 ข้อมูลของท่านจะถูกใช้เพื่อพัฒนาและปรับปรุงคุณภาพการให้บริการเท่านั้น</div>
-      </div>
-      <div class="footer">© OcciCare Mobile Checkup System · พิมพ์เมื่อ ${today}</div>
     </body></html>`;
     const w = window.open('', '_blank');
     w.document.write(html);
@@ -8041,6 +8089,7 @@ Pages.assessment = {
     setTimeout(()=>{ try{ w.print(); }catch(e){} }, 600);
   }
 };
+
 
 /* ═══════════════════════════════════════════════════════════
    Pages.assessment_report — ผลประเมินความพึงพอใจ
@@ -8081,6 +8130,72 @@ Pages.assessment_report = {
       </div>`;
     };
 
+    // ── Render Radar Chart (overall view) ──
+    const renderRadar = (s) => {
+      if(!s || s.staff.length === 0) return '';
+      const allItems = [...s.staff, ...s.stations].filter(x=>x.avg !== null);
+      if(allItems.length < 3) return ''; // ไม่พอเลย 3 จุดไม่ดี
+      const sz = 260, cx = sz/2, cy = sz/2, rMax = sz/2 - 35;
+      const n = allItems.length;
+      const points = allItems.map((it, i)=>{
+        const angle = (i/n) * 2 * Math.PI - Math.PI/2;
+        const r = (it.avg/5) * rMax;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        return {x, y, item:it, angle};
+      });
+      // Grid lines (concentric pentagons)
+      const grids = [0.2, 0.4, 0.6, 0.8, 1].map(scale=>{
+        const pts = allItems.map((_, i)=>{
+          const angle = (i/n) * 2 * Math.PI - Math.PI/2;
+          const r = scale * rMax;
+          return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
+        }).join(' ');
+        return `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,${0.05 + scale*0.05})" stroke-width="1"/>`;
+      }).join('');
+      // Data polygon
+      const dataPts = points.map(p=>`${p.x},${p.y}`).join(' ');
+      // Axis lines + labels
+      const axes = points.map(p=>{
+        const lx = cx + (rMax+18) * Math.cos(p.angle);
+        const ly = cy + (rMax+18) * Math.sin(p.angle);
+        const anchor = Math.abs(p.angle - (-Math.PI/2)) < 0.5 || Math.abs(p.angle - (Math.PI/2)) < 0.5 ? 'middle' : (p.angle < Math.PI/2 && p.angle > -Math.PI/2 ? 'start' : 'end');
+        const shortLabel = p.item.label.length > 14 ? p.item.label.substr(0,12)+'..' : p.item.label;
+        return `<line x1="${cx}" y1="${cy}" x2="${cx + rMax*Math.cos(p.angle)}" y2="${cy + rMax*Math.sin(p.angle)}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+                <circle cx="${p.x}" cy="${p.y}" r="3" fill="#6EE7B7"/>
+                <text x="${lx}" y="${ly}" text-anchor="${anchor}" fill="#F0CD7F" font-size="8" font-family="'IBM Plex Mono',monospace">${shortLabel} ${p.item.avg.toFixed(1)}</text>`;
+      }).join('');
+      return `<svg viewBox="0 0 ${sz} ${sz}" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto">
+        ${grids}
+        ${axes}
+        <polygon points="${dataPts}" fill="rgba(110,231,183,.25)" stroke="#10B981" stroke-width="2"/>
+      </svg>`;
+    };
+
+    // ── Render Distribution bars ──
+    const renderDist = (item) => {
+      if(item.avg === null) return '<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-style:italic">— ไม่มีข้อมูล —</span>';
+      const total = (item.dist[1]||0)+(item.dist[2]||0)+(item.dist[3]||0)+(item.dist[4]||0)+(item.dist[5]||0);
+      if(total === 0) return '<span style="color:rgba(255,255,255,.4);font-size:10.5px">—</span>';
+      const colors = {5:'#10B981', 4:'#34D399', 3:'#F59E0B', 2:'#F87171', 1:'#DC2626'};
+      const segments = [5,4,3,2,1].map(v=>{
+        const c = item.dist[v]||0;
+        if(c === 0) return '';
+        const pct = (c/total)*100;
+        return `<div style="flex:${pct};background:${colors[v]};display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700" title="${v} ดาว: ${c} คน">${pct>=10?c:''}</div>`;
+      }).filter(s=>s).join('');
+      return `<div style="display:flex;height:16px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.04)">${segments}</div>`;
+    };
+
+    const renderDistRow = (item) => {
+      const txtColor = item.avg >= 4 ? '#6EE7B7' : item.avg >= 3 ? '#FCD34D' : '#FCA5A5';
+      return `<div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;align-items:center;padding:6px 0;font-size:11.5px">
+        <span style="color:rgba(255,255,255,.85);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${U.esc(item.label)}">${U.esc(item.label)}</span>
+        <div>${renderDist(item)}</div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${item.avg!==null?txtColor:'rgba(255,255,255,.3)'};text-align:right;font-size:12.5px">${item.avg!==null?item.avg.toFixed(1):'—'}</span>
+      </div>`;
+    };
+
     const content = !summary
       ? `<div style="padding:50px;text-align:center;color:rgba(255,255,255,.55)">
           <div style="font-size:42px;margin-bottom:11px">⭐</div>
@@ -8114,13 +8229,52 @@ Pages.assessment_report = {
             <div class="metric-sub">รายการ</div>
           </div>
         </div>
-        <div class="card mb4">
-          <div class="card-header"><span class="card-title">👥 การให้บริการของเจ้าหน้าที่ (5 ข้อ)</span></div>
-          <div>${summary.staff.map(s=>renderBar(s.label,s.avg,s.count)).join('')}</div>
+        <!-- Radar + Insight (side by side) -->
+        <div class="g2 mb4">
+          <div class="card">
+            <div class="card-header"><span class="card-title">📡 Radar Chart — ภาพรวมทุกหมวด</span></div>
+            <div style="padding:13px">${renderRadar(summary)}</div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title" style="color:#FCA5A5">🎯 ประเด็นที่ควรปรับปรุง (Top 3)</span></div>
+            <div style="padding:13px">
+              ${summary.weakest.length === 0
+                ? '<div style="text-align:center;color:rgba(255,255,255,.5);padding:23px;font-size:13px">🎉 คะแนนทุกข้อสูงเกิน 4.0 ทั้งหมด</div>'
+                : summary.weakest.map((w,i)=>{
+                  const colors = ['#DC2626','#F59E0B','#FCD34D'];
+                  const c = colors[i] || '#94A3B8';
+                  return `<div style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+                    <span style="background:${c};color:${i===2?'#000':'#fff'};width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</span>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-weight:600;font-size:12.5px">${U.esc(w.label)}</div>
+                      <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-top:3px">${w.totalRated} คน · ${w.lowCount} คนให้ ≤3 (${w.lowPct}%)</div>
+                    </div>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${c};font-size:16px">${w.avg.toFixed(1)}</span>
+                  </div>`;
+                }).join('')}
+              <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-top:8px;font-style:italic;font-weight:500;border-top:1px solid rgba(255,255,255,.08);padding-top:7px">💡 แนะนำ: ปรับปรุงพื้นที่/ขั้นตอนของจุดเหล่านี้ เพื่อยกระดับ Service Quality</div>
+            </div>
+          </div>
         </div>
+        <!-- Staff Distribution -->
         <div class="card mb4">
-          <div class="card-header"><span class="card-title">🏥 จุดตรวจสุขภาพ (12 จุด)</span></div>
-          <div>${summary.stations.map(s=>renderBar(s.label,s.avg,s.count)).join('')}</div>
+          <div class="card-header"><span class="card-title">👥 การให้บริการของเจ้าหน้าที่ — Distribution</span></div>
+          <div style="padding:13px">
+            <div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-family:'IBM Plex Mono',monospace">
+              <span>คำถาม</span><span>กระจายคะแนน (5→1)</span><span style="text-align:right">เฉลี่ย</span>
+            </div>
+            ${summary.staff.map(renderDistRow).join('')}
+          </div>
+        </div>
+        <!-- Stations Distribution -->
+        <div class="card mb4">
+          <div class="card-header"><span class="card-title">🏥 จุดตรวจสุขภาพ — Distribution</span></div>
+          <div style="padding:13px">
+            <div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-family:'IBM Plex Mono',monospace">
+              <span>จุดตรวจ</span><span>กระจายคะแนน (5→1)</span><span style="text-align:right">เฉลี่ย</span>
+            </div>
+            ${summary.stations.map(renderDistRow).join('')}
+          </div>
         </div>
         ${summary.suggestions.length>0 ? `<div class="card mb4">
           <div class="card-header"><span class="card-title">💬 ข้อเสนอแนะ (${summary.suggestions.length} รายการ)</span></div>
@@ -8149,5 +8303,130 @@ Pages.assessment_report = {
       </div>
       ${content}
     `;
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   Pages.config_assessment — CRUD แบบประเมิน
+   ═══════════════════════════════════════════════════════════ */
+Pages.config_assessment = {
+  _editing: null,  // {section:'staff'|'stations', idx:N}
+  async render(){
+    const canEdit = DB.auth.can('add','config_assessment') || DB.auth.can('edit','config_assessment');
+    const Q = DB.assessment.getQuestions();
+    const renderItems = (items, section) => {
+      return items.map((q, i)=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;margin-bottom:6px">
+          <span style="font-family:'IBM Plex Mono',monospace;color:#F0CD7F;font-weight:700;font-size:11.5px;min-width:24px">${i+1}.</span>
+          <input type="text" id="q_${section}_${i}" value="${U.esc(q.label)}" ${canEdit?'':'readonly'}
+            style="flex:1;padding:7px 10px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.12);border-radius:5px;color:#FFFFFF;font-size:12.5px;font-family:inherit;outline:none"
+            placeholder="ข้อความคำถาม..."/>
+          <span style="font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.4);font-size:10px;background:rgba(255,255,255,.05);padding:2px 7px;border-radius:4px" title="Key">${q.key}</span>
+          ${canEdit?`
+            <button onclick="Pages.config_assessment.moveUp('${section}',${i})" ${i===0?'disabled':''} style="padding:5px 8px;border:1px solid rgba(255,255,255,.15);background:transparent;color:${i===0?'rgba(255,255,255,.3)':'#FFFFFF'};border-radius:4px;font-size:11px;cursor:${i===0?'not-allowed':'pointer'};font-family:inherit" title="ขึ้น">↑</button>
+            <button onclick="Pages.config_assessment.moveDown('${section}',${i})" ${i===items.length-1?'disabled':''} style="padding:5px 8px;border:1px solid rgba(255,255,255,.15);background:transparent;color:${i===items.length-1?'rgba(255,255,255,.3)':'#FFFFFF'};border-radius:4px;font-size:11px;cursor:${i===items.length-1?'not-allowed':'pointer'};font-family:inherit" title="ลง">↓</button>
+            <button onclick="Pages.config_assessment.remove('${section}',${i})" style="padding:5px 9px;border:1px solid rgba(252,165,165,.35);background:rgba(252,165,165,.08);color:#FCA5A5;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600" title="ลบ">×</button>
+          `:''}
+        </div>`).join('');
+    };
+    document.getElementById('content').innerHTML=`
+      <div class="ph">
+        <div><h2>🎯 ตั้งค่าแบบประเมินความพึงพอใจ</h2><p>เพิ่ม / แก้ไข / ลบ คำถาม · มีผลกับแบบประเมินทุก Project</p></div>
+        ${canEdit?`<button class="btn btn-out" onclick="Pages.config_assessment.resetDefault()" style="background:rgba(252,211,77,.06);border-color:rgba(252,211,77,.3);color:#FCD34D">🔄 คืนค่า Default</button>`:''}
+      </div>
+
+      <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.25);padding:11px 14px;border-radius:8px;margin-bottom:14px;font-size:11.5px;line-height:1.55;color:#7DD3FC;font-weight:500">
+        💡 <strong style="color:#7DD3FC;font-weight:700">หมายเหตุ:</strong> การแก้ไขมีผลกับแบบประเมินทันที (assessment.html) และรายงานผลประเมิน · คะแนน Section 1 = 1-5 / Section 2 = 0-5 (0 = ไม่มีตรวจ)
+      </div>
+
+      <div class="g2 mb4">
+        <div class="card">
+          <div class="card-header"><span class="card-title">👥 Section 1 — เจ้าหน้าที่ (1-5)</span><span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:500">${Q.staff.length} ข้อ</span></div>
+          <div style="padding:12px">
+            ${renderItems(Q.staff, 'staff')}
+            ${canEdit?`<button onclick="Pages.config_assessment.add('staff')" style="width:100%;padding:9px;border:1.5px dashed rgba(110,231,183,.4);background:rgba(110,231,183,.05);color:#6EE7B7;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:5px">➕ เพิ่มคำถามเจ้าหน้าที่</button>`:''}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">🏥 Section 2 — จุดตรวจ (0-5)</span><span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:500">${Q.stations.length} จุด</span></div>
+          <div style="padding:12px">
+            ${renderItems(Q.stations, 'stations')}
+            ${canEdit?`<button onclick="Pages.config_assessment.add('stations')" style="width:100%;padding:9px;border:1.5px dashed rgba(110,231,183,.4);background:rgba(110,231,183,.05);color:#6EE7B7;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:5px">➕ เพิ่มจุดตรวจ</button>`:''}
+          </div>
+        </div>
+      </div>
+
+      ${canEdit?`<div style="position:sticky;bottom:0;background:linear-gradient(0deg,#0B1322 70%,transparent);padding:13px 0;margin-top:11px;text-align:center">
+        <button class="btn btn-gold" onclick="Pages.config_assessment.saveAll()" style="font-size:14px;padding:10px 26px">💾 บันทึกทั้งหมด</button>
+      </div>`:''}
+    `;
+  },
+  _genKey(section){
+    const Q = DB.assessment.getQuestions();
+    const prefix = section === 'staff' ? 's_' : 't_';
+    const existing = new Set([...Q.staff, ...Q.stations].map(q=>q.key));
+    let i = 1;
+    while(existing.has(prefix+'custom'+i)) i++;
+    return prefix + 'custom' + i;
+  },
+  add(section){
+    const Q = DB.assessment.getQuestions();
+    const list = section === 'staff' ? Q.staff : Q.stations;
+    list.push({key: this._genKey(section), label: 'คำถามใหม่ (กรุณาแก้ไข)'});
+    DB.assessment.saveQuestions(Q.staff, Q.stations);
+    this.render();
+    setTimeout(()=>{
+      const el = document.getElementById(`q_${section}_${list.length-1}`);
+      if(el){el.focus(); el.select();}
+    }, 100);
+  },
+  remove(section, idx){
+    const Q = DB.assessment.getQuestions();
+    const list = section === 'staff' ? Q.staff : Q.stations;
+    if(list.length <= 1){U.toast('ต้องมีอย่างน้อย 1 คำถาม','warning');return;}
+    if(!U.confirm(`ลบคำถาม "${list[idx].label}" ?`)) return;
+    list.splice(idx, 1);
+    DB.assessment.saveQuestions(Q.staff, Q.stations);
+    this.render();
+    U.toast('✅ ลบแล้ว');
+  },
+  moveUp(section, idx){
+    if(idx === 0) return;
+    const Q = DB.assessment.getQuestions();
+    const list = section === 'staff' ? Q.staff : Q.stations;
+    [list[idx-1], list[idx]] = [list[idx], list[idx-1]];
+    DB.assessment.saveQuestions(Q.staff, Q.stations);
+    this.render();
+  },
+  moveDown(section, idx){
+    const Q = DB.assessment.getQuestions();
+    const list = section === 'staff' ? Q.staff : Q.stations;
+    if(idx >= list.length-1) return;
+    [list[idx+1], list[idx]] = [list[idx], list[idx+1]];
+    DB.assessment.saveQuestions(Q.staff, Q.stations);
+    this.render();
+  },
+  saveAll(){
+    // Read all input values and update labels
+    const Q = DB.assessment.getQuestions();
+    Q.staff.forEach((q,i)=>{
+      const el = document.getElementById(`q_staff_${i}`);
+      if(el) q.label = el.value.trim();
+    });
+    Q.stations.forEach((q,i)=>{
+      const el = document.getElementById(`q_stations_${i}`);
+      if(el) q.label = el.value.trim();
+    });
+    // Validate all labels non-empty
+    const empty = [...Q.staff, ...Q.stations].filter(q=>!q.label);
+    if(empty.length > 0){U.toast('กรุณากรอกคำถามให้ครบทุกข้อ','warning');return;}
+    DB.assessment.saveQuestions(Q.staff, Q.stations);
+    U.toast('✅ บันทึกแบบประเมินแล้ว — มีผลกับ Project ทั้งหมด');
+  },
+  resetDefault(){
+    if(!U.confirm('คืนค่าแบบประเมินกลับเป็น Default?\n\n(คำถามที่เพิ่ม/แก้ไขจะหายทั้งหมด · response เดิมยังอยู่)')) return;
+    DB.assessment.resetQuestions();
+    this.render();
+    U.toast('🔄 คืนค่า Default แล้ว');
   }
 };

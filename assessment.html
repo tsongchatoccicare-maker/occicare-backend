@@ -90,41 +90,35 @@ body{padding-bottom:30px}
 // ─────────────────────────────────────────────
 // แบบประเมิน — มาตรฐาน 2 sections + suggestions
 // ─────────────────────────────────────────────
-const STAFF_QUESTIONS = [
-  {key:'s_speed',     label:'ความรวดเร็วในการให้บริการ'},
-  {key:'s_polite',    label:'พูดจาสุภาพ มีอัธยาศัยดี แต่งกายเรียบร้อย และวางตัวเหมาะสม'},
-  {key:'s_advise',    label:'สามารถแนะนำ ให้คำปรึกษา และตอบคำถามได้ชัดเจน'},
-  {key:'s_attentive', label:'มีความกระตือรือร้น และเอาใจใส่ในการให้บริการ'},
-  {key:'s_organized', label:'ความเป็นระเบียบเรียบร้อยในการวางอุปกรณ์ และเครื่องมือ'}
-];
-const STATION_QUESTIONS = [
-  {key:'t_register', label:'จุดลงทะเบียน'},
-  {key:'t_weight',   label:'จุดชั่งน้ำหนัก วัดส่วนสูง'},
-  {key:'t_history',  label:'จุดซักประวัติ และวัดความดันโลหิต'},
-  {key:'t_blood',    label:'จุดเจาะเลือด'},
-  {key:'t_urine',    label:'จุดเก็บปัสสาวะ (UA)'},
-  {key:'t_eye',      label:'จุดตรวจสมรรถภาพการมองเห็น'},
-  {key:'t_ear',      label:'จุดตรวจสมรรถภาพการได้ยิน'},
-  {key:'t_lung',     label:'จุดตรวจสมรรถภาพปอด'},
-  {key:'t_ekg',      label:'จุดตรวจคลื่นไฟฟ้าหัวใจ'},
-  {key:'t_xray',     label:'จุดเอกซเรย์ทรวงอก'},
-  {key:'t_doctor',   label:'จุดตรวจร่างกายโดยแพทย์'},
-  {key:'t_return',   label:'จุดคืนเอกสาร'}
-];
+// ── Load editable questions from DB.assessment (config_assessment page can edit them) ──
+const QUESTIONS = (typeof DB !== 'undefined' && DB.assessment && DB.assessment.getQuestions)
+  ? DB.assessment.getQuestions()
+  : { staff:[], stations:[] };
+const STAFF_QUESTIONS = QUESTIONS.staff || [];
+const STATION_QUESTIONS = QUESTIONS.stations || [];
 
 const params = new URLSearchParams(window.location.search);
-const projectCode = params.get('p') || params.get('project') || '';
+const token = params.get('t') || '';
+const projectCodeParam = params.get('p') || params.get('project') || '';
 
-function getProject(code){
-  if(!code) return null;
-  // หาจาก DB.sales.listProjects() — ใช้ project_code
+function getProjectFromToken(t){
+  if(!t) return null;
   try {
-    const projs = DB.sales.listProjects();
-    return projs.find(p=>p.project_code===code) || null;
+    const cfg = DB.assessment.findByToken(t);
+    if(!cfg) return null;
+    return DB.sales.listProjects().find(p=>p.id===cfg.project_id) || null;
   } catch(e){ return null; }
 }
 
-const project = getProject(projectCode);
+function getProjectFromCode(code){
+  if(!code) return null;
+  try {
+    return DB.sales.listProjects().find(p=>p.project_code===code) || null;
+  } catch(e){ return null; }
+}
+
+// Token URL (?t=TOKEN) takes priority, then legacy ?p=PROJECT_CODE
+const project = token ? getProjectFromToken(token) : getProjectFromCode(projectCodeParam);
 
 function renderError(msg){
   document.getElementById('error').style.display='';
@@ -133,7 +127,12 @@ function renderError(msg){
 
 function renderProjInfo(){
   if(!project){
-    renderError(projectCode ? `ไม่พบ Project: ${projectCode}` : 'ลิงก์ไม่ถูกต้อง — กรุณาสแกน QR Code อีกครั้ง');
+    const errMsg = token
+      ? 'ลิงก์ QR หมดอายุ หรือถูกยกเลิกแล้ว — กรุณาขอ QR ใหม่จากเจ้าหน้าที่'
+      : projectCodeParam
+        ? `ไม่พบ Project: ${projectCodeParam}`
+        : 'ลิงก์ไม่ถูกต้อง — กรุณาสแกน QR Code อีกครั้ง';
+    renderError(errMsg);
     return false;
   }
   document.getElementById('proj_info').innerHTML = `
