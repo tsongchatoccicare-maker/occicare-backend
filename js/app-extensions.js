@@ -33,7 +33,7 @@ const JOB_TYPES_ALL = [
   #sidebar.sb-open{transform:translateX(0);box-shadow:0 8px 40px rgba(11,35,64,.4);}
   #sb-ov.sb-open{display:block!important;}
   #main{margin-left:0!important;}
-  #hbg-btn{display:inline-flex!important;align-items:center;}
+  #hamburger{display:inline-flex!important;align-items:center;}
   #content{padding:14px!important;}
   .ph{flex-direction:column;gap:10px;}
   .g2,.g3,.g2-3{grid-template-columns:1fr!important;}
@@ -86,6 +86,8 @@ function _closeSB(){
 window._closeSB = _closeSB;
 
 function _initHamburger(){
+  // ★ ถ้ามี #hamburger จาก index.html อยู่แล้ว → skip (เพื่อไม่สร้างซ้ำ)
+  if(document.getElementById('hamburger')) return;
   if(document.getElementById('hbg-btn')) return;
   const hdr = document.getElementById('header');
   if(!hdr) return;

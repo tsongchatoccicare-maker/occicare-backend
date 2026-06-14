@@ -257,7 +257,7 @@ const Modal={
     document.getElementById('mo-title').textContent=title;
     document.getElementById('mo-body').innerHTML=html;
     const box=document.querySelector('.mo-box');
-    box.style.maxWidth=wide?'900px':'700px';
+    box.style.maxWidth=wide?'1300px':'1300px';
     document.getElementById('mo').classList.add('open');
     if(onSave){document.getElementById('mo-save').style.display='inline-flex';document.getElementById('mo-save').onclick=onSave;}
     else document.getElementById('mo-save').style.display='none';
@@ -928,6 +928,135 @@ Pages.op_report={
     </div>`;
   },
 
+  // ═══════════════════════════════════════════════
+  //  EXPORT PER-PERSON (PDF + CSV)
+  // ═══════════════════════════════════════════════
+  _exportPerPersonPDF(persons, from, to, selTypes){
+    try{
+      const grandTotal = persons.reduce((s,p)=>s+p.totalWage, 0);
+      const totalRows = persons.reduce((s,p)=>s+p.jobs.length, 0);
+      const today = new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+      const rangeText = from && to ? `${U.fmtD(from)} — ${U.fmtD(to)}` : (from ? `ตั้งแต่ ${U.fmtD(from)}` : (to ? `ถึง ${U.fmtD(to)}` : 'ทั้งหมด'));
+
+      const personCards = persons.map(p=>{
+        // Sort jobs by date asc + day_no
+        const sortedJobs = p.jobs.slice().sort((a,b)=>{
+          const dA = new Date(a.onsite_date||0);
+          const dB = new Date(b.onsite_date||0);
+          if(dA.getTime() !== dB.getTime()) return dA - dB;
+          return (a.day_no||0) - (b.day_no||0);
+        });
+        const rows = sortedJobs.map(j=>`<tr>
+          <td><span style="font-family:'IBM Plex Mono',monospace;color:#1E40AF;font-weight:700;font-size:10.5px">${U.esc(j.project_code)}</span>${j.day_no>0?`<span style="background:linear-gradient(180deg,#F59E0B,#D97706);color:#FFF;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:3px;font-family:'IBM Plex Mono',monospace;margin-left:4px">วันที่ ${j.day_no}</span>`:''}</td>
+          <td>${U.fmtD(j.onsite_date)}</td>
+          <td>${U.esc(j.company_name)}</td>
+          <td>${U.esc(j.station_name)}</td>
+          <td>${U.esc(j.profession)}</td>
+          <td style="text-align:right;font-family:'IBM Plex Mono',monospace;color:#065F46;font-weight:700">฿${U.fmt(j.wage)}</td>
+        </tr>`).join('');
+
+        return `<div class="person-card">
+          <div class="hd">
+            <div class="name">👤 ${U.esc(p.full_name)} <span style="font-size:9.5px;color:#6B7280;font-weight:500">· ${U.esc(p.profession)}${p.phone?` · 📞 ${U.esc(p.phone)}`:''}</span></div>
+            <div class="meta">${p.jobs.length} รายการ</div>
+          </div>
+          <table class="p-tbl">
+            <thead><tr><th style="width:18%">Project</th><th style="width:13%">วันที่</th><th style="width:22%">บริษัท</th><th style="width:17%">Station</th><th style="width:15%">วิชาชีพ</th><th style="text-align:right;width:15%">ค่าจ้าง</th></tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr><td colspan="5" style="text-align:right">รวมค่าจ้างของบุคคลนี้</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace;color:#10B981;font-weight:800;font-size:13px">฿${U.fmt(p.totalWage)}</td></tr></tfoot>
+          </table>
+        </div>`;
+      }).join('');
+
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>รายงานค่าจ้างรายบุคคล</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:'Sarabun',sans-serif}
+        @media print{ @page { size:A4; margin:10mm; } button{display:none!important} }
+        body{padding:13mm;background:#FFFFFF;color:#1A2332;font-size:11.5px}
+        .container{max-width:190mm;margin:0 auto}
+        .header{background:linear-gradient(135deg,#0B2340,#1A3C65);color:#FFF;padding:13px 18px;border-radius:8px;margin-bottom:12px}
+        .header h1{font-size:18px;font-weight:700;color:#FFF}
+        .header p{font-size:11px;opacity:.92;color:#FFF}
+        .meta-box{font-size:11px;color:#374151;margin-bottom:13px;padding:8px 12px;background:#F0FDF4;border-left:4px solid #10B981;border-radius:5px;line-height:1.6}
+        .person-card{margin-bottom:11px;border:1px solid #E5E7EB;border-radius:6px;overflow:hidden;page-break-inside:avoid}
+        .person-card .hd{background:#F3F4F6;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B2340}
+        .person-card .hd .name{font-size:12px;font-weight:700;color:#0B2340}
+        .person-card .hd .meta{font-size:10px;color:#6B7280;font-weight:600}
+        .p-tbl{width:100%;border-collapse:collapse;font-size:10px}
+        .p-tbl th{background:#FAFBFC;padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:#6B7280;border-bottom:1px solid #E5E7EB;text-transform:uppercase;letter-spacing:.3px}
+        .p-tbl td{padding:6px 8px;border-bottom:1px solid #F3F4F6}
+        .p-tbl tbody tr:nth-child(even) td{background:#FFFFFF}
+        .p-tbl tfoot td{background:#F0FDF4;font-weight:700;color:#065F46;border-top:2px solid #10B981;font-size:11px}
+        .grand{background:linear-gradient(135deg,#0B2340,#1A3C65);color:#FFF;padding:13px 18px;border-radius:7px;margin-top:13px;display:flex;justify-content:space-between;align-items:center}
+        .grand .lbl{font-size:13px;font-weight:600;opacity:.9}
+        .grand .val{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:800}
+        .footer{text-align:center;font-size:9.5px;color:#9CA3AF;margin-top:11px;font-weight:500}
+        .print-btn{position:fixed;top:12px;right:12px;background:#0B2340;color:#FFF;border:0;padding:10px 18px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:1000}
+      </style>
+      </head><body>
+        <button class="print-btn" onclick="window.print()">🖨️ Print / Export PDF</button>
+        <div class="container">
+          <div class="header">
+            <h1>👤 รายงานค่าจ้างรายบุคคล</h1>
+            <p>Per-Person Payment Report · OcciCare Mobile Checkup System</p>
+          </div>
+          <div class="meta-box">
+            📅 <strong>ช่วง:</strong> ${rangeText}
+            · 👥 <strong>ประเภท:</strong> ${selTypes.join(', ')}
+            · ✅ <strong>${persons.length}</strong> บุคคล · <strong>${totalRows}</strong> รายการ
+          </div>
+          ${personCards}
+          <div class="grand">
+            <span class="lbl">🎯 รวมทั้งหมด · ${persons.length} บุคคล · ${totalRows} รายการ</span>
+            <span class="val">฿${U.fmt(grandTotal)}</span>
+          </div>
+          <div class="footer">© OcciCare Mobile Checkup System · พิมพ์เมื่อ ${today}</div>
+        </div>
+      </body></html>`;
+
+      const w = window.open('', '_blank');
+      w.document.write(html);
+      w.document.close();
+      setTimeout(()=>{ try{ w.print(); }catch(e){} }, 600);
+    } catch(e){ U.toast('❌ Export PDF ผิดพลาด: '+e.message,'danger'); console.error(e); }
+  },
+
+  _exportPerPersonCSV(persons, from, to, selTypes){
+    try{
+      const today = new Date().toLocaleDateString('th-TH');
+      const rangeText = from && to ? `${from} ถึง ${to}` : (from || to || 'ทั้งหมด');
+      let csv = '\ufeff'; // UTF-8 BOM
+      csv += `"รายงานค่าจ้างรายบุคคล","ช่วง: ${rangeText}","ประเภท: ${selTypes.join('|')}","พิมพ์: ${today}"\n\n`;
+      csv += '"ชื่อ-สกุล","ตำแหน่ง","เบอร์","Project","วันที่","บริษัท","Station","วิชาชีพ","ประเภท","ค่าจ้าง"\n';
+      let grand = 0;
+      persons.forEach(p=>{
+        const sortedJobs = p.jobs.slice().sort((a,b)=>{
+          const dA = new Date(a.onsite_date||0);
+          const dB = new Date(b.onsite_date||0);
+          if(dA.getTime() !== dB.getTime()) return dA - dB;
+          return (a.day_no||0) - (b.day_no||0);
+        });
+        sortedJobs.forEach(j=>{
+          const projLabel = `${j.project_code}${j.day_no>0?` วันที่ ${j.day_no}`:''}`;
+          csv += `"${p.full_name.replace(/"/g,'""')}","${p.profession.replace(/"/g,'""')}","${p.phone||''}","${projLabel}","${j.onsite_date||''}","${(j.company_name||'').replace(/"/g,'""')}","${(j.station_name||'').replace(/"/g,'""')}","${(j.profession||'').replace(/"/g,'""')}","${j.staff_type||''}",${j.wage}\n`;
+          grand += j.wage;
+        });
+      });
+      csv += `\n"-- รวมทั้งหมด --","","","","","","","","${persons.length} บุคคล",${grand}\n`;
+
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `รายงานค่าจ้างรายบุคคล_${(from||'all').replace(/-/g,'')}_${(to||'all').replace(/-/g,'')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      U.toast('✅ Export CSV สำเร็จ');
+    } catch(e){ U.toast('❌ Export CSV ผิดพลาด: '+e.message,'danger'); console.error(e); }
+  },
+
   viewDetail(joId){
     const jo=DB.operation.getJobOrderById(joId);
     if(!jo)return;
@@ -1038,8 +1167,23 @@ Pages.op_report={
     const jos=DB.operation.listJobOrders();
     const projs=jos.map(jo=>{const p=DB.sales.getProject(jo.project_id)||{};return{id:jo.id,label:`${p.project_code||'-'} — ${p.company_name||jo.company_name||'-'} (${U.fmtD(p.onsite_date)})`,onsite_date:p.onsite_date||''};});
     const projOpts=projs.map(p=>`<option value="${p.id}">${U.esc(p.label)}</option>`).join('');
+    // Default mode
+    if(!this._exportMode) this._exportMode = 'project';
     Modal.open(`
-    <div style="font-size:12px;font-weight:600;color:var(--t-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">เลือกรูปแบบ Export</div>
+    <div style="font-size:12px;font-weight:600;color:var(--t-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px">📋 รูปแบบรายงาน</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <button id="ex_mode_project" onclick="Pages.op_report._setMode('project')"
+        style="padding:11px 12px;border:1.5px solid ${this._exportMode==='project'?'#F0CD7F':'rgba(255,255,255,.15)'};background:${this._exportMode==='project'?'linear-gradient(180deg,#F0CD7F,#D4A845)':'#162338'};color:${this._exportMode==='project'?'#1A1A1A':'#FFFFFF'};border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:13px;text-align:center;transition:all .15s">
+        <div style="font-size:18px;margin-bottom:3px">📊</div>ตาม Project
+        <div style="font-size:10px;font-weight:500;margin-top:2px;color:${this._exportMode==='project'?'rgba(0,0,0,.65)':'rgba(255,255,255,.6)'}">รวมตามใบแจ้งงาน</div>
+      </button>
+      <button id="ex_mode_person" onclick="Pages.op_report._setMode('person')"
+        style="padding:11px 12px;border:1.5px solid ${this._exportMode==='person'?'#F0CD7F':'rgba(255,255,255,.15)'};background:${this._exportMode==='person'?'linear-gradient(180deg,#F0CD7F,#D4A845)':'#162338'};color:${this._exportMode==='person'?'#1A1A1A':'#FFFFFF'};border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:13px;text-align:center;transition:all .15s">
+        <div style="font-size:18px;margin-bottom:3px">👤</div>รายบุคคล
+        <div style="font-size:10px;font-weight:500;margin-top:2px;color:${this._exportMode==='person'?'rgba(0,0,0,.65)':'rgba(255,255,255,.6)'}">รวมตามคน — ดูว่าใครได้กี่บาทรวม</div>
+      </button>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--t-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px">📅 ช่วงข้อมูล</div>
     <div class="tabs" style="margin-bottom:14px">
       <div class="tab active" onclick="switchTab(this,'ex_t1')">📅 ช่วงวันที่</div>
       <div class="tab" onclick="switchTab(this,'ex_t2')">📋 เลือก Project</div>
@@ -1100,6 +1244,11 @@ Pages.op_report={
     'Export รายงานสรุปค่าใช้จ่าย', null);
   },
 
+  _setMode(mode){
+    this._exportMode = mode;
+    Modal.close();
+    setTimeout(()=>this.exportDialog(), 50);
+  },
   _toggleAllTypes(checked){
     document.querySelectorAll('.ex-type-cb').forEach(cb=>{cb.checked=checked;Pages.op_report._updateTypeStyle(cb);});
   },
@@ -1147,8 +1296,106 @@ Pages.op_report={
     }
     if(!filtered.length){U.toast('⚠ ไม่พบข้อมูลให้ Export — ลองปรับเงื่อนไข','warning');return;}
     if(!selTypes.length){U.toast('⚠ กรุณาเลือกประเภทอย่างน้อย 1 รายการ','warning');return;}
-    if(type==='pdf') this._exportPDF(filtered,fromDate,toDate,selTypes);
-    else this._exportCSV(filtered,fromDate,toDate,selTypes);
+    // Route by mode
+    if(this._exportMode === 'person'){
+      const persons = this._aggregatePersons(filtered, selTypes);
+      if(persons.length === 0){U.toast('⚠ ไม่พบบุคคลตามเงื่อนไข','warning');return;}
+      if(type==='pdf') this._exportPerPersonPDF(persons, fromDate, toDate, selTypes);
+      else this._exportPerPersonCSV(persons, fromDate, toDate, selTypes);
+    } else {
+      if(type==='pdf') this._exportPDF(filtered, fromDate, toDate, selTypes);
+      else this._exportCSV(filtered, fromDate, toDate, selTypes);
+    }
+  },
+
+  // ─── Aggregate persons from JOs (group by ชื่อ-สกุล + วิชาชีพ) ───
+  _aggregatePersons(jos, selTypes){
+    const mp = DB.manpowerCost.list();
+    const matchType=(st)=>{
+      const t=(st||'').trim();
+      return selTypes.some(sel=>{
+        const s=sel.trim();
+        if(s==='Part-time') return t.toLowerCase().includes('part');
+        if(s==='Out Source') return t.toLowerCase().includes('out');
+        if(s==='ในองค์กร') return t==='ในองค์กร'||t.toLowerCase().includes('inhouse')||t.toLowerCase().includes('in-house');
+        return t===s;
+      });
+    };
+    // Map: "name|profession" → {full_name, profession, phone, jobs: [...], totalWage}
+    const personsMap = {};
+    jos.forEach(jo=>{
+      const proj = DB.sales.getProject(jo.project_id) || {};
+      const sts = DB.operation.listStations(jo.id);
+      const projectInfo = {
+        project_code: proj.project_code || `JO-${jo.id}`,
+        company_name: proj.company_name || jo.company_name || '-',
+        onsite_date: jo.onsite_date || proj.onsite_date || '',
+        day_no: jo.day_no || 0,
+        total_days: jo.total_days || 1
+      };
+      sts.forEach(s=>{
+        const list = s.staff_list || [];
+        if(list.length > 0){
+          list.forEach(p=>{
+            if(!matchType(p.staff_type)) return;
+            if(!p.staff_name || !p.staff_name.trim()) return; // skip empty
+            const name = p.staff_name.trim();
+            const profession = (p.profession||'-').trim();
+            const key = `${name.toLowerCase()}|${profession.toLowerCase()}`;
+            let wage = p.wage_per_day;
+            if(wage===undefined||wage===null||wage===''){
+              const r=mp.find(m=>m.role===p.profession);
+              wage=r?r.cost_per_day:0;
+            }
+            wage = parseFloat(wage)||0;
+            if(!personsMap[key]){
+              personsMap[key] = {
+                full_name: name, profession, phone: p.phone||'',
+                jobs: [], totalWage: 0
+              };
+            }
+            personsMap[key].jobs.push({
+              ...projectInfo,
+              station_name: s.station_name||'-',
+              station_code: s.station_code||'',
+              profession: profession,
+              staff_type: p.staff_type||'',
+              wage: wage
+            });
+            personsMap[key].totalWage += wage;
+          });
+        } else if(matchType(s.staff_type)){
+          // Legacy fallback
+          if(!s.staff_name||!s.staff_name.trim()) return;
+          const name = s.staff_name.trim();
+          const profession = (s.profession||'-').trim();
+          const key = `${name.toLowerCase()}|${profession.toLowerCase()}`;
+          let wage = s.wage_per_day;
+          if(wage===undefined||wage===null||wage===''){
+            const r=mp.find(m=>m.role===s.profession);
+            wage=r?r.cost_per_day:0;
+          }
+          wage = parseFloat(wage)||0;
+          if(!personsMap[key]){
+            personsMap[key] = {
+              full_name: name, profession, phone: s.phone||'',
+              jobs: [], totalWage: 0
+            };
+          }
+          personsMap[key].jobs.push({
+            ...projectInfo,
+            station_name: s.station_name||'-',
+            station_code: s.station_code||'',
+            profession: profession,
+            staff_type: s.staff_type||'',
+            wage: wage
+          });
+          personsMap[key].totalWage += wage;
+        }
+      });
+    });
+    // Sort: by total wage desc
+    return Object.values(personsMap).sort((a,b)=>b.totalWage - a.totalWage);
   },
 
   // คำนวณค่าใช้จ่ายตามประเภท (array of staff_type filter)

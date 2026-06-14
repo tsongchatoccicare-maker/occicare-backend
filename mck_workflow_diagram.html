@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MCK Workflow Diagram — OcciCare Mobile Checkup System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+:root{
+  --navy:#0B2340; --navy-dk:#06162A; --navy-lt:#1A3C65;
+  --gold:#C9A84C; --gold-lt:#E8C97A; --gold-dk:#9A7E2E;
+  --ink:#1A2332; --ink-dim:#475569; --muted:#6B7280;
+  --line:#E5E7EB; --line-lt:#F1F3F6;
+  --bg:#FFFFFF; --bg-tint:#F8FAFC; --bg-cream:#FAF8F2;
+  --ok:#10B981; --warn:#F59E0B; --danger:#DC2626; --info:#0EA5E9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.doc{max-width:210mm;margin:0 auto;padding:0;background:#FFF}
+
+/* ── Page system ── */
+.page{padding:18mm 16mm;min-height:297mm;position:relative;page-break-after:always;break-after:page}
+.page:last-child{page-break-after:auto}
+
+/* ── Cover ── */
+.cover{background:linear-gradient(135deg,var(--navy-dk),var(--navy),var(--navy-lt));color:#FFF;display:flex;flex-direction:column;justify-content:space-between;padding:30mm 18mm}
+.cover *{color:#FFF}
+.cover-mark{display:flex;align-items:center;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.2em;opacity:.85;text-transform:uppercase}
+.cover-mark::before{content:'';width:42px;height:1.5px;background:var(--gold-lt)}
+.cover-hero{margin-top:auto;margin-bottom:auto;max-width:170mm}
+.cover-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.25em;color:var(--gold-lt);text-transform:uppercase;margin-bottom:18px}
+.cover-title{font-size:54px;font-weight:800;line-height:1.05;letter-spacing:-0.02em;margin-bottom:9px}
+.cover-title .x{color:var(--gold-lt);font-weight:300;font-style:italic}
+.cover-sub{font-size:18px;font-weight:300;opacity:.92;margin-bottom:32px;line-height:1.5}
+.cover-list{display:grid;grid-template-columns:1fr 1fr;gap:13px 28px;font-size:13px;margin-top:25px}
+.cover-list li{display:flex;align-items:baseline;gap:11px;list-style:none;font-weight:500}
+.cover-list li b{font-family:'IBM Plex Mono',monospace;color:var(--gold-lt);font-weight:700;min-width:24px}
+.cover-foot{display:flex;justify-content:space-between;align-items:flex-end;padding-top:18px;border-top:1px solid rgba(232,201,122,.3);font-size:11px;font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.cover-foot strong{color:var(--gold-lt);font-weight:700}
+
+/* ── TOC ── */
+.toc-list{counter-reset:toc;margin:30px 0;list-style:none}
+.toc-list li{counter-increment:toc;border-bottom:1px dotted var(--line);padding:13px 0;display:flex;align-items:baseline;gap:14px;font-size:14px;font-weight:500}
+.toc-list li::before{content:counter(toc,decimal-leading-zero);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--gold-dk);min-width:30px}
+.toc-list li .lbl{flex:1;color:var(--ink)}
+.toc-list li .lbl small{display:block;font-size:11.5px;font-weight:400;color:var(--muted);margin-top:2px}
+.toc-list li .pg{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-dim);font-weight:600}
+
+/* ── Section header ── */
+.sec-h{margin-bottom:22px;padding-bottom:14px;border-bottom:3px solid var(--navy);position:relative}
+.sec-h::after{content:'';position:absolute;left:0;bottom:-3px;width:80px;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-lt))}
+.sec-num{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--gold-dk);text-transform:uppercase;margin-bottom:6px;display:block}
+.sec-title{font-size:30px;font-weight:800;letter-spacing:-0.01em;color:var(--navy);line-height:1.15}
+.sec-sub{font-size:13px;font-weight:400;color:var(--muted);margin-top:4px;line-height:1.5;font-style:italic}
+
+/* ── Sub-section ── */
+h3.sub{font-size:17px;font-weight:700;color:var(--navy);margin:24px 0 10px;display:flex;align-items:baseline;gap:11px}
+h3.sub .n{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold-dk);background:rgba(201,168,76,.13);padding:2px 9px;border-radius:4px;font-weight:700}
+h4.sub2{font-size:13.5px;font-weight:700;color:var(--navy-lt);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.05em}
+
+p{margin-bottom:11px;color:var(--ink)}
+.lead{font-size:14.5px;color:var(--ink-dim);font-weight:400;line-height:1.65;margin-bottom:18px;padding-left:13px;border-left:3px solid var(--gold)}
+
+/* ── Mermaid container ── */
+.diag{background:var(--bg-tint);border:1px solid var(--line);border-radius:9px;padding:18px;margin:14px 0 18px;text-align:center;overflow-x:auto}
+.diag .mermaid{margin:0 auto;display:inline-block;min-width:100%}
+.diag-cap{font-size:11.5px;color:var(--muted);font-style:italic;margin-top:8px;font-weight:500}
+
+/* ── Callouts ── */
+.callout{display:flex;gap:13px;padding:11px 15px;border-radius:7px;margin:11px 0;font-size:12.5px;line-height:1.6;align-items:flex-start}
+.callout .icon{font-size:20px;flex-shrink:0;line-height:1}
+.callout .body{flex:1}
+.callout .body b{font-weight:700;display:block;margin-bottom:2px;letter-spacing:.02em}
+.cl-loop{background:rgba(201,168,76,.08);border-left:4px solid var(--gold)}
+.cl-loop .body b{color:var(--gold-dk)}
+.cl-info{background:rgba(14,165,233,.06);border-left:4px solid var(--info)}
+.cl-info .body b{color:#0369A1}
+.cl-warn{background:rgba(245,158,11,.07);border-left:4px solid var(--warn)}
+.cl-warn .body b{color:#B45309}
+
+/* ── Step list ── */
+.steps{counter-reset:step;list-style:none;margin:14px 0;padding:0}
+.steps li{counter-increment:step;display:grid;grid-template-columns:32px 1fr;gap:13px;padding:10px 0;border-bottom:1px solid var(--line-lt);align-items:baseline}
+.steps li:last-child{border-bottom:none}
+.steps li::before{content:counter(step,decimal-leading-zero);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold-dk);background:rgba(201,168,76,.12);font-weight:700;padding:3px 0;border-radius:4px;text-align:center;align-self:flex-start;margin-top:1px}
+.steps li b{font-weight:700;color:var(--navy);display:inline}
+.steps li small{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.55}
+.steps li code{font-family:'IBM Plex Mono',monospace;background:var(--line-lt);color:var(--navy-lt);padding:1px 6px;border-radius:3px;font-size:11px;font-weight:600}
+
+/* ── Tables ── */
+.tb{width:100%;border-collapse:collapse;font-size:12.5px;margin:14px 0;background:#FFF;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.tb th{background:var(--navy);color:#FFF;font-weight:700;padding:9px 12px;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+.tb td{padding:9px 12px;border-top:1px solid var(--line);vertical-align:top;line-height:1.55}
+.tb tr:nth-child(odd) td{background:var(--bg-tint)}
+.tb td code{font-family:'IBM Plex Mono',monospace;background:rgba(11,35,64,.06);color:var(--navy);padding:1px 6px;border-radius:3px;font-size:11px;font-weight:600}
+.tb .yes{color:var(--ok);font-weight:700;text-align:center}
+.tb .no{color:var(--muted);text-align:center}
+.tb .partial{color:var(--warn);font-weight:700;text-align:center;font-size:11px}
+
+/* ── Pill ── */
+.pill{display:inline-block;padding:1.5px 8px;border-radius:9px;font-size:10.5px;font-weight:700;font-family:'IBM Plex Mono',monospace;letter-spacing:.02em}
+.p-navy{background:var(--navy);color:#FFF}
+.p-gold{background:var(--gold-lt);color:var(--navy-dk)}
+.p-ok{background:rgba(16,185,129,.13);color:#065F46}
+.p-warn{background:rgba(245,158,11,.13);color:#92400E}
+.p-info{background:rgba(14,165,233,.13);color:#0C4A6E}
+
+/* ── Status badges ── */
+.status-flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:11px 0;font-size:11.5px;font-weight:600}
+.status-flow .s{padding:4px 10px;border-radius:4px;background:#FFF;border:1.5px solid var(--line);font-family:'IBM Plex Mono',monospace;color:var(--ink-dim)}
+.status-flow .arr{color:var(--gold-dk);font-weight:700;font-size:14px}
+
+/* ── Page footer ── */
+.pgfoot{position:absolute;bottom:9mm;left:16mm;right:16mm;display:flex;justify-content:space-between;font-size:9.5px;font-family:'IBM Plex Mono',monospace;color:var(--muted);font-weight:500;letter-spacing:.05em;padding-top:5px;border-top:1px solid var(--line)}
+.pgfoot strong{color:var(--navy);font-weight:700}
+
+/* ── Two-column for compact info ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.kbox{background:var(--bg-tint);border:1px solid var(--line);border-radius:7px;padding:13px 16px}
+.kbox h4{font-size:12px;font-weight:700;color:var(--gold-dk);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;font-family:'IBM Plex Mono',monospace}
+.kbox ul{list-style:none;padding:0;font-size:12.5px;line-height:1.7}
+.kbox ul li{padding-left:14px;position:relative}
+.kbox ul li::before{content:'▸';position:absolute;left:0;color:var(--gold-dk);font-weight:700}
+
+/* ── Print button (screen only) ── */
+.print-fab{position:fixed;top:18px;right:18px;background:var(--navy);color:#FFF;border:0;padding:11px 19px;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:600;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(11,35,64,.25);z-index:1000;display:flex;align-items:center;gap:7px}
+.print-fab:hover{background:var(--navy-lt)}
+
+/* ── Print ── */
+@media print{
+  @page{size:A4 portrait;margin:0}
+  body{background:#FFF}
+  .doc{max-width:none;margin:0;box-shadow:none}
+  .print-fab{display:none!important}
+  .page{padding:18mm 16mm;page-break-after:always;break-after:page}
+  .diag{break-inside:avoid;page-break-inside:avoid}
+  .steps li,.callout,.tb{break-inside:avoid;page-break-inside:avoid}
+  .cover{background:var(--navy-dk)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .tb th,.p-navy,.p-gold,.p-ok,.p-warn,.p-info,.steps li::before,.callout{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<button class="print-fab" onclick="window.print()">🖨️ พิมพ์ / Export PDF</button>
+
+<div class="doc">
+
+<!-- ═══════════════════════════════════════ COVER ═══════════════════════════════════════ -->
+<section class="page cover">
+  <div class="cover-mark">OcciCare · System Documentation</div>
+  <div class="cover-hero">
+    <div class="cover-eyebrow">Workflow Diagram · Version 1.0</div>
+    <div class="cover-title">MCK Mobile<br>Checkup <span class="x">System</span></div>
+    <div class="cover-sub">เอกสารแผนภาพการทำงาน — ครอบคลุมทุก loop และ decision point<br>ในระบบจัดการการตรวจสุขภาพเคลื่อนที่</div>
+    <ul class="cover-list">
+      <li><b>A</b><span>Sales → Operation → Lab / X-ray / Report</span></li>
+      <li><b>B</b><span>OPD → Medical → Billing</span></li>
+      <li><b>C</b><span>Part-Time Management — สมัคร · เบิกจ่าย</span></li>
+      <li><b>D</b><span>Gen Assessment QR — ประเมินความพึงพอใจ</span></li>
+      <li><b>E</b><span>Role &amp; Permission Matrix — 9 บทบาท</span></li>
+      <li><b>F</b><span>Appendix — Multi-day · Status · Data Model</span></li>
+    </ul>
+  </div>
+  <div class="cover-foot">
+    <span>OcciCare Healthcare Tech · <strong>Confidential</strong></span>
+    <span>มิถุนายน 2569 / June 2026</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ TOC ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">contents</span>
+    <h2 class="sec-title">สารบัญ</h2>
+    <p class="sec-sub">เอกสารนี้แบ่งเป็น 8 ส่วน — แต่ละ flow มี diagram + sub-steps + loop highlights</p>
+  </div>
+
+  <ul class="toc-list">
+    <li><div class="lbl">System Architecture Overview<small>ภาพรวมโครงสร้าง · Module map · Tech stack · Data layer</small></div><span class="pg">P. 03</span></li>
+    <li><div class="lbl">Flow A — Sales → Operation → Lab/X-ray/Report<small>CRM · Quotation · Project · Handover · JO · Stations · Onsite · Lab/X-ray/Report</small></div><span class="pg">P. 04</span></li>
+    <li><div class="lbl">Flow B — OPD → Medical → Billing<small>การส่งต่อจาก Report ถึง การออก Invoice · Payment tracking</small></div><span class="pg">P. 06</span></li>
+    <li><div class="lbl">Flow C — Part-Time Management<small>RegisterPT public form · อนุมัติ · Assignment · Wage · ประวัติ</small></div><span class="pg">P. 07</span></li>
+    <li><div class="lbl">Flow D — Gen Assessment QR<small>Generate token · Scan · Submit · Report พร้อม Charts</small></div><span class="pg">P. 08</span></li>
+    <li><div class="lbl">Flow E — Role &amp; Permission Matrix<small>9 บทบาท · Permission per module · Notification routing</small></div><span class="pg">P. 09</span></li>
+    <li><div class="lbl">Appendix — Cross-cutting Loops<small>Multi-day JO · Status state machine · Data model relationships</small></div><span class="pg">P. 10</span></li>
+    <li><div class="lbl">Glossary<small>คำศัพท์ + API ที่ใช้บ่อย</small></div><span class="pg">P. 12</span></li>
+  </ul>
+
+  <div class="callout cl-info" style="margin-top:25px">
+    <span class="icon">📖</span>
+    <div class="body"><b>วิธีอ่านเอกสารนี้</b>
+      แต่ละหัวข้อมี (1) Diagram หลัก เป็น flowchart, (2) Sub-steps อธิบายแต่ละขั้นเป็นข้อ, (3) <span class="pill p-gold" style="vertical-align:1px">Loop</span> callouts ชี้จุดที่มีการวนซ้ำ, (4) <span class="pill p-info" style="vertical-align:1px">DB</span> keys ที่เกี่ยวข้องในแต่ละ flow</div>
+  </div>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram</span><span><strong>02</strong> / 12</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════ 01. ARCHITECTURE ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 01 — overview</span>
+    <h2 class="sec-title">System Architecture</h2>
+    <p class="sec-sub">โครงสร้างระบบในมุม Module-to-Module · ไม่ใช่ระดับโค้ด แต่เป็นมุมมองการไหลของงาน</p>
+  </div>
+
+  <p class="lead">ระบบ MCK สร้างขึ้นเพื่อจัดการ <b>การออกหน่วยตรวจสุขภาพเคลื่อนที่</b> ครบวงจร ตั้งแต่ขั้นรับงานจากลูกค้า (Sales) — ปฏิบัติงานหน้างาน (Operation) — ตรวจวิเคราะห์ทางห้องปฏิบัติการ (Lab/X-ray/Report) — ส่งต่อแพทย์ (OPD/Medical) — สู่การเบิกจ่าย (Billing) พร้อม module เสริม Part-Time และ Assessment</p>
+
+  <h3 class="sub"><span class="n">1.1</span> Module Map ภาพรวม</h3>
+
+  <div class="diag">
+    <div class="mermaid" id="m_overview">
+flowchart TB
+  classDef sales fill:#DBEAFE,stroke:#1E40AF,stroke-width:2px,color:#1E3A8A
+  classDef op fill:#FEF3C7,stroke:#B45309,stroke-width:2px,color:#78350F
+  classDef lab fill:#E0E7FF,stroke:#4338CA,stroke-width:2px,color:#312E81
+  classDef med fill:#D1FAE5,stroke:#047857,stroke-width:2px,color:#065F46
+  classDef bill fill:#FEE2E2,stroke:#B91C1C,stroke-width:2px,color:#7F1D1D
+  classDef ext fill:#F3E8FF,stroke:#7E22CE,stroke-width:2px,color:#581C87
+  classDef cfg fill:#F1F5F9,stroke:#475569,stroke-width:2px,color:#1E293B
+
+  Customer([👤 ลูกค้า / Customer Inquiry])
+
+  subgraph S[" "]
+    direction TB
+    CRM[👥 CRM<br/>Customers]
+    Quote[📋 Quotation<br/>ใบเสนอราคา]
+    Project[💼 Project<br/>โครงการขาย]
+  end
+
+  subgraph OP[" "]
+    direction TB
+    JO[🚑 Job Order<br/>ใบแจ้งงาน]
+    Stations[🩺 Stations<br/>จุดตรวจ]
+    Onsite[🚐 Onsite<br/>ปฏิบัติงานหน้างาน]
+  end
+
+  subgraph LX[" "]
+    direction TB
+    Lab[🔬 Lab<br/>TAT 5-7 วัน]
+    Xray[📡 X-ray<br/>TAT 3-5 วัน]
+    Report[📄 Report<br/>SLA 30 วัน]
+  end
+
+  subgraph M[" "]
+    direction TB
+    OPD[🏥 OPD<br/>ตรวจร่างกาย]
+    Medical[📑 Medical<br/>เวชระเบียน]
+  end
+
+  Billing[💰 Billing<br/>Invoice]
+
+  PT[⏰ Part-Time<br/>บุคลากร]
+  Assess[⭐ Assessment<br/>QR ประเมิน]
+
+  Customer --> CRM
+  CRM --> Quote
+  Quote --> Project
+  Project -->|Handover| JO
+  JO --> Stations
+  Stations --> Onsite
+  Onsite --> Lab
+  Lab --> Xray
+  Xray --> Report
+  Report --> OPD
+  OPD --> Medical
+  Medical --> Billing
+
+  PT -.assign.-> Stations
+  Project -.gen QR.-> Assess
+
+  class CRM,Quote,Project sales
+  class JO,Stations,Onsite op
+  class Lab,Xray,Report lab
+  class OPD,Medical med
+  class Billing bill
+  class PT,Assess ext
+    </div>
+    <div class="diag-cap">แผนภาพ 1.1 — Module flow หลัก · เส้นทึบ = ลำดับงาน · เส้นประ = relation เสริม</div>
+  </div>
+
+  <h3 class="sub"><span class="n">1.2</span> Tech Stack &amp; Data Layer</h3>
+  <div class="g2">
+    <div class="kbox">
+      <h4>Frontend</h4>
+      <ul>
+        <li>HTML5 + Vanilla JS (No framework)</li>
+        <li>CSS Custom — Dark Luxury theme (Navy + Gold)</li>
+        <li>Font: Sarabun · IBM Plex Mono</li>
+        <li>QR: qrcode-generator (CDN)</li>
+      </ul>
+    </div>
+    <div class="kbox">
+      <h4>Data Layer</h4>
+      <ul>
+        <li>localStorage (Primary, key prefix per module)</li>
+        <li>เช่น <code>parttime_db__staff</code>, <code>assessment_db__responses</code></li>
+        <li>Supabase SQL schema เตรียมไว้ (dormant)</li>
+        <li>SQL: <code>occicare_supabase_v3.sql</code></li>
+      </ul>
+    </div>
+    <div class="kbox">
+      <h4>9 User Roles</h4>
+      <ul>
+        <li><code>admin</code> · full access</li>
+        <li><code>sales01</code> · CRM/Quotation/Sales</li>
+        <li><code>op01</code> · Operation chain</li>
+        <li><code>lab01</code>, <code>xray01</code>, <code>report01</code></li>
+        <li><code>opd01</code>, <code>medical01</code>, <code>billing01</code></li>
+      </ul>
+    </div>
+    <div class="kbox">
+      <h4>Pages (Sidebar Sections)</h4>
+      <ul>
+        <li>Main · Sales · Operation</li>
+        <li>Lab/X-ray/Report · OPD · Medical · Billing</li>
+        <li>Gen Assessment · รายงาน</li>
+        <li>ข้อมูล Part-Time · ระบบ</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §01 Architecture</span><span><strong>03</strong> / 12</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════ 02. FLOW A: SALES → OP → LAB ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 02 — flow A</span>
+    <h2 class="sec-title">Sales → Operation → Lab / X-ray / Report</h2>
+    <p class="sec-sub">เส้นทางหลักของงานออกตรวจสุขภาพ — จากลูกค้าติดต่อจนถึงรายงานผลตรวจ</p>
+  </div>
+
+  <p class="lead">Flow นี้คือกระดูกสันหลังของระบบ คิดเป็น ~70% ของงานประจำวัน · ทุก Project เริ่มที่ <span class="pill p-navy">CRM</span> แล้วผ่าน Quotation/Project → Operation → Lab/X-ray/Report ตามลำดับ</p>
+
+  <h3 class="sub"><span class="n">2.1</span> Diagram หลัก</h3>
+
+  <div class="diag">
+    <div class="mermaid">
+flowchart TD
+  classDef start fill:#FEF3C7,stroke:#B45309,color:#78350F
+  classDef sales fill:#DBEAFE,stroke:#1E40AF,color:#1E3A8A
+  classDef op fill:#FEF3C7,stroke:#B45309,color:#78350F
+  classDef test fill:#E0E7FF,stroke:#4338CA,color:#312E81
+  classDef decision fill:#FFF,stroke:#475569,color:#1E293B
+  classDef end1 fill:#D1FAE5,stroke:#047857,color:#065F46
+
+  Start([🟢 ลูกค้าติดต่อสอบถาม]):::start
+  CRM[/<b>1.</b> CRM — Add Customer<br/>company · contact · job_type/]:::sales
+  Quote[/<b>2.</b> Quotation — ใบเสนอราคา<br/>amount · valid_until/]:::sales
+  Decide{ลูกค้าตกลง?}:::decision
+  ProjDraft[/<b>3.</b> Project status=Draft/]:::sales
+  ProjClosed[/<b>4.</b> Project status=Closed<br/>ปิดการขาย/]:::sales
+  Hand[/<b>5.</b> Handover Checkbox<br/>✓ tick = ส่งต่อ Operation/]:::sales
+  MultiDay{Project<br/>หลายวัน?}:::decision
+  CreateN[/<b>6a.</b> Loop: Create N JOs<br/>day_no = 1, 2, ..., N/]:::op
+  Create1[/<b>6b.</b> Create 1 JO/]:::op
+  Station[/<b>7.</b> Add Stations<br/>+ staff_list per station/]:::op
+  Onsite[/<b>8.</b> Onsite — ปฏิบัติงาน<br/>เก็บ specimen · X-ray · ตรวจ/]:::op
+  Lab[/<b>9.</b> Lab Tests<br/>TAT 5-7 วัน/]:::test
+  XR[/<b>10.</b> X-ray<br/>TAT 3-5 วัน/]:::test
+  Rep[/<b>11.</b> Report<br/>SLA 30 วัน/]:::test
+  End1([🏁 Report ส่งลูกค้า → ต่อ Flow B]):::end1
+  EndNo([🛑 ปิดเคส — ไม่ตกลง]):::end1
+
+  Start --> CRM --> Quote --> Decide
+  Decide -->|No| EndNo
+  Decide -->|Yes| ProjDraft --> ProjClosed --> Hand --> MultiDay
+  MultiDay -->|"N > 1"| CreateN
+  MultiDay -->|"N = 1"| Create1
+  CreateN --> Station
+  Create1 --> Station
+  Station --> Onsite --> Lab --> XR --> Rep --> End1
+    </div>
+    <div class="diag-cap">แผนภาพ 2.1 — Sales → Operation → Lab/X-ray/Report (12 ขั้น + Multi-day branching)</div>
+  </div>
+
+  <div class="callout cl-loop">
+    <span class="icon">🔁</span>
+    <div class="body"><b>Loop ที่ขั้น 6a — Multi-day Job Order</b>
+      ถ้า Project มี 5 วัน ระบบจะวน loop สร้าง 5 JO โดยอัตโนมัติ · ทุก JO มี <code>day_no</code> และ <code>total_days</code> ที่อ้างถึงกัน · ดูรายละเอียดใน Appendix §7.1</div>
+  </div>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §02 Flow A</span><span><strong>04</strong> / 12</span></div>
+</section>
+
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 02 — flow A (cont.)</span>
+    <h2 class="sec-title">Sales → Operation → Lab / X-ray / Report</h2>
+    <p class="sec-sub">รายละเอียดสิ่งที่เกิดขึ้นในแต่ละขั้น</p>
+  </div>
+
+  <h3 class="sub"><span class="n">2.2</span> Sub-steps Sales</h3>
+  <ol class="steps">
+    <li><b>CRM — Add Customer</b> ผู้ใช้ <code>sales01</code> สร้างลูกค้าใหม่ ระบุ <code>company_name</code>, <code>contact_person</code>, <code>phone</code>, <code>job_type</code> (ตรวจสุขภาพ · OS XRAY · ตรวจซ้ำ · เก็บอาหารตัวอย่าง · อบรม First Aid · Consult · อื่นๆ) <small>บันทึก: <code>parttime_db__customers</code> &nbsp; · &nbsp; UI: <code>Pages.customers</code></small></li>
+    <li><b>Quotation</b> สร้างใบเสนอราคาที่อ้างถึง customer · เก็บราคา + valid_until <small>UI: <code>Pages.quotation</code> &nbsp; · &nbsp; PDF export พร้อม</small></li>
+    <li><b>Project (status=Draft)</b> เปิด Project เมื่อ Quotation ได้รับการอนุมัติ <small>UI: <code>Pages.sales</code> &nbsp; · &nbsp; ระบบจะ auto-generate <code>project_code</code> (เช่น MCK-2025-001)</small></li>
+    <li><b>Project status → Closed</b> เปลี่ยนสถานะเป็น "Closed" = ปิดการขาย พร้อมส่งต่อ Operation <small>หลังจากนี้ส่ง Notification ให้ <code>op01</code></small></li>
+    <li><b>Handover Checkbox</b> sales tick กล่อง "ส่งต่อ" ในตาราง Project · ✅ icon + วันที่ปรากฏ <small>ถ้า untick → ดึงกลับให้ Sales</small></li>
+  </ol>
+
+  <h3 class="sub"><span class="n">2.3</span> Sub-steps Operation</h3>
+  <ol class="steps">
+    <li><b>Create JO (Single หรือ Multi-day)</b> สร้างใบแจ้งงาน 1 ใบต่อ 1 วัน · เลือก Project + จำนวนวัน 1-7 (หรือ Custom N) <small>Multi-day → loop สร้าง N records · <code>day_no</code>=1..N · <code>total_days</code>=N</small></li>
+    <li><b>Add Stations + staff_list</b> แต่ละ JO มีหลาย Station (ลงทะเบียน · เจาะเลือด · X-ray · ฯลฯ) · แต่ละ station ระบุ <code>staff_count</code> และ <code>staff_list[]</code> (รายคน) <small>1 station = N คน · ระบุ profession · wage_per_day · staff_type</small></li>
+    <li><b>Onsite — ปฏิบัติงาน</b> ทีมออกตรวจ · เก็บ specimen · ตรวจร่างกาย · บันทึก vital signs <small>UI: <code>Pages.op_onsite</code> &nbsp; · &nbsp; project status → Onsite</small></li>
+  </ol>
+
+  <h3 class="sub"><span class="n">2.4</span> Sub-steps Lab / X-ray / Report</h3>
+  <ol class="steps">
+    <li><b>Lab</b> รับ specimen → ตรวจวิเคราะห์ → ออกผล · TAT 5-7 วัน <small>alert ถ้าเกิน TAT (category: <code>TAT-Lab</code>)</small></li>
+    <li><b>X-ray</b> ฟิล์มถึงรังสีแพทย์ → อ่านผล → ส่งผล · TAT 3-5 วัน <small>alert (category: <code>X-Ray</code>)</small></li>
+    <li><b>Report</b> รวมผลทุกอย่างเป็น Report ฉบับสมบูรณ์ → ส่งให้ลูกค้า · SLA 30 วัน <small>alert (category: <code>SLA-Report</code>)</small></li>
+  </ol>
+
+  <div class="callout cl-warn">
+    <span class="icon">⚠️</span>
+    <div class="body"><b>Alert &amp; Notification</b>
+      แต่ละ alert จะส่งให้เฉพาะ role ที่เกี่ยวข้อง · <code>categoryToModule</code> map ใน Dashboard กรองให้ user เห็นเฉพาะแจ้งเตือนของตน (admin เห็นทั้งหมด)</div>
+  </div>
+
+  <h3 class="sub"><span class="n">2.5</span> Project Status Flow</h3>
+  <div class="status-flow">
+    <span class="s">Draft</span><span class="arr">→</span>
+    <span class="s">Quoted</span><span class="arr">→</span>
+    <span class="s">Closed</span><span class="arr">→</span>
+    <span class="s">Onsite</span><span class="arr">→</span>
+    <span class="s">Lab</span><span class="arr">→</span>
+    <span class="s">Report</span><span class="arr">→</span>
+    <span class="s">Billing</span><span class="arr">→</span>
+    <span class="s" style="background:rgba(16,185,129,.1);border-color:#10B981;color:#065F46">Completed</span>
+  </div>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §02 Flow A (cont.)</span><span><strong>05</strong> / 12</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════ 03. FLOW B: OPD/MEDICAL/BILLING ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 03 — flow B</span>
+    <h2 class="sec-title">OPD → Medical → Billing</h2>
+    <p class="sec-sub">การส่งต่อหลัง Report เสร็จ — ลงเวชระเบียน · ออก Invoice</p>
+  </div>
+
+  <p class="lead">หลังจาก Report ส่งให้ลูกค้าแล้ว ระบบยังคงดูแลข้อมูลในแง่ <b>Medical Record</b> (เก็บประวัติแพทย์) และ <b>Billing</b> (เบิกจ่ายค่าบริการ)</p>
+
+  <h3 class="sub"><span class="n">3.1</span> Diagram</h3>
+
+  <div class="diag">
+    <div class="mermaid">
+flowchart TD
+  classDef rep fill:#E0E7FF,stroke:#4338CA,color:#312E81
+  classDef opd fill:#FCE7F3,stroke:#BE185D,color:#9F1239
+  classDef med fill:#D1FAE5,stroke:#047857,color:#065F46
+  classDef bill fill:#FEE2E2,stroke:#B91C1C,color:#7F1D1D
+  classDef decision fill:#FFF,stroke:#475569,color:#1E293B
+  classDef end1 fill:#FEF3C7,stroke:#B45309,color:#78350F
+
+  Rep([📄 Report เสร็จ จาก Flow A]):::rep
+  OPDIn[/<b>1.</b> OPD — รับผู้ป่วยจาก Report<br/>ตรวจร่างกายเบื้องต้น/]:::opd
+  Critical{ค่าวิกฤต?}:::decision
+  Refer[/<b>2a.</b> Refer ต่อแพทย์เฉพาะทาง/]:::opd
+  Medical[/<b>2b.</b> Medical Record<br/>เวชระเบียน /]:::med
+  Followup{Follow-up<br/>จำเป็น?}:::decision
+  ScheduleFu[/<b>3a.</b> Schedule นัด Follow-up<br/>+ Notification ลูกค้า/]:::med
+  CloseMed[/<b>3b.</b> ปิด Medical Record/]:::med
+  Invoice[/<b>4.</b> Billing — ออก Invoice<br/>คำนวณค่าบริการตาม headcount/]:::bill
+  Pay{ลูกค้า<br/>ชำระ?}:::decision
+  Paid[/<b>5a.</b> สถานะ: Paid<br/>Completed/]:::bill
+  Pending[/<b>5b.</b> สถานะ: Pending<br/>Alert ทุก 30 วัน/]:::bill
+  End1([✅ ปิด Project Cycle]):::end1
+
+  Rep --> OPDIn --> Critical
+  Critical -->|"ผิดปกติ"| Refer --> Medical
+  Critical -->|"ปกติ"| Medical
+  Medical --> Followup
+  Followup -->|"Yes"| ScheduleFu --> CloseMed
+  Followup -->|"No"| CloseMed
+  CloseMed --> Invoice --> Pay
+  Pay -->|"จ่ายแล้ว"| Paid --> End1
+  Pay -->|"ยังไม่จ่าย"| Pending
+  Pending -.รอจ่าย.-> Pay
+    </div>
+    <div class="diag-cap">แผนภาพ 3.1 — OPD → Medical → Billing พร้อมเส้นวนกลับ Pending → Paid</div>
+  </div>
+
+  <h3 class="sub"><span class="n">3.2</span> Sub-steps OPD &amp; Medical</h3>
+  <ol class="steps">
+    <li><b>OPD รับผู้ป่วย</b> จาก Report — ตรวจร่างกายโดยแพทย์ · บันทึก vital signs <small>UI: <code>Pages.opd</code> &nbsp; · &nbsp; role <code>opd01</code></small></li>
+    <li><b>ค่าวิกฤต (Critical Values)</b> หากผลตรวจมีค่าผิดปกติ (น้ำตาลสูง · ไขมันสูง · BP สูง) → <span class="pill p-warn">refer</span> ต่อแพทย์เฉพาะทาง <small>Notification category: <code>ค่าวิกฤต</code></small></li>
+    <li><b>Medical Record</b> เก็บเวชระเบียน · ประวัติแพทย์ · ผลตรวจ <small>UI: <code>Pages.medical</code> &nbsp; · &nbsp; role <code>medical01</code></small></li>
+    <li><b>Follow-up</b> ถ้าจำเป็น → schedule นัดผู้ป่วยกลับมา · ส่ง Notification ทาง Line/Email</li>
+  </ol>
+
+  <h3 class="sub"><span class="n">3.3</span> Sub-steps Billing</h3>
+  <ol class="steps">
+    <li><b>ออก Invoice</b> คำนวณค่าบริการตาม headcount × อัตรา + งานเสริม <small>UI: <code>Pages.billing</code> &nbsp; · &nbsp; role <code>billing01</code></small></li>
+    <li><b>ติดตามการชำระ</b> สถานะ Pending → Paid · ถ้าเกิน 30 วัน → Alert <span class="pill p-warn">Billing</span> <small>category: <code>Billing</code></small></li>
+    <li><b>Project Cycle ปิด</b> เมื่อ Invoice paid → status: Completed → ปิด workflow ของ Project นี้</li>
+  </ol>
+
+  <div class="callout cl-loop">
+    <span class="icon">🔁</span>
+    <div class="body"><b>Loop Pending → Paid</b>
+      เส้นประในแผนภาพแสดงว่า Invoice ที่ค้างจ่ายจะ alert ทุก 30 วัน จนกว่าจะ Paid · ไม่ block flow อื่น แค่เตือน</div>
+  </div>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §03 Flow B</span><span><strong>06</strong> / 12</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════ 04. FLOW C: PART-TIME ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 04 — flow C</span>
+    <h2 class="sec-title">Part-Time Management</h2>
+    <p class="sec-sub">บุคลากรชั่วคราว — สมัคร · อนุมัติ · จ้างงาน · รายงานประวัติ</p>
+  </div>
+
+  <p class="lead">Part-Time คือบุคลากรชั่วคราวที่จ้างมาช่วยงานหน้างาน (พยาบาล · แพทย์ · เจ้าหน้าที่) · เข้าระบบผ่านฟอร์มสมัครสาธารณะ <code>RegisterPT.html</code> · admin อนุมัติ · แล้วเลือกไป assign ใน Station ของ JO</p>
+
+  <h3 class="sub"><span class="n">4.1</span> Diagram — สมัคร · อนุมัติ · เบิกจ่าย</h3>
+
+  <div class="diag">
+    <div class="mermaid">
+flowchart TD
+  classDef pub fill:#F3E8FF,stroke:#7E22CE,color:#581C87
+  classDef rev fill:#FEF3C7,stroke:#B45309,color:#78350F
+  classDef ok fill:#D1FAE5,stroke:#047857,color:#065F46
+  classDef warn fill:#FED7AA,stroke:#C2410C,color:#7C2D12
+  classDef bad fill:#FEE2E2,stroke:#B91C1C,color:#7F1D1D
+  classDef decision fill:#FFF,stroke:#475569,color:#1E293B
+
+  Start([🟢 บุคคลภายนอกต้องการสมัคร]):::pub
+  Form[/<b>1.</b> RegisterPT.html<br/>ชื่อ-สกุล · ปกชน · บัญชี<br/>เอกสารใบประกอบ · ฯลฯ/]:::pub
+  Submit[/<b>2.</b> Submit → status=pending/]:::pub
+  Review{Admin<br/>review}:::decision
+  Reject[/<b>3a.</b> reject /]:::bad
+  Approve[/<b>3b.</b> approveAsStaff<br/>status=approved<br/>work_status=Active/]:::ok
+  Available[/<b>4.</b> Available pool<br/>เลือกได้ในการสร้าง JO/]:::ok
+  Assign[/<b>5.</b> Op assign คนนี้ใน<br/>Station ของ JO<br/>+ wage_per_day/]:::rev
+  Work[/<b>6.</b> ทำงานหน้างาน Onsite/]:::rev
+  Calc[/<b>7.</b> คำนวณค่าจ้าง<br/>รวมต่อ Project + รวมทุก Project/]:::ok
+  History[/<b>8.</b> รายงานประวัติ PT<br/>+ ยอดรวมที่จ้าง/]:::ok
+
+  WS{Update<br/>work_status?}:::decision
+  WSActive[Active<br/>ใช้งานปกติ]:::ok
+  WSGive[Give a chance<br/>ระมัดระวัง]:::warn
+  WSBlack[Blacklist<br/>ห้ามจ้าง]:::bad
+
+  Start --> Form --> Submit --> Review
+  Review -->|"ไม่ผ่าน"| Reject
+  Review -->|"ผ่าน"| Approve --> Available --> Assign --> Work --> Calc --> History
+
+  Available -.click badge.-> WS
+  History -.update.-> WS
+  WS --> WSActive
+  WS --> WSGive
+  WS --> WSBlack
+  WSActive -.continue.-> Available
+  WSGive -.continue with warn.-> Available
+  WSBlack -.block.-> Reject
+    </div>
+    <div class="diag-cap">แผนภาพ 4.1 — Part-Time lifecycle + work_status state machine</div>
+  </div>
+
+  <h3 class="sub"><span class="n">4.2</span> Sub-steps</h3>
+  <ol class="steps">
+    <li><b>RegisterPT.html (Public Form)</b> ผู้สมัครเปิดฟอร์มจาก browser · กรอกข้อมูลส่วนตัว · upload เอกสาร (3 ใบ: ใบประกอบ · บัตร ปชช · หน้าบัญชีธ.) <small>เก็บใน <code>parttime_db__staff</code> &nbsp; · &nbsp; ไม่ต้อง login</small></li>
+    <li><b>Pending → admin review</b> admin/sales เปิดหน้า Part-Time → เห็นรายการรอตรวจ · ดูเอกสาร · approve หรือ reject</li>
+    <li><b>Approve</b> เปลี่ยน status=approved + work_status=Active · บันทึก approved_by + วันที่ <small>UI: <code>Pages.parttime</code></small></li>
+    <li><b>Available Pool</b> รายชื่อทั้งหมดที่ approved → ใช้เป็น autocomplete ใน JO Station <small>Op เลือกได้แบบ dropdown</small></li>
+    <li><b>Assign to JO Station</b> ใน JO ระบุชื่อ + วิชาชีพ + ประเภท (Part-time) + wage_per_day <small>1 station มีหลายคนได้ (staff_list[])</small></li>
+    <li><b>Work onsite</b> ทำงานในวันที่ JO ระบุ · 1 JO = 1 วัน · ถ้า project หลายวัน → คนเดียวกันอาจมีหลาย JO</li>
+    <li><b>คำนวณค่าจ้าง</b> รวมต่อ Project, รวมข้าม Project ทุกใบ → แสดงเป็น <span class="pill p-ok">💰 ฿X,XXX</span> badge</li>
+    <li><b>รายงานประวัติ PT</b> หน้า "📊 รายงานประวัติ PT" แสดงแต่ละคนทำงานกี่ Project, ราคารวม, klick chip ดูรายละเอียดได้ <small>UI: <code>Pages.parttime_history</code></small></li>
+  </ol>
+
+  <div class="callout cl-loop">
+    <span class="icon">🔁</span>
+    <div class="body"><b>State Machine — work_status</b>
+      Active ⇄ Give a chance ⇄ Blacklist เปลี่ยนได้ตลอดด้วย inline dropdown · Blacklist = ไม่ให้เลือกใน JO ใหม่อีกต่อไป (แต่ประวัติเก่ายังอยู่)</div>
+  </div>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §04 Flow C</span><span><strong>07</strong> / 12</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════ 05. FLOW D: ASSESSMENT ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 05 — flow D</span>
+    <h2 class="sec-title">Gen Assessment QR</h2>
+    <p class="sec-sub">QR ประเมินความพึงพอใจ — Generate · Scan · Submit · Report</p>
+  </div>
+
+  <p class="lead">ระบบให้ลูกค้าประเมินความพึงพอใจหน้างาน Onsite · ใช้ QR code ที่ unique ต่อ Project · พิมพ์ติดที่จุดลงทะเบียน · ลูกค้าสแกนแล้วทำแบบประเมินผ่านมือถือ</p>
+
+  <h3 class="sub"><span class="n">5.1</span> Diagram — Generate · Scan · Submit · Report</h3>
+
+  <div class="diag">
+    <div class="mermaid">
+flowchart TD
+  classDef admin fill:#FEF3C7,stroke:#B45309,color:#78350F
+  classDef token fill:#E0E7FF,stroke:#4338CA,color:#312E81
+  classDef cust fill:#D1FAE5,stroke:#047857,color:#065F46
+  classDef report fill:#FCE7F3,stroke:#BE185D,color:#9F1239
+  classDef decision fill:#FFF,stroke:#475569,color:#1E293B
+
+  ProjReady[/Project status ≥ Closed/]:::admin
+  Page[/<b>1.</b> Admin เปิดหน้า<br/>⭐ Gen Assessment/]:::admin
+  Gen{มี QR เดิม?}:::decision
+  Click1[/<b>2a.</b> คลิก สร้าง QR<br/>(สำหรับครั้งแรก)/]:::admin
+  ClickRegen[/<b>2b.</b> คลิก 🔄 Regenerate<br/>(token เก่าถูกยกเลิก)/]:::admin
+  TokenGen[/<b>3.</b> Gen 12-char token<br/>เก็บใน qr_configs/]:::token
+  URL[/<b>4.</b> URL ใหม่<br/>assessment.html?t=XXX/]:::token
+  PDF[/<b>5.</b> Export PDF A4<br/>QR + วิธีให้คะแนน/]:::admin
+  Print[/<b>6.</b> พิมพ์ติดที่หน้างาน/]:::admin
+  Scan[/<b>7.</b> ลูกค้าสแกน QR<br/>เปิดในมือถือ/]:::cust
+  ValidT{token<br/>valid?}:::decision
+  Form[/<b>8.</b> Form 18 ข้อ<br/>เจ้าหน้าที่ 5 + จุดตรวจ 12 + suggestion/]:::cust
+  Submit[/<b>9.</b> Submit → save<br/>assessment_db__responses/]:::cust
+  Thanks([🎉 ขอบคุณ]):::cust
+  Expired([🛑 QR หมดอายุ ขอใหม่]):::report
+  Rep[/<b>10.</b> Admin ดู<br/>🌟 รายงานผลประเมิน/]:::report
+  Charts[/<b>11.</b> Radar Chart + Distribution<br/>+ Top 3 Weakest/]:::report
+
+  ProjReady --> Page --> Gen
+  Gen -->|"ยังไม่มี"| Click1
+  Gen -->|"มีแล้ว"| ClickRegen
+  Click1 --> TokenGen
+  ClickRegen --> TokenGen
+  TokenGen --> URL --> PDF --> Print --> Scan --> ValidT
+  ValidT -->|"valid"| Form --> Submit --> Thanks
+  ValidT -->|"expired / invalid"| Expired
+  Submit -.aggregate.-> Rep --> Charts
+    </div>
+    <div class="diag-cap">แผนภาพ 5.1 — Gen QR (admin) → Scan (customer) → Report (admin)</div>
+  </div>
+
+  <h3 class="sub"><span class="n">5.2</span> Sub-steps</h3>
+  <ol class="steps">
+    <li><b>Generate Unique Token</b> ทุก Project มี token เฉพาะ 12 chars จาก char-set <code>ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789</code> (ตัด 0/O/1/I/l)<small>Regenerate → ทับ token เดิม → QR เก่าใช้ไม่ได้ทันที</small></li>
+    <li><b>PDF A4 Layout</b> 1 หน้า A4: header navy + ชื่อ project + QR 340px + คำอธิบายคะแนน 0-5 <small>ไม่แสดง link ใต้ QR เพื่อไม่ให้ rebuild URL เอง</small></li>
+    <li><b>Customer Scan</b> เปิด assessment.html?t=TOKEN ในมือถือ · ระบบหา project จาก token <small>UI: standalone HTML purple theme + radio buttons</small></li>
+    <li><b>Submit Form</b> 18 ข้อรวม (เจ้าหน้าที่ 1-5 · จุดตรวจ 0-5 · ข้อเสนอแนะ) <small>Validate ครบทุกข้อก่อน submit · scroll ไปข้อแรกที่ไม่ได้ตอบ</small></li>
+    <li><b>Aggregate Report</b> admin เปิด "🌟 ผลประเมินความพึงพอใจ" → เลือก Project → เห็น KPI + Radar + Distribution + Top 3 Weakest</li>
+  </ol>
+
+  <div class="callout cl-info">
+    <span class="icon">🎯</span>
+    <div class="body"><b>Insight สำหรับการพัฒนา</b>
+      Top 3 Weakest จะเรียงคำถามที่คะแนนต่ำสุด พร้อม % คนให้คะแนน ≤3 → ใช้วางแผนปรับปรุงจุดบริการต่อไป</div>
+  </div>
+
+  <h3 class="sub"><span class="n">5.3</span> CRUD แบบประเมิน (ระบบ)</h3>
+  <p>หน้า "🎯 ตั้งค่าแบบประเมิน" ในส่วน ระบบ → admin เพิ่ม/ลบ/แก้คำถาม · จัดลำดับ · คืนค่า default · มีผลกับทุก Project ทันที <small>(เก็บใน <code>assessment_db__questions</code>)</small></p>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §05 Flow D</span><span><strong>08</strong> / 12</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════ 06. FLOW E: ROLES ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 06 — flow E</span>
+    <h2 class="sec-title">Role &amp; Permission Matrix</h2>
+    <p class="sec-sub">9 บทบาทผู้ใช้ · สิทธิ์ในแต่ละ module · Notification routing</p>
+  </div>
+
+  <p class="lead">ระบบมี 9 บทบาทผู้ใช้แยกตามแผนก · แต่ละบทบาทเห็นเฉพาะ module ที่จำเป็น · admin เห็นและแก้ทั้งหมด · ระดับสิทธิ์: <span class="pill p-ok">full</span> (CRUD), <span class="pill p-info">viewOnly</span> (อ่านอย่างเดียว), <span class="pill p-warn">none</span> (ซ่อนเมนู)</p>
+
+  <h3 class="sub"><span class="n">6.1</span> Login Flow</h3>
+  <div class="diag">
+    <div class="mermaid">
+flowchart LR
+  classDef start fill:#D1FAE5,stroke:#047857,color:#065F46
+  classDef proc fill:#FEF3C7,stroke:#B45309,color:#78350F
+  classDef decision fill:#FFF,stroke:#475569,color:#1E293B
+  classDef end1 fill:#FEE2E2,stroke:#B91C1C,color:#7F1D1D
+
+  L([👤 User]):::start
+  Form[Login form]:::proc
+  Auth{user+pwd<br/>valid?}:::decision
+  Sess[Create session]:::proc
+  Nav[Build navbar<br/>filter by role]:::proc
+  Allow[Load only<br/>allowed pages]:::proc
+  Notif[Filter notifications<br/>by category→module]:::proc
+  Dash([🟢 Dashboard]):::start
+  Fail([🛑 Invalid]):::end1
+
+  L --> Form --> Auth
+  Auth -->|"No"| Fail
+  Auth -->|"Yes"| Sess --> Nav --> Allow --> Notif --> Dash
+    </div>
+    <div class="diag-cap">แผนภาพ 6.1 — Login → Build nav → Filter notifications by role</div>
+  </div>
+
+  <h3 class="sub"><span class="n">6.2</span> Permission Matrix</h3>
+  <table class="tb">
+    <thead>
+      <tr>
+        <th>Role</th>
+        <th>Username</th>
+        <th>CRM</th>
+        <th>Sales</th>
+        <th>Op</th>
+        <th>Lab</th>
+        <th>X-ray</th>
+        <th>Report</th>
+        <th>OPD</th>
+        <th>Med</th>
+        <th>Bill</th>
+        <th>PT</th>
+        <th>Cfg</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>👑 Admin</td><td><code>admin</code></td>
+        <td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td></tr>
+      <tr><td>💼 Sales</td><td><code>sales01</code></td>
+        <td class="yes">●</td><td class="yes">●</td><td class="partial">v</td><td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="partial">v</td><td class="no">—</td></tr>
+      <tr><td>🚑 Op</td><td><code>op01</code></td>
+        <td class="partial">v</td><td class="partial">v</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="no">—</td></tr>
+      <tr><td>🔬 Lab</td><td><code>lab01</code></td>
+        <td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="yes">●</td><td class="partial">v</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="no">—</td></tr>
+      <tr><td>📡 X-ray</td><td><code>xray01</code></td>
+        <td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="no">—</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="no">—</td></tr>
+      <tr><td>📄 Report</td><td><code>report01</code></td>
+        <td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="partial">v</td><td class="partial">v</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="no">—</td></tr>
+      <tr><td>🏥 OPD</td><td><code>opd01</code></td>
+        <td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="yes">●</td><td class="partial">v</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>📑 Medical</td><td><code>medical01</code></td>
+        <td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="partial">v</td><td class="partial">v</td><td class="yes">●</td><td class="partial">v</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>💰 Billing</td><td><code>billing01</code></td>
+        <td class="no">—</td><td class="partial">v</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:11px;color:var(--muted);margin-top:4px;font-style:italic">● = Full (CRUD) &nbsp;·&nbsp; v = View only &nbsp;·&nbsp; — = ไม่เห็นเมนู &nbsp;·&nbsp; ตาราง simplified ตัด admin-only modules (config, assessment)</p>
+
+  <h3 class="sub"><span class="n">6.3</span> Notification Routing</h3>
+  <p>Alert จะถูก filter ตาม <code>categoryToModule</code> mapping · admin เห็นทุก alert · role อื่นเห็นเฉพาะของตน:</p>
+  <table class="tb" style="font-size:11.5px">
+    <thead><tr><th style="width:30%">Category</th><th style="width:25%">Module</th><th>เห็นโดย</th></tr></thead>
+    <tbody>
+      <tr><td><code>TAT-Lab</code> · <code>ค่าวิกฤต</code></td><td>lab</td><td>admin, lab01</td></tr>
+      <tr><td><code>SLA-Report</code></td><td>report</td><td>admin, report01</td></tr>
+      <tr><td><code>Billing</code></td><td>billing</td><td>admin, sales01, billing01</td></tr>
+      <tr><td><code>Onsite</code></td><td>op_onsite</td><td>admin, op01</td></tr>
+      <tr><td><code>X-Ray</code></td><td>xray</td><td>admin, xray01, lab01</td></tr>
+      <tr><td><code>OPD</code></td><td>opd</td><td>admin, opd01, medical01</td></tr>
+      <tr><td><code>Medical</code></td><td>medical</td><td>admin, medical01</td></tr>
+    </tbody>
+  </table>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §06 Flow E</span><span><strong>09</strong> / 12</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════ 07. APPENDIX — LOOPS ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 07 — appendix</span>
+    <h2 class="sec-title">Cross-cutting Loops</h2>
+    <p class="sec-sub">Loop ระดับลึก — เห็นจาก section ก่อนหน้าแล้วเชิงสรุป · ในนี้แตกขั้นย่อยให้ละเอียด</p>
+  </div>
+
+  <h3 class="sub"><span class="n">7.1</span> Multi-day JO Loop</h3>
+  <p>ตัวอย่าง: Sales ปิด Project ที่ลูกค้าตรวจ 5 วันต่อเนื่อง · Op จะคลิก "ลงอัตรากำลัง" → เลือก 5 วัน → ระบบ <b>วน loop สร้าง 5 JO records</b>:</p>
+
+  <div class="diag">
+    <div class="mermaid">
+sequenceDiagram
+  participant U as Op User
+  participant UI as JO Modal
+  participant DB as localStorage
+  participant List as JO List
+  U->>UI: คลิก "ลงอัตรากำลัง" จาก Project
+  UI->>UI: แสดง Modal · จำนวนวัน + วันที่
+  U->>UI: เลือก N=5 + ระบุ 5 วัน
+  Note right of UI: state: _cjoState
+  loop For i = 1 to N
+    UI->>DB: save JO {day_no: i, total_days: 5, onsite_date: dates[i]}
+    DB-->>UI: ack
+  end
+  UI->>List: render JO list grouped by project
+  List->>List: badge "วันที่ N" gold + "📅 5 วัน" blue (first JO)
+    </div>
+    <div class="diag-cap">แผนภาพ 7.1 — Multi-day JO creation sequence</div>
+  </div>
+
+  <h3 class="sub"><span class="n">7.2</span> Multi-person Station Loop</h3>
+  <p>ทุก Station ตอนนี้รองรับ <b>หลายคน</b> ผ่าน array <code>staff_list[]</code> · เวลาคำนวณค่าจ้าง Op Report จะ loop ผ่านทุกคน:</p>
+  <ol class="steps">
+    <li><b>JO มี N stations</b> · แต่ละ station มี <code>staff_count</code> คน · staff_list[] เก็บข้อมูลแต่ละคน (profession · staff_name · staff_type · wage_per_day · phone · remark)</li>
+    <li><b>Op Report _calcByTypes()</b> วน <code>for each station → for each person</code> · filter ตาม selTypes (เช่น "Part-time") · sum <code>wage_per_day</code> per person</li>
+    <li><b>PDF Export</b> รวมเป็น rowspan ใน detail table · 1 station ที่มี 3 คน → 3 rows + Station name 1 ครั้ง (rowspan)</li>
+  </ol>
+
+  <h3 class="sub"><span class="n">7.3</span> Status State Machine — Project</h3>
+  <div class="diag">
+    <div class="mermaid">
+stateDiagram-v2
+  [*] --> Draft : sales01 สร้าง
+  Draft --> Quoted : Quotation อนุมัติ
+  Quoted --> Closed : ปิดการขาย
+  Closed --> Onsite : Op เริ่มงาน
+  Onsite --> Lab : เก็บ specimen
+  Lab --> XRay : Lab เสร็จ
+  XRay --> Report : รังสีเสร็จ
+  Report --> Billing : Report ส่ง
+  Billing --> Completed : Invoice paid
+  Completed --> [*]
+  Closed --> Quoted : กลับไปแก้ไข
+  Draft --> [*] : ยกเลิก
+    </div>
+    <div class="diag-cap">แผนภาพ 7.3 — Project status state machine (รวม edge case เช่นกลับไปแก้ไข)</div>
+  </div>
+
+  <div class="callout cl-info">
+    <span class="icon">📊</span>
+    <div class="body"><b>Dashboard KPI</b>
+      Dashboard ใช้ <code>customer.job_type</code> เป็น dimension · 7 ประเภท: ตรวจสุขภาพ, OS XRAY, ตรวจซ้ำ, เก็บอาหารตัวอย่าง, อบรม First Aid, Consult, อื่นๆ · นับ project ตามประเภท · คลิก card → ดูรายการ project</div>
+  </div>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §07 Appendix</span><span><strong>10</strong> / 12</span></div>
+</section>
+
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 07 — appendix (cont.)</span>
+    <h2 class="sec-title">Data Model Relationships</h2>
+    <p class="sec-sub">แผนภาพ ER แบบ simplified — เน้นความสัมพันธ์หลัก</p>
+  </div>
+
+  <div class="diag">
+    <div class="mermaid">
+erDiagram
+  CUSTOMER ||--o{ QUOTATION : ออก
+  CUSTOMER ||--o{ PROJECT : "เป็นลูกค้าของ"
+  PROJECT ||--o{ JOB_ORDER : "(1-N วัน)"
+  JOB_ORDER ||--o{ STATION : "มี N จุดตรวจ"
+  STATION ||--o{ STAFF_LIST : "มี N คน"
+  PARTTIME_STAFF ||--o{ STAFF_LIST : "(by staff_name)"
+  PROJECT ||--o| ASSESSMENT_QR : "(unique token)"
+  ASSESSMENT_QR ||--o{ ASSESSMENT_RESPONSE : "หลายคนตอบ"
+  PROJECT ||--o{ INVOICE : "1-N invoice"
+  PROJECT ||--o{ OPD_RECORD : "เคสที่ refer"
+  OPD_RECORD ||--o{ MEDICAL_RECORD : "เวชระเบียน"
+
+  CUSTOMER {
+    int id
+    string company_name
+    string job_type
+    string contact_person
+  }
+  PROJECT {
+    int id
+    string project_code
+    string status
+    int headcount
+  }
+  JOB_ORDER {
+    int id
+    int project_id
+    int day_no
+    int total_days
+    date onsite_date
+  }
+  STATION {
+    int id
+    int job_order_id
+    string station_code
+    string station_name
+    int staff_count
+    array staff_list
+  }
+  ASSESSMENT_QR {
+    int project_id
+    string token
+    datetime generated_at
+  }
+  ASSESSMENT_RESPONSE {
+    int id
+    string project_code
+    int s_speed
+    int s_polite
+    int t_register
+    text suggestion
+  }
+    </div>
+    <div class="diag-cap">แผนภาพ 7.4 — Data model relationships (simplified ER)</div>
+  </div>
+
+  <h3 class="sub"><span class="n">7.5</span> localStorage Keys</h3>
+  <table class="tb" style="font-size:11.5px">
+    <thead><tr><th style="width:40%">Key</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>parttime_db__customers</code></td><td>รายชื่อลูกค้า (CRM) + job_type</td></tr>
+      <tr><td><code>parttime_db__quotations</code></td><td>ใบเสนอราคา</td></tr>
+      <tr><td><code>parttime_db__projects</code></td><td>Sales projects</td></tr>
+      <tr><td><code>parttime_db__job_orders</code></td><td>JO (1 ใบ = 1 วัน)</td></tr>
+      <tr><td><code>parttime_db__stations</code></td><td>Stations พร้อม staff_list[]</td></tr>
+      <tr><td><code>parttime_db__staff</code></td><td>Part-Time applicants (จาก RegisterPT)</td></tr>
+      <tr><td><code>parttime_db__invoices</code></td><td>Billing invoices</td></tr>
+      <tr><td><code>assessment_db__responses</code></td><td>คำตอบแบบประเมินจากลูกค้า</td></tr>
+      <tr><td><code>assessment_db__qr_configs</code></td><td>Token per project (unique)</td></tr>
+      <tr><td><code>assessment_db__questions</code></td><td>แบบประเมินที่ admin แก้ได้</td></tr>
+    </tbody>
+  </table>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §07 Data Model</span><span><strong>11</strong> / 12</span></div>
+</section>
+
+<!-- ═══════════════════════════════════════ 08. GLOSSARY ═══════════════════════════════════════ -->
+<section class="page">
+  <div class="sec-h">
+    <span class="sec-num">section 08 — glossary</span>
+    <h2 class="sec-title">Glossary</h2>
+    <p class="sec-sub">คำศัพท์ที่ใช้ในระบบ + API ที่อ้างถึงในแผนภาพ</p>
+  </div>
+
+  <h3 class="sub"><span class="n">8.1</span> คำศัพท์</h3>
+  <table class="tb" style="font-size:12px">
+    <thead><tr><th style="width:24%">คำศัพท์</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><b>MCK</b></td><td>Mobile Checkup — การออกตรวจสุขภาพเคลื่อนที่หน้างาน</td></tr>
+      <tr><td><b>Project</b></td><td>หน่วยงานขายระดับสูงสุด — 1 ลูกค้า 1 รอบงานตรวจ มี status ตามขั้น</td></tr>
+      <tr><td><b>JO (Job Order)</b></td><td>ใบแจ้งงาน — 1 ใบ = 1 วันออกตรวจ · Project หลายวันมีหลาย JO</td></tr>
+      <tr><td><b>Station</b></td><td>จุดตรวจในวันออกตรวจ เช่น ลงทะเบียน · เจาะเลือด · เอกซเรย์</td></tr>
+      <tr><td><b>staff_list[]</b></td><td>Array ของบุคลากรที่ประจำ Station นั้น · 1 station มีหลายคนได้</td></tr>
+      <tr><td><b>Part-Time (PT)</b></td><td>บุคลากรชั่วคราว · สมัครผ่าน RegisterPT.html · admin อนุมัติ</td></tr>
+      <tr><td><b>work_status</b></td><td>สถานะการใช้งานของ PT: Active / Give a chance / Blacklist</td></tr>
+      <tr><td><b>day_no</b></td><td>ลำดับวันใน Project ที่มีหลายวัน (1, 2, 3, ...)</td></tr>
+      <tr><td><b>Token (Assessment)</b></td><td>รหัส 12 chars unique ต่อ Project ใช้ใน URL ของ QR</td></tr>
+      <tr><td><b>TAT</b></td><td>Turn-around Time — เวลาในการดำเนินการให้เสร็จ (Lab 5-7 วัน)</td></tr>
+      <tr><td><b>SLA</b></td><td>Service Level Agreement — Report ต้องส่งภายใน 30 วัน</td></tr>
+      <tr><td><b>Handover</b></td><td>การส่งต่อ Project จาก Sales → Operation · ผ่าน checkbox</td></tr>
+      <tr><td><b>Radar Chart</b></td><td>กราฟสรุปคะแนนหลายมิติในรูปทรงหลายเหลี่ยม</td></tr>
+      <tr><td><b>Weakest (Top 3)</b></td><td>คำถามที่คะแนนต่ำสุด 3 อันดับ — ใช้พัฒนาบริการ</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub"><span class="n">8.2</span> APIs / Functions สำคัญ</h3>
+  <table class="tb" style="font-size:11.5px">
+    <thead><tr><th style="width:40%">Function</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>DB.customer.listCustomers()</code></td><td>ดึงรายชื่อลูกค้าทั้งหมด</td></tr>
+      <tr><td><code>DB.sales.saveProject(data)</code></td><td>สร้าง/อัปเดต Project (status, project_code, ...)</td></tr>
+      <tr><td><code>DB.operation.saveJobOrder(data)</code></td><td>สร้าง JO · ระบุ project_id, day_no, total_days</td></tr>
+      <tr><td><code>DB.operation.saveStation(data)</code></td><td>สร้าง Station + staff_list[] รายคน</td></tr>
+      <tr><td><code>DB.parttime.approveAsStaff(id)</code></td><td>อนุมัติ PT → status=approved + work_status=Active</td></tr>
+      <tr><td><code>DB.assessment.generateQRConfig(pid, code)</code></td><td>Gen unique token สำหรับ Project</td></tr>
+      <tr><td><code>DB.assessment.findByToken(token)</code></td><td>หา project จาก token (สำหรับ assessment.html)</td></tr>
+      <tr><td><code>DB.assessment.summary(code)</code></td><td>คำนวณ avg/distribution/weakest สำหรับ Report</td></tr>
+      <tr><td><code>DB.assessment.getQuestions()</code></td><td>ดึงคำถาม (เพื่อใช้ในฟอร์ม + report) · deep clone</td></tr>
+      <tr><td><code>DB.assessment.saveQuestions(s, t)</code></td><td>แอดมินบันทึกคำถามที่แก้ใหม่</td></tr>
+      <tr><td><code>DB.auth.can('view', module)</code></td><td>เช็คสิทธิ์ user ปัจจุบัน · ใช้ filter nav + alerts</td></tr>
+      <tr><td><code>DB.checkAlerts()</code></td><td>ดึง alert ทั้งหมด (filter ภายหลังด้วย categoryToModule)</td></tr>
+    </tbody>
+  </table>
+
+  <div style="background:linear-gradient(135deg,var(--navy-dk),var(--navy));color:#FFF;padding:18px 22px;border-radius:8px;margin-top:28px;text-align:center">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;opacity:.8;text-transform:uppercase;margin-bottom:5px;color:var(--gold-lt)">END OF DOCUMENT</div>
+    <div style="font-size:14px;font-weight:600;color:#FFF">OcciCare MCK · Workflow Diagram v1.0 · มิถุนายน 2569</div>
+    <div style="font-size:10.5px;opacity:.75;margin-top:5px;color:#FFF">เอกสารนี้สร้างเพื่อ training, onboarding, และ technical reference · review ทุก 6 เดือน</div>
+  </div>
+
+  <div class="pgfoot"><span>MCK Workflow Diagram · §08 Glossary</span><span><strong>12</strong> / 12</span></div>
+</section>
+
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  themeVariables: {
+    fontFamily: 'Sarabun, sans-serif',
+    fontSize: '13px',
+    primaryColor: '#FEF3C7',
+    primaryBorderColor: '#B45309',
+    primaryTextColor: '#1A2332',
+    lineColor: '#475569',
+    secondaryColor: '#DBEAFE',
+    tertiaryColor: '#D1FAE5',
+    background: '#FFFFFF'
+  },
+  flowchart: { curve: 'basis', padding: 16, htmlLabels: true },
+  sequence: { actorMargin: 50, mirrorActors: false, bottomMarginAdj: 10 },
+  state: { padding: 16 },
+  er: { entityPadding: 14, fontSize: 12 }
+});
+
+// Auto-resize Mermaid diagrams to fit page width
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.querySelectorAll('.mermaid svg').forEach(svg => {
+      svg.style.maxWidth = '100%';
+      svg.style.height = 'auto';
+    });
+  }, 800);
+});
+</script>
+
+</body>
+</html>
