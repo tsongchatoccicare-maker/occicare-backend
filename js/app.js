@@ -30,7 +30,7 @@ const VEHICLES=['รถยนต์กะบะขาว','รถยนต์ก
 const PROFESSIONS=['เจ้าหน้าที่','RN','MT','แพทย์','เจ้าหน้าที่ ใบ Cer','อื่นๆ'];
 const STAFF_TYPES=['ในองค์กร','Part-time','Out Source'];
 const STATUS_FLOW=['Prospect','Closed','Onsite','Lab','Report','Billing','Completed'];
-const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',assessment:'⭐ Gen Assessment',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config_assessment:'🎯 ตั้งค่าแบบประเมิน',config:'⚙ Config ระบบ'};
+const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',assessment:'⭐ Gen Assessment',assessment_report:'🌟 ผลประเมินความพึงพอใจ',op_summary:'📈 ผลการประเมินบันทึกออกหน่วย',config_assessment:'🎯 ตั้งค่าแบบประเมิน',config:'⚙ Config ระบบ'};
 const QT_APPROVE_ROLES=['admin','sales']; // roles that can approve quotations
 
 /* ===== UTILS ===== */
@@ -276,7 +276,7 @@ const Router={
     if(!DB.auth.can('view',page)&&page!=='calendar'&&page!=='op_report'){U.toast('⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้','danger');return;}
     this.current=page;
     document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time',assessment:'⭐ Gen Assessment — สร้าง QR แบบประเมิน',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config_assessment:'🎯 ตั้งค่าแบบประเมิน'}[page]||page;
+    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time',assessment:'⭐ Gen Assessment — สร้าง QR แบบประเมิน',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config_assessment:'🎯 ตั้งค่าแบบประเมิน',op_summary:'📈 ผลการประเมินบันทึกออกหน่วย'}[page]||page;
     // Show loading indicator
     const content = document.getElementById('content');
     if(content) content.innerHTML = '<div class="empty" style="padding:60px"><div style="font-size:32px;margin-bottom:12px;opacity:.4">⏳</div><p style="color:var(--t-dim)">กำลังโหลด...</p></div>';
@@ -466,6 +466,7 @@ function buildNav(){
     {section:'รายงาน'},
     {page:'op_report',icon:'📊',label:'รายงานสรุปค่าใช้จ่าย',mod:'op_report'},
     {page:'assessment_report',icon:'🌟',label:'ผลประเมินความพึงพอใจ',mod:'assessment_report'},
+    {page:'op_summary',icon:'📈',label:'ผลการประเมินบันทึกออกหน่วย',mod:'op_summary'},
     {section:'ข้อมูล Part-Time'},
     {page:'parttime',icon:'⏰',label:'Part-Time',mod:'parttime'},
     {page:'parttime_history',icon:'📊',label:'รายงานประวัติ PT',mod:'parttime_history'},
@@ -8377,45 +8378,74 @@ Pages.assessment_report = {
       </div>`;
     };
 
-    // ── Render Radar Chart (overall view) ──
-    const renderRadar = (s) => {
-      if(!s || s.staff.length === 0) return '';
-      const allItems = [...s.staff, ...s.stations].filter(x=>x.avg !== null);
-      if(allItems.length < 3) return ''; // ไม่พอเลย 3 จุดไม่ดี
-      const sz = 260, cx = sz/2, cy = sz/2, rMax = sz/2 - 35;
-      const n = allItems.length;
-      const points = allItems.map((it, i)=>{
+    // ── Render Radar Chart — ขนาดใหญ่ + multi-line labels + ไม่ truncate ──
+    const renderRadar = (items, colors = {fill:'rgba(110,231,183,.25)', stroke:'#10B981', dot:'#6EE7B7'}) => {
+      if(!items || items.length === 0) return '<div style="text-align:center;color:rgba(255,255,255,.5);padding:30px;font-size:12px">— ยังไม่มีข้อมูล —</div>';
+      const validItems = items.filter(x=>x.avg !== null);
+      if(validItems.length < 3) return '<div style="text-align:center;color:rgba(255,255,255,.5);padding:30px;font-size:12px">ต้องมีข้อมูลอย่างน้อย 3 หมวด</div>';
+      const sz = 600, cx = sz/2, cy = sz/2, rMax = 185;
+      const labelDist = rMax + 30;
+      const n = validItems.length;
+      // Adaptive max chars (more space ถ้าหมวดน้อย)
+      const maxCharsPerLine = n <= 7 ? 20 : 14;
+      const wrapLabel = (label)=>{
+        if(label.length <= maxCharsPerLine) return [label];
+        const mid = Math.ceil(label.length / 2);
+        // หา space ใกล้กลาง
+        for(let offset = 0; offset < 8; offset++){
+          for(const splitChar of [' ', ',']){
+            if(label[mid+offset] === splitChar) return [label.substr(0, mid+offset).trim(), label.substr(mid+offset+1).trim()];
+            if(offset > 0 && label[mid-offset] === splitChar) return [label.substr(0, mid-offset).trim(), label.substr(mid-offset+1).trim()];
+          }
+        }
+        return [label.substr(0, mid), label.substr(mid)];
+      };
+      const points = validItems.map((it, i)=>{
         const angle = (i/n) * 2 * Math.PI - Math.PI/2;
         const r = (it.avg/5) * rMax;
-        const x = cx + r * Math.cos(angle);
-        const y = cy + r * Math.sin(angle);
-        return {x, y, item:it, angle};
+        return {
+          x: cx + r * Math.cos(angle),
+          y: cy + r * Math.sin(angle),
+          lx: cx + labelDist * Math.cos(angle),
+          ly: cy + labelDist * Math.sin(angle),
+          item:it, angle
+        };
       });
-      // Grid lines (concentric pentagons)
+      // Concentric polygons
       const grids = [0.2, 0.4, 0.6, 0.8, 1].map(scale=>{
-        const pts = allItems.map((_, i)=>{
+        const pts = validItems.map((_, i)=>{
           const angle = (i/n) * 2 * Math.PI - Math.PI/2;
           const r = scale * rMax;
           return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
         }).join(' ');
         return `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,${0.05 + scale*0.05})" stroke-width="1"/>`;
       }).join('');
-      // Data polygon
-      const dataPts = points.map(p=>`${p.x},${p.y}`).join(' ');
-      // Axis lines + labels
-      const axes = points.map(p=>{
-        const lx = cx + (rMax+18) * Math.cos(p.angle);
-        const ly = cy + (rMax+18) * Math.sin(p.angle);
-        const anchor = Math.abs(p.angle - (-Math.PI/2)) < 0.5 || Math.abs(p.angle - (Math.PI/2)) < 0.5 ? 'middle' : (p.angle < Math.PI/2 && p.angle > -Math.PI/2 ? 'start' : 'end');
-        const shortLabel = p.item.label.length > 14 ? p.item.label.substr(0,12)+'..' : p.item.label;
-        return `<line x1="${cx}" y1="${cy}" x2="${cx + rMax*Math.cos(p.angle)}" y2="${cy + rMax*Math.sin(p.angle)}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
-                <circle cx="${p.x}" cy="${p.y}" r="3" fill="#6EE7B7"/>
-                <text x="${lx}" y="${ly}" text-anchor="${anchor}" fill="#F0CD7F" font-size="8" font-family="'IBM Plex Mono',monospace">${shortLabel} ${p.item.avg.toFixed(1)}</text>`;
+      // Score labels 1-5 ตามแกนบน
+      const scoreLabels = [1,2,3,4,5].map(v=>{
+        const r = (v/5) * rMax;
+        return `<text x="${cx + 6}" y="${cy - r + 4}" fill="rgba(255,255,255,.35)" font-size="11" font-weight="600" font-family="'IBM Plex Mono',monospace">${v}</text>`;
       }).join('');
-      return `<svg viewBox="0 0 ${sz} ${sz}" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto">
-        ${grids}
-        ${axes}
-        <polygon points="${dataPts}" fill="rgba(110,231,183,.25)" stroke="#10B981" stroke-width="2"/>
+      const dataPts = points.map(p=>`${p.x},${p.y}`).join(' ');
+      // Axes — แต่ละแกน + dot + label
+      const lineHeight = 14;
+      const axes = points.map(p=>{
+        const dx = p.lx - cx;
+        const anchor = Math.abs(dx) < 8 ? 'middle' : (dx > 0 ? 'start' : 'end');
+        const lines = wrapLabel(p.item.label);
+        const blockHeight = (lines.length + 1) * lineHeight;
+        const startY = p.ly - blockHeight/2 + lineHeight/2 + 4;
+        let labelText = '';
+        lines.forEach((line, idx)=>{
+          labelText += `<text x="${p.lx}" y="${startY + idx*lineHeight}" text-anchor="${anchor}" fill="#F0CD7F" font-size="11" font-weight="600" font-family="'IBM Plex Sans Thai',sans-serif">${U.esc(line)}</text>`;
+        });
+        labelText += `<text x="${p.lx}" y="${startY + lines.length*lineHeight}" text-anchor="${anchor}" fill="${colors.dot}" font-size="12" font-weight="700" font-family="'IBM Plex Mono',monospace">${p.item.avg.toFixed(1)}</text>`;
+        return `<line x1="${cx}" y1="${cy}" x2="${cx + rMax*Math.cos(p.angle)}" y2="${cy + rMax*Math.sin(p.angle)}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+                <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="${colors.dot}"/>
+                ${labelText}`;
+      }).join('');
+      return `<svg viewBox="0 0 ${sz} ${sz}" style="width:100%;max-width:800px;height:auto;display:block;margin:0 auto">
+        ${grids}${scoreLabels}${axes}
+        <polygon points="${dataPts}" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="2.5"/>
       </svg>`;
     };
 
@@ -8476,51 +8506,59 @@ Pages.assessment_report = {
             <div class="metric-sub">รายการ</div>
           </div>
         </div>
-        <!-- Radar + Insight (side by side) -->
+        <!-- Top 3 Weakest (รวมทั้งหมด) -->
+        <div class="card mb4">
+          <div class="card-header"><span class="card-title" style="color:#FCA5A5">🎯 ประเด็นที่ควรปรับปรุง (Top 3 ทั้งหมด)</span></div>
+          <div style="padding:13px">
+            ${summary.weakest.length === 0
+              ? '<div style="text-align:center;color:rgba(255,255,255,.5);padding:23px;font-size:13px">🎉 คะแนนทุกข้อสูงเกิน 4.0 ทั้งหมด</div>'
+              : summary.weakest.map((w,i)=>{
+                const colors = ['#DC2626','#F59E0B','#FCD34D'];
+                const c = colors[i] || '#94A3B8';
+                return `<div style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+                  <span style="background:${c};color:${i===2?'#000':'#fff'};width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:12.5px">${U.esc(w.label)}</div>
+                    <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-top:3px">${w.totalRated} คน · ${w.lowCount} คนให้ ≤3 (${w.lowPct}%)</div>
+                  </div>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${c};font-size:16px">${w.avg.toFixed(1)}</span>
+                </div>`;
+              }).join('')}
+            <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-top:8px;font-style:italic;font-weight:500;border-top:1px solid rgba(255,255,255,.08);padding-top:7px">💡 แนะนำ: ปรับปรุงพื้นที่/ขั้นตอนของจุดเหล่านี้ เพื่อยกระดับ Service Quality</div>
+          </div>
+        </div>
+
+        <!-- Section 1: เจ้าหน้าที่ — Radar + Distribution -->
         <div class="g2 mb4">
           <div class="card">
-            <div class="card-header"><span class="card-title">📡 Radar Chart — ภาพรวมทุกหมวด</span></div>
-            <div style="padding:13px">${renderRadar(summary)}</div>
+            <div class="card-header"><span class="card-title">📡 Radar Chart — เจ้าหน้าที่ (5 ข้อ)</span></div>
+            <div style="padding:13px">${renderRadar(summary.staff, {fill:'rgba(56,189,248,.25)', stroke:'#0EA5E9', dot:'#7DD3FC'})}</div>
           </div>
           <div class="card">
-            <div class="card-header"><span class="card-title" style="color:#FCA5A5">🎯 ประเด็นที่ควรปรับปรุง (Top 3)</span></div>
+            <div class="card-header"><span class="card-title">👥 การให้บริการของเจ้าหน้าที่ — Distribution</span></div>
             <div style="padding:13px">
-              ${summary.weakest.length === 0
-                ? '<div style="text-align:center;color:rgba(255,255,255,.5);padding:23px;font-size:13px">🎉 คะแนนทุกข้อสูงเกิน 4.0 ทั้งหมด</div>'
-                : summary.weakest.map((w,i)=>{
-                  const colors = ['#DC2626','#F59E0B','#FCD34D'];
-                  const c = colors[i] || '#94A3B8';
-                  return `<div style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-                    <span style="background:${c};color:${i===2?'#000':'#fff'};width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</span>
-                    <div style="flex:1;min-width:0">
-                      <div style="font-weight:600;font-size:12.5px">${U.esc(w.label)}</div>
-                      <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-top:3px">${w.totalRated} คน · ${w.lowCount} คนให้ ≤3 (${w.lowPct}%)</div>
-                    </div>
-                    <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${c};font-size:16px">${w.avg.toFixed(1)}</span>
-                  </div>`;
-                }).join('')}
-              <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-top:8px;font-style:italic;font-weight:500;border-top:1px solid rgba(255,255,255,.08);padding-top:7px">💡 แนะนำ: ปรับปรุงพื้นที่/ขั้นตอนของจุดเหล่านี้ เพื่อยกระดับ Service Quality</div>
+              <div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-family:'IBM Plex Mono',monospace">
+                <span>คำถาม</span><span>กระจายคะแนน (5→1)</span><span style="text-align:right">เฉลี่ย</span>
+              </div>
+              ${summary.staff.map(renderDistRow).join('')}
             </div>
           </div>
         </div>
-        <!-- Staff Distribution -->
-        <div class="card mb4">
-          <div class="card-header"><span class="card-title">👥 การให้บริการของเจ้าหน้าที่ — Distribution</span></div>
-          <div style="padding:13px">
-            <div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-family:'IBM Plex Mono',monospace">
-              <span>คำถาม</span><span>กระจายคะแนน (5→1)</span><span style="text-align:right">เฉลี่ย</span>
-            </div>
-            ${summary.staff.map(renderDistRow).join('')}
+
+        <!-- Section 2: จุดตรวจ — Radar + Distribution -->
+        <div class="g2 mb4">
+          <div class="card">
+            <div class="card-header"><span class="card-title">📡 Radar Chart — จุดตรวจสุขภาพ (${summary.stations.length} จุด)</span></div>
+            <div style="padding:13px">${renderRadar(summary.stations, {fill:'rgba(110,231,183,.25)', stroke:'#10B981', dot:'#6EE7B7'})}</div>
           </div>
-        </div>
-        <!-- Stations Distribution -->
-        <div class="card mb4">
-          <div class="card-header"><span class="card-title">🏥 จุดตรวจสุขภาพ — Distribution</span></div>
-          <div style="padding:13px">
-            <div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-family:'IBM Plex Mono',monospace">
-              <span>จุดตรวจ</span><span>กระจายคะแนน (5→1)</span><span style="text-align:right">เฉลี่ย</span>
+          <div class="card">
+            <div class="card-header"><span class="card-title">🏥 จุดตรวจสุขภาพ — Distribution</span></div>
+            <div style="padding:13px">
+              <div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-family:'IBM Plex Mono',monospace">
+                <span>จุดตรวจ</span><span>กระจายคะแนน (5→1)</span><span style="text-align:right">เฉลี่ย</span>
+              </div>
+              ${summary.stations.map(renderDistRow).join('')}
             </div>
-            ${summary.stations.map(renderDistRow).join('')}
           </div>
         </div>
         ${summary.suggestions.length>0 ? `<div class="card mb4">
@@ -8675,5 +8713,306 @@ Pages.config_assessment = {
     DB.assessment.resetQuestions();
     this.render();
     U.toast('🔄 คืนค่า Default แล้ว');
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   Pages.op_summary — ผลการประเมินบันทึกออกหน่วย (per-Project)
+   รูปแบบเหมือน Menu ผลประเมินความพึงพอใจ — เลือก 1 Project
+   ═══════════════════════════════════════════════════════════ */
+Pages.op_summary = {
+  _selectedProjectId: null,
+
+  async render(){
+    const STATUSES = ['Onsite','Lab','Report','Billing','Completed'];
+    const allProjs = DB.sales.listProjects()
+      .filter(p => STATUSES.includes(p.status))
+      .sort((a,b) => new Date(b.onsite_date||0) - new Date(a.onsite_date||0));
+
+    if(allProjs.length === 0){
+      document.getElementById('content').innerHTML = `
+        <div class="ph"><div><h2>📈 ผลการประเมินบันทึกออกหน่วย</h2><p>สรุปข้อมูลการออกหน่วยตรวจสุขภาพ · เลือก Project ที่ต้องการดู</p></div></div>
+        <div class="card" style="padding:50px;text-align:center;color:rgba(255,255,255,.55)">
+          <div style="font-size:42px;margin-bottom:11px">📭</div>
+          <p style="font-size:14px;font-weight:600">ยังไม่มี Project ที่ออกหน่วย</p>
+          <p style="font-size:11.5px;margin-top:7px">Project ต้องมีสถานะ ≥ Onsite จึงจะเข้าใน report นี้</p>
+        </div>`;
+      return;
+    }
+
+    // Auto-select most recent project
+    if(!this._selectedProjectId) this._selectedProjectId = allProjs[0].id;
+    const proj = allProjs.find(p => p.id === this._selectedProjectId) || allProjs[0];
+
+    const customers = DB.customer.listCustomers();
+    const customer = customers.find(c => c.id === proj.customer_id);
+    const mp = DB.manpowerCost.list();
+
+    // Gather JOs + stations for this project
+    const jos = DB.operation.listJobOrders().filter(j => j.project_id === proj.id)
+      .sort((a,b) => (a.day_no||0) - (b.day_no||0));
+
+    const stationMap = {};
+    let totalStaff = 0, ptCount = 0, inOrgCount = 0, outSourceCount = 0;
+    let totalCost = 0;
+
+    jos.forEach(j => {
+      const sts = DB.operation.listStations(j.id);
+      sts.forEach(s => {
+        if(!stationMap[s.station_name]){
+          stationMap[s.station_name] = {
+            name: s.station_name, code: s.station_code||'', count:0,
+            ptCount:0, inOrgCount:0, outSourceCount:0,
+            examCount:0, totalCost:0
+          };
+        }
+        stationMap[s.station_name].examCount += parseInt(s.exam_count)||0;
+        const list = s.staff_list || [];
+        list.forEach(p => {
+          totalStaff++;
+          stationMap[s.station_name].count++;
+          const stype = (p.staff_type||'').toLowerCase();
+          if(stype.includes('part')){
+            ptCount++;
+            stationMap[s.station_name].ptCount++;
+            let wage = p.wage_per_day;
+            if(wage===undefined||wage===null||wage===''){
+              const r = mp.find(m => m.role === p.profession);
+              wage = r ? r.cost_per_day : 0;
+            }
+            const w = parseFloat(wage)||0;
+            totalCost += w;
+            stationMap[s.station_name].totalCost += w;
+          } else if(stype.includes('out')){
+            outSourceCount++;
+            stationMap[s.station_name].outSourceCount++;
+          } else {
+            inOrgCount++;
+            stationMap[s.station_name].inOrgCount++;
+          }
+        });
+      });
+    });
+
+    const stationList = Object.values(stationMap);
+    const maxStaff = Math.max(1, ...stationList.map(s => s.count));
+
+    // ── Radar items (Stations) ──
+    const radarItems = stationList.map(s => ({
+      key: s.name, label: s.name,
+      avg: s.count > 0 ? (s.count/maxStaff)*5 : null,
+      count: s.count
+    }));
+
+    // ── renderRadar (same as assessment_report — large + multi-line) ──
+    const renderRadar = (items, colors) => {
+      if(!items || items.length === 0) return '<div style="text-align:center;color:rgba(255,255,255,.5);padding:30px;font-size:12px">— ยังไม่มีข้อมูล —</div>';
+      const validItems = items.filter(x => x.avg !== null);
+      if(validItems.length < 3) return '<div style="text-align:center;color:rgba(255,255,255,.5);padding:30px;font-size:12px">ต้องมีข้อมูลอย่างน้อย 3 หมวด</div>';
+      const sz = 600, cx = sz/2, cy = sz/2, rMax = 185;
+      const labelDist = rMax + 30;
+      const n = validItems.length;
+      const maxCharsPerLine = n <= 7 ? 20 : 14;
+      const wrapLabel = (label) => {
+        if(label.length <= maxCharsPerLine) return [label];
+        const mid = Math.ceil(label.length / 2);
+        for(let offset = 0; offset < 8; offset++){
+          for(const splitChar of [' ', ',']){
+            if(label[mid+offset] === splitChar) return [label.substr(0, mid+offset).trim(), label.substr(mid+offset+1).trim()];
+            if(offset > 0 && label[mid-offset] === splitChar) return [label.substr(0, mid-offset).trim(), label.substr(mid-offset+1).trim()];
+          }
+        }
+        return [label.substr(0, mid), label.substr(mid)];
+      };
+      const points = validItems.map((it, i) => {
+        const angle = (i/n) * 2 * Math.PI - Math.PI/2;
+        const r = (it.avg/5) * rMax;
+        return {
+          x: cx + r*Math.cos(angle), y: cy + r*Math.sin(angle),
+          lx: cx + labelDist*Math.cos(angle), ly: cy + labelDist*Math.sin(angle),
+          item: it, angle
+        };
+      });
+      const grids = [0.2,0.4,0.6,0.8,1].map(scale => {
+        const pts = validItems.map((_, i) => {
+          const angle = (i/n) * 2 * Math.PI - Math.PI/2;
+          const r = scale * rMax;
+          return `${cx + r*Math.cos(angle)},${cy + r*Math.sin(angle)}`;
+        }).join(' ');
+        return `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,${0.05 + scale*0.05})" stroke-width="1"/>`;
+      }).join('');
+      const dataPts = points.map(p => `${p.x},${p.y}`).join(' ');
+      const lineHeight = 14;
+      const axes = points.map(p => {
+        const dx = p.lx - cx;
+        const anchor = Math.abs(dx) < 8 ? 'middle' : (dx > 0 ? 'start' : 'end');
+        const lines = wrapLabel(p.item.label);
+        const blockHeight = (lines.length + 1) * lineHeight;
+        const startY = p.ly - blockHeight/2 + lineHeight/2 + 4;
+        let labelText = '';
+        lines.forEach((line, idx) => {
+          labelText += `<text x="${p.lx}" y="${startY + idx*lineHeight}" text-anchor="${anchor}" fill="#F0CD7F" font-size="11" font-weight="600" font-family="'IBM Plex Sans Thai',sans-serif">${U.esc(line)}</text>`;
+        });
+        labelText += `<text x="${p.lx}" y="${startY + lines.length*lineHeight}" text-anchor="${anchor}" fill="${colors.dot}" font-size="12" font-weight="700" font-family="'IBM Plex Mono',monospace">${p.item.count} คน</text>`;
+        return `<line x1="${cx}" y1="${cy}" x2="${cx + rMax*Math.cos(p.angle)}" y2="${cy + rMax*Math.sin(p.angle)}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+                <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="${colors.dot}"/>
+                ${labelText}`;
+      }).join('');
+      return `<svg viewBox="0 0 ${sz} ${sz}" style="width:100%;max-width:800px;height:auto;display:block;margin:0 auto">
+        ${grids}${axes}
+        <polygon points="${dataPts}" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="2.5"/>
+      </svg>`;
+    };
+
+    // Distribution row per station (stacked: PT / in-org / OS)
+    const renderStationDistRow = (s) => {
+      const total = s.count;
+      if(total === 0) return '';
+      const ptPct = (s.ptCount/total)*100;
+      const inPct = (s.inOrgCount/total)*100;
+      const osPct = (s.outSourceCount/total)*100;
+      return `<div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px">
+        <span style="color:rgba(255,255,255,.85)">${U.esc(s.name)} <span style="font-size:10px;color:rgba(255,255,255,.5)">(${total} คน)</span></span>
+        <div style="display:flex;height:16px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.04)">
+          ${s.ptCount>0?`<div style="flex:${ptPct};background:#F0CD7F;display:flex;align-items:center;justify-content:center;color:#1A1A1A;font-size:9px;font-weight:700" title="Part-time: ${s.ptCount}">${s.ptCount>=2?s.ptCount:''}</div>`:''}
+          ${s.inOrgCount>0?`<div style="flex:${inPct};background:#6EE7B7;display:flex;align-items:center;justify-content:center;color:#1A1A1A;font-size:9px;font-weight:700" title="ในองค์กร: ${s.inOrgCount}">${s.inOrgCount>=2?s.inOrgCount:''}</div>`:''}
+          ${s.outSourceCount>0?`<div style="flex:${osPct};background:#7DD3FC;display:flex;align-items:center;justify-content:center;color:#1A1A1A;font-size:9px;font-weight:700" title="OS: ${s.outSourceCount}">${s.outSourceCount>=2?s.outSourceCount:''}</div>`:''}
+        </div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:#FCD34D;text-align:right;font-size:11.5px">฿${(s.totalCost/1000).toFixed(1)}K</span>
+      </div>`;
+    };
+
+    // Project dropdown options
+    const projOpts = allProjs.map(p => {
+      const c = customers.find(x => x.id === p.customer_id);
+      return `<option value="${p.id}" ${this._selectedProjectId===p.id?'selected':''}>${U.esc(p.project_code||'-')} — ${U.esc(p.company_name||c?.company_name||'-')} (${U.fmtD(p.onsite_date)})</option>`;
+    }).join('');
+
+    document.getElementById('content').innerHTML = `
+      <div class="ph">
+        <div><h2>📈 ผลการประเมินบันทึกออกหน่วย</h2><p>สรุปข้อมูลการออกหน่วยตรวจสุขภาพ · เลือก Project ที่ต้องการดู</p></div>
+      </div>
+
+      <!-- Project selector -->
+      <div class="card mb4">
+        <div style="padding:13px 16px;display:flex;gap:11px;align-items:center;flex-wrap:wrap">
+          <label style="font-size:12.5px;font-weight:600;color:#F0CD7F">📋 Project:</label>
+          <select id="ops_proj" onchange="Pages.op_summary._onSelect(this.value)" style="flex:1;min-width:300px;padding:8px 12px;background:var(--s-3,#1D2B42);border:1.5px solid rgba(255,255,255,.15);border-radius:6px;color:#FFFFFF;font-size:12.5px;font-family:inherit;outline:none">
+            ${projOpts}
+          </select>
+          <span style="font-size:11px;color:rgba(255,255,255,.6);font-family:'IBM Plex Mono',monospace">${allProjs.length} project ทั้งหมด</span>
+        </div>
+      </div>
+
+      <!-- Project info -->
+      <div class="card mb4" style="background:linear-gradient(135deg,rgba(11,35,64,.4),rgba(26,60,101,.2))">
+        <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12.5px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">Project Code</div>
+            <div style="font-family:'IBM Plex Mono',monospace;color:#F0CD7F;font-size:15px;font-weight:700">${U.esc(proj.project_code||'-')}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">บริษัท</div>
+            <div style="font-weight:600">${U.esc(proj.company_name||customer?.company_name||'-')}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">ประเภทงาน</div>
+            <div>${U.esc(customer?.job_type||'-')}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">วันที่ออกหน่วย</div>
+            <div>${U.fmtD(proj.onsite_date)} · ${jos.length} วัน · ${U.badge(proj.status||'-')}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+        <div class="metric-card" style="background:rgba(125,211,252,.06);border:1px solid rgba(125,211,252,.3);position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7DD3FC,#0EA5E9)"></div>
+          <div class="metric-label" style="color:#7DD3FC">จำนวนคนตรวจ</div>
+          <div class="metric-value">${(proj.headcount||0).toLocaleString()}</div>
+          <div class="metric-sub">วางแผน · ${stationList.length} สถานี</div>
+        </div>
+        <div class="metric-card" style="background:rgba(240,205,127,.06);border:1px solid rgba(240,205,127,.3);position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F0CD7F,#D4A845)"></div>
+          <div class="metric-label" style="color:#F0CD7F">วันออกหน่วย / JO</div>
+          <div class="metric-value">${jos.length}</div>
+          <div class="metric-sub">วัน · ${totalStaff} บุคลากร</div>
+        </div>
+        <div class="metric-card" style="background:rgba(110,231,183,.06);border:1px solid rgba(110,231,183,.3);position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6EE7B7,#10B981)"></div>
+          <div class="metric-label" style="color:#6EE7B7">ประเภทบุคลากร</div>
+          <div class="metric-value" style="font-size:16px;line-height:1.4">PT ${ptCount}<br><span style="font-size:13px;color:rgba(255,255,255,.7)">ในองค์กร ${inOrgCount} · OS ${outSourceCount}</span></div>
+        </div>
+        <div class="metric-card" style="background:rgba(252,165,165,.06);border:1px solid rgba(252,165,165,.3);position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FCA5A5,#DC2626)"></div>
+          <div class="metric-label" style="color:#FCA5A5">ค่าจ้าง Part-time</div>
+          <div class="metric-value">฿${(totalCost/1000).toFixed(1)}K</div>
+          <div class="metric-sub">รวม · ${ptCount>0?'฿'+Math.round(totalCost/ptCount).toLocaleString()+'/คน':'-'}</div>
+        </div>
+      </div>
+
+      ${stationList.length === 0 ? `
+        <div class="card" style="padding:40px;text-align:center;color:rgba(255,255,255,.55)">
+          <div style="font-size:36px;margin-bottom:9px">🚐</div>
+          <p style="font-size:13.5px;font-weight:600">Project นี้ยังไม่มี Station / JO</p>
+          <p style="font-size:11.5px;margin-top:5px">รอ Operation สร้างใบแจ้งงานก่อน</p>
+        </div>
+      ` : `
+        <!-- Section 1: Radar — Stations -->
+        <div class="g2 mb4">
+          <div class="card">
+            <div class="card-header"><span class="card-title">📡 Radar Chart — Stations (${stationList.length} จุด)</span></div>
+            <div style="padding:13px">${renderRadar(radarItems, {fill:'rgba(110,231,183,.25)', stroke:'#10B981', dot:'#6EE7B7'})}</div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">📊 Distribution — บุคลากรแต่ละสถานี</span></div>
+            <div style="padding:13px">
+              <div style="display:grid;grid-template-columns:1.6fr 1fr 50px;gap:11px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-family:'IBM Plex Mono',monospace">
+                <span>Station</span><span>PT / ในองค์กร / OS</span><span style="text-align:right">ค่าจ้าง</span>
+              </div>
+              ${stationList.map(renderStationDistRow).join('')}
+              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:9px;display:flex;gap:11px;flex-wrap:wrap;font-weight:500">
+                <span><span style="display:inline-block;width:11px;height:11px;background:#F0CD7F;border-radius:2px;vertical-align:-1px;margin-right:4px"></span>Part-time</span>
+                <span><span style="display:inline-block;width:11px;height:11px;background:#6EE7B7;border-radius:2px;vertical-align:-1px;margin-right:4px"></span>ในองค์กร</span>
+                <span><span style="display:inline-block;width:11px;height:11px;background:#7DD3FC;border-radius:2px;vertical-align:-1px;margin-right:4px"></span>Out Source</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- JO list (multi-day) -->
+        ${jos.length > 1 ? `
+          <div class="card">
+            <div class="card-header"><span class="card-title">📅 JO รายวัน (${jos.length} วัน)</span></div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>วันที่</th><th>วันที่ออกหน่วย</th><th>สถานะ</th><th style="text-align:right">Station</th><th style="text-align:right">บุคลากร</th></tr></thead>
+                <tbody>
+                  ${jos.map(j => {
+                    const stsForJo = DB.operation.listStations(j.id);
+                    const staffInJo = stsForJo.reduce((s, st) => s + (st.staff_list?.length || 0), 0);
+                    return `<tr>
+                      <td><span style="background:linear-gradient(180deg,#F59E0B,#D97706);color:#FFF;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;font-family:'IBM Plex Mono',monospace">วันที่ ${j.day_no || 1}</span></td>
+                      <td>${U.fmtD(j.onsite_date)}</td>
+                      <td>${U.badge(j.status||'-')}</td>
+                      <td style="text-align:right;font-family:'IBM Plex Mono',monospace">${stsForJo.length}</td>
+                      <td style="text-align:right;font-family:'IBM Plex Mono',monospace;color:#6EE7B7;font-weight:700">${staffInJo}</td>
+                    </tr>`;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+      `}
+    `;
+  },
+
+  _onSelect(projId){
+    this._selectedProjectId = parseInt(projId);
+    this.render();
   }
 };

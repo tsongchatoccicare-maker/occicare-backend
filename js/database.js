@@ -1346,7 +1346,7 @@ const DB={
         dashboard:full, customers:full, sales:full, quotation:full,
         op_prep:full, op_onsite:full, op_report:full, op_checklist:full,
         lab:full, xray:full, report:full, opd:full, billing:full, medical:full,
-        config:full, staff:full, parttime:full, parttime_history:full, assessment:full, assessment_report:full, config_assessment:full
+        config:full, staff:full, parttime:full, parttime_history:full, assessment:full, assessment_report:full, op_summary:full, config_assessment:full
       },created_at:DB._now(),updated_at:DB._now()},
 
       // sales — ทีมขาย: CRM, ใบเสนอราคา, Project & Handover
@@ -1355,7 +1355,7 @@ const DB={
       {role:'sales',modules:{
         dashboard:viewOnly, customers:fullNoDel, sales:fullNoDel, quotation:full,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
        
        
        
@@ -1368,7 +1368,7 @@ const DB={
       {role:'operation',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:full, op_onsite:full, op_report:full, op_checklist:fullNoDel,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
        
        
         config:none
@@ -1380,7 +1380,7 @@ const DB={
       {role:'lab',modules:{
         dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
         op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
-        lab:fullNoDel, xray:viewOnly, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, config_assessment:none,
+        lab:fullNoDel, xray:viewOnly, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
        
        
        
@@ -1393,7 +1393,7 @@ const DB={
       {role:'xray',modules:{
         dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:viewOnly, op_report:none,
-        lab:none, xray:fullNoDel, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, config_assessment:none,
+        lab:none, xray:fullNoDel, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
        
        
        
@@ -1406,7 +1406,7 @@ const DB={
       {role:'report',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
-        lab:viewOnly, xray:none, report:fullNoDel, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, config_assessment:none,
+        lab:viewOnly, xray:none, report:fullNoDel, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
        
        
        
@@ -1419,7 +1419,7 @@ const DB={
       {role:'billing',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:viewOnly, opd:none, billing:fullNoDel, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:viewOnly, opd:none, billing:fullNoDel, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
        
        
        
@@ -1430,7 +1430,7 @@ const DB={
       {role:'opd',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:viewOnly, op_report:none,
-        lab:none, xray:none, report:none, opd:fullNoDel, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:none, opd:fullNoDel, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
        
        
         config:none
@@ -1440,7 +1440,7 @@ const DB={
       {role:'medical',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:fullNoDel, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:fullNoDel, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
        
        
         config:none
