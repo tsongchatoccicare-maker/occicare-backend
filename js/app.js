@@ -30,7 +30,7 @@ const VEHICLES=['รถยนต์กะบะขาว','รถยนต์ก
 const PROFESSIONS=['เจ้าหน้าที่','RN','MT','แพทย์','เจ้าหน้าที่ ใบ Cer','อื่นๆ'];
 const STAFF_TYPES=['ในองค์กร','Part-time','Out Source'];
 const STATUS_FLOW=['Prospect','Closed','Onsite','Lab','Report','Billing','Completed'];
-const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',assessment:'⭐ Gen Assessment',assessment_report:'🌟 ผลประเมินความพึงพอใจ',op_summary:'📈 ผลการประเมินบันทึกออกหน่วย',config_assessment:'🎯 ตั้งค่าแบบประเมิน',config:'⚙ Config ระบบ'};
+const MODULES={dashboard:'📊 Dashboard',customers:'👥 CRM ลูกค้า',sales:'💼 Sales',quotation:'📋 ใบเสนอราคา',op_prep:'🚑 Op-เตรียมงาน/ใบแจ้งงาน',op_checklist:'📋 Op-Checklist Station',op_onsite:'🚑 Op-Onsite',op_report:'📊 Op-รายงานสรุปค่าใช้จ่าย',lab:'🔬 Lab & TAT',xray:'📡 เอกซเรย์ X-ray',report:'📄 Report ทีมทำผล',opd:'🏥 OPD — ตรวจครบ',medical:'📋 เวชระเบียน',billing:'💰 Billing & Invoice',staff:'👤 ตั้งค่ารายชื่อ',parttime:'⏰ Part-Time',parttime_history:'📊 รายงานประวัติ PT',assessment:'⭐ Gen Assessment',assessment_report:'🌟 ผลประเมินความพึงพอใจ',op_summary:'📈 ผลการประเมินบันทึกออกหน่วย',staff_assessment:'⭐ ประเมินเจ้าหน้าที่',config_assessment:'🎯 ตั้งค่าแบบประเมิน',config_staff_assessment:'⚙ ตั้งค่าประเมินเจ้าหน้าที่',config:'⚙ Config ระบบ'};
 const QT_APPROVE_ROLES=['admin','sales']; // roles that can approve quotations
 
 /* ===== UTILS ===== */
@@ -276,7 +276,7 @@ const Router={
     if(!DB.auth.can('view',page)&&page!=='calendar'&&page!=='op_report'){U.toast('⛔ ไม่มีสิทธิ์เข้าถึงหน้านี้','danger');return;}
     this.current=page;
     document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time',assessment:'⭐ Gen Assessment — สร้าง QR แบบประเมิน',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config_assessment:'🎯 ตั้งค่าแบบประเมิน',op_summary:'📈 ผลการประเมินบันทึกออกหน่วย'}[page]||page;
+    document.getElementById('pt').textContent={dashboard:'Dashboard',calendar:'ปฏิทินงาน',quotation:'ใบเสนอราคา (Quotation)',exam_config:'รายการตรวจ & ต้นทุน',customers:'CRM — ลูกค้า',sales:'Sales — Project & Handover',op_checklist:'Operation — เตรียมงาน',op_prep:'Operation — ใบแจ้งงาน',op_onsite:'Operation — Onsite',lab:'Lab — ห้องปฏิบัติการ',report:'Report — ทีมทำผล',billing:'Billing — Invoice',config:'Config — ตั้งค่าระบบ',config_checklist:'ตั้งค่า Checklist',xray:'X-Ray — อ่านฟิล์ม',op_report:'Operation — รายงานสรุปค่าใช้จ่าย',opd:'OPD — ตรวจครบ',config_stations:'ตั้งค่า Station',medical:'เวชระเบียน',op_station_checklist:'Operation — Checklist Station',config_station_checklist:'ตั้งค่า Checklist Station',staff:'ตั้งค่ารายชื่อพนักงาน',parttime:'⏰ Part-Time — ใบสมัคร',parttime_history:'📊 รายงานประวัติ Part-Time',assessment:'⭐ Gen Assessment — สร้าง QR แบบประเมิน',assessment_report:'🌟 ผลประเมินความพึงพอใจ',config_assessment:'🎯 ตั้งค่าแบบประเมิน',op_summary:'📈 ผลการประเมินบันทึกออกหน่วย',staff_assessment:'⭐ ประเมินเจ้าหน้าที่ตามจุด Station',config_staff_assessment:'⚙ ตั้งค่าเกณฑ์ประเมินเจ้าหน้าที่'}[page]||page;
     // Show loading indicator
     const content = document.getElementById('content');
     if(content) content.innerHTML = '<div class="empty" style="padding:60px"><div style="font-size:32px;margin-bottom:12px;opacity:.4">⏳</div><p style="color:var(--t-dim)">กำลังโหลด...</p></div>';
@@ -467,6 +467,7 @@ function buildNav(){
     {page:'op_report',icon:'📊',label:'รายงานสรุปค่าใช้จ่าย',mod:'op_report'},
     {page:'assessment_report',icon:'🌟',label:'ผลประเมินความพึงพอใจ',mod:'assessment_report'},
     {page:'op_summary',icon:'📈',label:'ผลการประเมินบันทึกออกหน่วย',mod:'op_summary'},
+    {page:'staff_assessment',icon:'⭐',label:'ประเมินเจ้าหน้าที่',mod:'staff_assessment'},
     {section:'ข้อมูล Part-Time'},
     {page:'parttime',icon:'⏰',label:'Part-Time',mod:'parttime'},
     {page:'parttime_history',icon:'📊',label:'รายงานประวัติ PT',mod:'parttime_history'},
@@ -477,7 +478,8 @@ function buildNav(){
     {page:'config_stations',icon:'🩺',label:'ตั้งค่า Station',mod:'config'},
     {page:'config_station_checklist',icon:'📋',label:'ตั้งค่า Checklist Station',mod:'config'},
     {page:'staff',icon:'👤',label:'ตั้งค่ารายชื่อ',mod:'staff'},
-    {page:'config_assessment',icon:'🎯',label:'ตั้งค่าแบบประเมิน',mod:'config_assessment'}
+    {page:'config_assessment',icon:'🎯',label:'ตั้งค่าแบบประเมิน',mod:'config_assessment'},
+    {page:'config_staff_assessment',icon:'⚙',label:'ตั้งค่าประเมินเจ้าหน้าที่',mod:'config_staff_assessment'}
   ];
   let html='';
   items.forEach(it=>{
@@ -4505,6 +4507,54 @@ Pages.op_onsite={
     const canAdd=DB.auth.can('add','op_onsite');
     // Build summary table of all onsite projects
     const onsiteProjs=projs.filter(p=>DB.operation.listOnsiteLogs(p.id).length>0||['Closed','Onsite','Lab','Report','Billing','Completed'].includes(p.status));
+
+    // ─── สรุปยอดรวม อิงตามใบแจ้งงาน (Job Orders) ───
+    let totJO=0, totDays=0, totHC=0, totDone=0, totCost=0;
+    const companySet=new Set();
+    const statCount={Draft:0,Onsite:0,Lab:0,Report:0,Billing:0,Closed:0,Completed:0};
+    onsiteProjs.forEach(p=>{
+      const jo=DB.operation.getJobOrder(p.id);
+      if(jo){
+        totJO++;
+        if(p.company_name)companySet.add(p.company_name);
+        totDays+=Number(p.total_days||1);
+        totHC+=Number(p.headcount||0);
+        // ตรวจสำเร็จ — Max done per project (เหมือน logic เดิม)
+        const logs=DB.operation.listOnsiteLogs(p.id);
+        if(logs.length)totDone+=Math.max(...logs.map(l=>Number(l.total_done)||0));
+        // ค่าใช้จ่าย Manpower = sum(wage_per_day) × total_days
+        const stations=DB.operation.listStations(jo.id)||[];
+        let projCost=0;
+        stations.forEach(st=>{
+          (st.staff_list||[]).forEach(s=>{ projCost+=Number(s.wage_per_day||0); });
+        });
+        totCost+=projCost*Number(p.total_days||1);
+      }
+      const s=p.status||'Draft';
+      if(s in statCount)statCount[s]++;
+    });
+    const donePct=totHC>0?Math.round(totDone/totHC*100):0;
+    const fmt=n=>(n||0).toLocaleString('th-TH');
+    const baht=n=>'฿'+fmt(Math.round(n));
+
+    const kpiCards=`
+      <div class="metrics-grid" style="margin-bottom:12px">
+        <div class="metric-card acc"><div class="metric-label">ใบแจ้งงาน</div><div class="metric-value">${fmt(totJO)}</div><div class="metric-sub">รายการ</div></div>
+        <div class="metric-card acc"><div class="metric-label">บริษัท</div><div class="metric-value">${fmt(companySet.size)}</div><div class="metric-sub">แห่ง</div></div>
+        <div class="metric-card acc"><div class="metric-label">วันรวม</div><div class="metric-value">${fmt(totDays)}</div><div class="metric-sub">วัน</div></div>
+        <div class="metric-card acc"><div class="metric-label">คนเป้าหมาย</div><div class="metric-value">${fmt(totHC)}</div><div class="metric-sub">คน</div></div>
+        <div class="metric-card suc"><div class="metric-label">ตรวจสำเร็จ</div><div class="metric-value">${fmt(totDone)}</div><div class="metric-sub">${donePct}%</div></div>
+        <div class="metric-card warn"><div class="metric-label">ค่า Manpower</div><div class="metric-value" style="font-size:20px">${baht(totCost)}</div><div class="metric-sub">ประมาณการ</div></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 0 12px;border-bottom:1px solid var(--c-line,#E5EAF0);margin-bottom:12px">
+        <span class="badge" style="background:#E6F1FB;color:#0C447C;font-size:11px;padding:3px 10px;border-radius:12px">📝 Draft: ${statCount.Draft}</span>
+        <span class="badge" style="background:#FAEEDA;color:#854F0B;font-size:11px;padding:3px 10px;border-radius:12px">🚑 Onsite: ${statCount.Onsite}</span>
+        <span class="badge" style="background:#EEEDFE;color:#3C3489;font-size:11px;padding:3px 10px;border-radius:12px">🔬 Lab: ${statCount.Lab}</span>
+        <span class="badge" style="background:#FBEAF0;color:#72243E;font-size:11px;padding:3px 10px;border-radius:12px">📊 Report: ${statCount.Report}</span>
+        <span class="badge" style="background:#FAECE7;color:#993C1D;font-size:11px;padding:3px 10px;border-radius:12px">💰 Billing: ${statCount.Billing}</span>
+        <span class="badge" style="background:#E1F5EE;color:#085041;font-size:11px;padding:3px 10px;border-radius:12px">✅ Closed: ${statCount.Closed+statCount.Completed}</span>
+      </div>`;
+
     const summaryRows=onsiteProjs.map(p=>{
       const logs=DB.operation.listOnsiteLogs(p.id);
       const isComplete=p.status==='Lab'||p.status==='Report'||p.status==='Billing'||p.status==='Completed';
@@ -4523,18 +4573,34 @@ Pages.op_onsite={
         </td>
       </tr>`;
     }).join('');
-    const pOpts=`<option value="">-- เลือก Project --</option>`+projs.map(p=>`<option value="${p.id}" ${this.currentPid===p.id?'selected':''}>${p.project_code} — ${p.company_name} (${U.fmtD(p.onsite_date)})</option>`).join('');
+    // Dropdown — ยึดตามใบแจ้งงาน (JO) — multi-day project = หลายรายการ
+    const allJOs=(DB.operation.listJobOrders()||[])
+      .map(jo=>({...jo, _project:projs.find(p=>p.id===jo.project_id)}))
+      .filter(j=>j._project)
+      .sort((a,b)=>{
+        const pcA=a._project.project_code||'', pcB=b._project.project_code||'';
+        if(pcA!==pcB)return pcA.localeCompare(pcB);
+        return(parseInt(a.day_no)||0)-(parseInt(b.day_no)||0);
+      });
+    const pOpts=`<option value="">-- เลือกใบแจ้งงาน --</option>`+allJOs.map(j=>{
+      const p=j._project;
+      const dn=parseInt(j.day_no)||0;
+      const dayLbl=dn>0?` — วันที่ ${dn}`:'';
+      const date=j.onsite_date||p.onsite_date;
+      return`<option value="${p.id}" data-jo="${j.id}" ${this.currentPid===p.id?'selected':''}>${U.esc(p.project_code)}${dayLbl} — ${U.esc(p.company_name)} (${U.fmtD(date)})</option>`;
+    }).join('');
     document.getElementById('content').innerHTML=`
     <div class="ph"><div><h2>🚑 Operation — Onsite</h2><p>บันทึกสรุปยอดหน้างานแต่ละ Station</p></div></div>
     <div class="card mb4">
-      <div class="card-header"><span class="card-title">📋 สรุปยอด Onsite ทั้งหมด</span></div>
+      <div class="card-header"><span class="card-title">📋 สรุปยอด Onsite ทั้งหมด</span><span class="t-muted t-sm" style="margin-left:6px">(อิงตามใบแจ้งงาน)</span></div>
+      ${kpiCards}
       <div class="tbl-wrap"><table>
         <thead><tr><th>Project Code</th><th>บริษัท</th><th>วันตรวจ</th><th>สถานะงาน</th><th></th></tr></thead>
         <tbody>${summaryRows||'<tr><td colspan="5" class="empty"><div class="icon">🚑</div><p>ยังไม่มีข้อมูล Onsite</p></td></tr>'}</tbody>
       </table></div>
     </div>
     <div class="card mb4">
-      <div class="fg"><label>เลือก Project เพื่อบันทึก / ดูรายละเอียด</label>
+      <div class="fg"><label>เลือกใบแจ้งงานเพื่อบันทึก / ดูรายละเอียด</label>
         <select id="ons_sel" onchange="Pages.op_onsite.loadProject(parseInt(this.value))">
           ${pOpts}
         </select>
@@ -6065,150 +6131,301 @@ async editInv(id){
 
 
 /* ── CALENDAR PAGE ── */
-Pages.calendar={
-  _y:new Date().getFullYear(),
-  _m:new Date().getMonth(),
-  STATUS_COLORS:{
+Pages.calendar = {
+  _y: new Date().getFullYear(),
+  _m: new Date().getMonth(),
+  _activeTypes: null,
+  STATUS_COLORS: {
     Prospect:'#8B5CF6','Follow up':'#A78BFA',Negotiation:'#7C3AED',
     Closed:'#06B6D4',Onsite:'#3B82F6',Lab:'#F59E0B',
     Report:'#8B5CF6',Billing:'#10B981',Completed:'#6B7280'
   },
-  // Color by job_type (from CRM/JO) — same list as JOB_TYPES_ALL in extensions
-  JOB_TYPE_COLORS:{
-    'ตรวจสุขภาพ':    '#3B82F6',  // blue
-    'OS XRAY':       '#8B5CF6',  // purple
-    'ตรวจซ้ำ':       '#F59E0B',  // amber
-    'เก็บอาหาร ตย':  '#EF4444',  // red
-    'เก็บอาหาร ตัวอย่าง':'#EF4444',
-    'อบรม First Aid':'#10B981',  // green
-    'Consult':       '#06B6D4',  // cyan
-    'อื่นๆ':         '#6B7280',  // gray
+  JOB_TYPE_COLORS: {
+    'ตรวจสุขภาพ':'#3B82F6',
+    'OS XRAY':'#8B5CF6',
+    'ตรวจซ้ำ':'#F59E0B',
+    'เก็บอาหาร ตย':'#EC4899',
+    'เก็บอาหาร ตัวอย่าง':'#EC4899',
+    'อบรม First Aid':'#10B981',
+    'Consult':'#06B6D4',
+    'อื่นๆ':'#6B7280'
   },
-  _getEventColor(p){
-    // Prefer job_type color if set, else status color
-    if(p.job_type && this.JOB_TYPE_COLORS[p.job_type])
-      return this.JOB_TYPE_COLORS[p.job_type];
-    return this.STATUS_COLORS[p.status]||'#888';
+  MONTHS: ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],
+  DAYS: ['อา','จ','อ','พ','พฤ','ศ','ส'],
+
+  _getEventColor(p) {
+    if(p.job_type && this.JOB_TYPE_COLORS[p.job_type]) return this.JOB_TYPE_COLORS[p.job_type];
+    return this.STATUS_COLORS[p.status] || '#6B7280';
   },
-  MONTHS:['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],
-  DAYS:['อา','จ','อ','พ','พฤ','ศ','ส'],
-  render(){
-    document.getElementById('content').innerHTML=`
-    <div class="ph">
-      <div><h2>📅 ปฏิทินงาน</h2><p id="cal-sub" style="font-size:18px;font-weight:700;font-family:'Noto Serif Thai',serif;color:#fff;margin-top:4px"></p></div>
-      <div class="btn-grp">
-        <button class="btn btn-out btn-sm" onclick="Pages.calendar.prev()">◀</button>
-        <button class="btn btn-out btn-sm" onclick="Pages.calendar.goToday()">วันนี้</button>
-        <button class="btn btn-out btn-sm" onclick="Pages.calendar.next()">▶</button>
+
+  // ★ Parse 'YYYY-MM-DD' as LOCAL midnight (ไม่ใช่ UTC — แก้ timezone bug)
+  _parseDate(str) {
+    const parts = (str || '').substr(0, 10).split('-');
+    if(parts.length !== 3) return new Date(NaN);
+    return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  },
+
+  _getDuration(p) {
+    if(p.total_days && parseInt(p.total_days) > 1) return parseInt(p.total_days);
+    const jos = DB.operation.listJobOrders().filter(j => j.project_id === p.id);
+    if(jos.length > 0) {
+      const td = parseInt(jos[0].total_days);
+      if(td > 1) return td;
+      if(jos.length > 1) return jos.length;
+    }
+    return 1;
+  },
+
+  render() {
+    document.getElementById('content').innerHTML = `
+      <div class="ph">
+        <div>
+          <h2>📅 ปฏิทินงาน</h2>
+          <p id="cal-sub" style="font-size:18px;font-weight:800;color:#F0CD7F;font-family:'Noto Serif Thai',serif;margin-top:4px;letter-spacing:-0.01em"></p>
+        </div>
+        <div class="btn-grp">
+          <button class="btn btn-out btn-sm" onclick="Pages.calendar.prev()">◀</button>
+          <button class="btn btn-gold btn-sm" onclick="Pages.calendar.goToday()">วันนี้</button>
+          <button class="btn btn-out btn-sm" onclick="Pages.calendar.next()">▶</button>
+        </div>
       </div>
-    </div>
-    <div id="cal-legend-bar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
-    <div class="card" style="padding:0;overflow:hidden;background:#fff;">
-      <div id="cal-header-row" style="display:grid;grid-template-columns:repeat(7,1fr);background:linear-gradient(90deg,#0B2340,#1A3C65)"></div>
-      <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:0;background:#fff"></div>
-    </div>`;
+      <div id="cal-kpis" class="mb4"></div>
+      <div id="cal-filters" class="mb4"></div>
+      <div class="card" style="padding:0;overflow:hidden;background:#FFFFFF;border:1px solid rgba(255,255,255,.12)">
+        <div id="cal-header-row" style="display:grid;grid-template-columns:repeat(7,1fr);background:linear-gradient(180deg,#1A3C65,#0B2340)"></div>
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);background:#FFFFFF"></div>
+      </div>
+    `;
     this.draw();
   },
-  async draw(){
-    const projs=DB.sales.listProjects();
-    const y=this._y,m=this._m;
-    const sub=document.getElementById('cal-sub');
-    if(sub){sub.textContent=this.MONTHS[m]+' '+(y+543);sub.style.cssText='font-size:18px;font-weight:700;color:#fff;font-family:"Noto Serif Thai",serif;margin-top:4px;text-shadow:0 1px 3px rgba(0,0,0,.2)';}
-    // Header row
-    const hdr=document.getElementById('cal-header-row');
-    if(hdr){hdr.innerHTML=this.DAYS.map(d=>`<div style="text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.75);padding:10px 0;text-transform:uppercase">${d}</div>`).join('');}
-    // Build event map
-    const evMap={};
-    projs.forEach(p=>{
-      if(!p.onsite_date)return;
-      const d=p.onsite_date.substr(0,10);
-      (evMap[d]=evMap[d]||[]).push(p);
-    });
-    const firstDay=new Date(y,m,1).getDay();
-    const dim=new Date(y,m+1,0).getDate();
-    const now=new Date();
-    const ts=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-    const grid=document.getElementById('cal-grid');
-    if(!grid)return;
-    let html='';
-    for(let i=0;i<firstDay;i++)html+=`<div style="min-height:88px;border-right:1px solid #E5EAF0;border-bottom:1px solid #E5EAF0;background:#F8FAFC"></div>`;
-    for(let day=1;day<=dim;day++){
-      const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-      const evs=evMap[ds]||[];
-      const isToday=ds===ts;
-      const du=Math.ceil((new Date(ds)-now)/86400000);
-      const near=du>=0&&du<=3&&evs.length>0;
-      let evHtml='';
-      evs.forEach(p=>{
-        const c=this._getEventColor(p);
-        const jt=p.job_type||'-';
-        const jtShort=jt.length>10?jt.substr(0,10)+'…':jt;
-        const coShort=p.company_name.length>14?p.company_name.substr(0,14)+'…':p.company_name;
-        evHtml+=`<div onclick="event.stopPropagation();Pages.calendar.openProj(${p.id})"
-          style="font-size:11px;padding:3px 6px;border-radius:5px;margin-bottom:2px;cursor:pointer;
-                 white-space:nowrap;overflow:hidden;font-weight:600;line-height:1.4;
-                 background:${c}22;color:${c};border-left:3px solid ${c};"
-          title="${U.esc(p.company_name)} — ${U.esc(jt)}">
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;opacity:.85">${jtShort}</div>
-          <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis">${coShort}</div>
-        </div>`;
+
+  draw() {
+    const projs = DB.sales.listProjects().filter(p => p.onsite_date);
+    const y = this._y, m = this._m;
+    const sub = document.getElementById('cal-sub');
+    if(sub) sub.textContent = `${this.MONTHS[m]} ${y+543} · ${y}`;
+
+    const monthStart = new Date(y, m, 1);
+    const monthEnd = new Date(y, m+1, 0);
+
+    if(this._activeTypes === null) {
+      this._activeTypes = new Set(projs.map(p => p.job_type).filter(Boolean));
+    }
+
+    // ─── Build events — 1 event per JO (per day) ─── 
+    // ถ้า project มี JO หลายใบ (multi-day) → จะมี event หลายตัวบนวันที่ต่างกัน
+    // ถ้า project ไม่มี JO → fallback ใช้ p.onsite_date 1 event
+    const allJOs = DB.operation.listJobOrders() || [];
+    const events = [];
+    const projHasJO = new Set();
+    allJOs.forEach(jo => {
+      const p = projs.find(x => x.id === jo.project_id);
+      if (!p) return;
+      if (p.job_type && !this._activeTypes.has(p.job_type)) return;
+      const dateStr = jo.onsite_date || p.onsite_date;
+      const date = this._parseDate(dateStr);
+      if (isNaN(date.getTime())) return;
+      events.push({
+        project: p, date, dayNo: parseInt(jo.day_no)||0,
+        totalDays: parseInt(jo.total_days||p.total_days)||1,
+        color: this._getEventColor(p), jobType: p.job_type||'-',
+        joId: jo.id
       });
-      html+=`<div onclick="Pages.calendar.openDay('${ds}')"
-        style="min-height:88px;padding:5px 7px;
-               border-right:1px solid #E5EAF0;border-bottom:1px solid #E5EAF0;
-               cursor:pointer;position:relative;transition:background .12s;
-               background:${near&&!isToday?'#FFFBEB':'#fff'};
-               ${isToday?'outline:2px solid #C9A84C;outline-offset:-2px;':''}">
-        ${near&&!isToday?`<div style="position:absolute;top:4px;left:5px;width:6px;height:6px;border-radius:50%;background:#F59E0B;box-shadow:0 0 6px rgba(245,158,11,.5)"></div>`:''}
-        <div style="font-size:13px;font-weight:700;
-          color:${near&&!isToday?'#92400E':'#1A2940'};
-          text-align:right;margin-bottom:3px;font-family:'IBM Plex Mono',monospace">
-          ${isToday?`<span style="background:#C9A84C;color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(201,168,76,.5)">${day}</span>`:day}
+      projHasJO.add(p.id);
+    });
+    // Fallback: projects ที่ยังไม่มี JO → ใช้ project.onsite_date
+    projs.forEach(p => {
+      if (projHasJO.has(p.id)) return;
+      if (p.job_type && !this._activeTypes.has(p.job_type)) return;
+      const date = this._parseDate(p.onsite_date);
+      if (isNaN(date.getTime())) return;
+      events.push({
+        project: p, date, dayNo: 0,
+        totalDays: parseInt(p.total_days)||1,
+        color: this._getEventColor(p), jobType: p.job_type||'-',
+        joId: null
+      });
+    });
+
+    const monthEvents = events.filter(e => e.date >= monthStart && e.date <= monthEnd);
+
+    // KPI
+    const today = new Date(); today.setHours(0,0,0,0);
+    const monthCount = monthEvents.length;
+    const todayCount = monthEvents.filter(e => e.date.getTime() === today.getTime()).length;
+    const week7End = new Date(today); week7End.setDate(today.getDate() + 7);
+    const upcomingCount = monthEvents.filter(e => e.date > today && e.date <= week7End).length;
+    const multidayCount = new Set(monthEvents.filter(e => e.totalDays > 1).map(e => e.project.id)).size;
+
+    document.getElementById('cal-kpis').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        <div class="metric-card" style="background:rgba(240,205,127,.06);border:1px solid rgba(240,205,127,.3);position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F0CD7F,#D4A845)"></div>
+          <div class="metric-label" style="color:#F0CD7F">เดือนนี้</div>
+          <div class="metric-value">${monthCount}</div>
+          <div class="metric-sub">Project ทั้งหมด</div>
         </div>
+        <div class="metric-card" style="background:rgba(252,165,165,.06);border:1px solid rgba(252,165,165,.3);position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FCA5A5,#DC2626)"></div>
+          <div class="metric-label" style="color:#FCA5A5">วันนี้</div>
+          <div class="metric-value">${todayCount}</div>
+          <div class="metric-sub">งานวันนี้</div>
+        </div>
+        <div class="metric-card" style="background:rgba(125,211,252,.06);border:1px solid rgba(125,211,252,.3);position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7DD3FC,#0EA5E9)"></div>
+          <div class="metric-label" style="color:#7DD3FC">อีก 7 วัน</div>
+          <div class="metric-value">${upcomingCount}</div>
+          <div class="metric-sub">Upcoming</div>
+        </div>
+        <div class="metric-card" style="background:rgba(110,231,183,.06);border:1px solid rgba(110,231,183,.3);position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6EE7B7,#10B981)"></div>
+          <div class="metric-label" style="color:#6EE7B7">Multi-day</div>
+          <div class="metric-value">${multidayCount}</div>
+          <div class="metric-sub">มากกว่า 1 วัน</div>
+        </div>
+      </div>
+    `;
+
+    // Filter chips
+    const allJobTypes = [...new Set(projs.map(p => p.job_type).filter(Boolean))];
+    const monthYM = `${y}-${String(m+1).padStart(2,'0')}`;
+    document.getElementById('cal-filters').innerHTML = allJobTypes.length === 0 ? '' : `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-right:5px;font-family:'IBM Plex Mono',monospace">ประเภทงาน:</span>
+        ${allJobTypes.map(jt => {
+          const col = this.JOB_TYPE_COLORS[jt] || '#6B7280';
+          const isOn = this._activeTypes.has(jt);
+          const count = projs.filter(p => p.job_type === jt && p.onsite_date && p.onsite_date.startsWith(monthYM)).length;
+          return `<span onclick="Pages.calendar.toggleType('${jt.replace(/'/g, "\\'")}')"
+            style="padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${col};background:${isOn?col:'transparent'};color:${isOn?'#FFF':col};display:inline-flex;align-items:center;gap:5px;transition:all .15s">
+            <span style="width:8px;height:8px;border-radius:50%;background:${isOn?'#FFF':col}"></span>${U.esc(jt)} <span style="opacity:.75">(${count})</span>
+          </span>`;
+        }).join('')}
+        <span onclick="Pages.calendar.allTypes()" style="padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1px dashed rgba(255,255,255,.3);color:rgba(255,255,255,.7);background:rgba(255,255,255,.02)">เลือกทั้งหมด</span>
+      </div>
+    `;
+
+    // Header
+    const hdr = document.getElementById('cal-header-row');
+    if(hdr) hdr.innerHTML = this.DAYS.map((d, i) => {
+      const weekend = i === 0 || i === 6;
+      return `<div style="padding:10px 0;text-align:center;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;border-right:${i<6?'1px solid rgba(255,255,255,.06)':'none'};color:${weekend?'rgba(252,165,165,.7)':'rgba(240,205,127,.85)'}">${d}</div>`;
+    }).join('');
+
+    // Day cells
+    const firstDay = monthStart.getDay();
+    const dim = monthEnd.getDate();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const grid = document.getElementById('cal-grid');
+    if(!grid) return;
+
+    let html = '';
+    for(let i = 0; i < firstDay; i++) {
+      html += `<div style="min-height:110px;border-right:1px solid #E5EAF0;border-bottom:1px solid #E5EAF0;background:#F8FAFC"></div>`;
+    }
+
+    for(let day = 1; day <= dim; day++) {
+      const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const dateObj = new Date(y, m, day);
+      const dayOfWeek = dateObj.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isToday = ds === todayStr;
+      const isPast = dateObj < today;
+
+      const dayEvents = monthEvents.filter(e =>
+        e.date.getFullYear() === y && e.date.getMonth() === m && e.date.getDate() === day
+      );
+      dayEvents.sort((a, b) => (a.dayNo||0) - (b.dayNo||0));
+
+      let evHtml = '';
+      const maxEvents = 3;
+      const visibleEvents = dayEvents.slice(0, maxEvents);
+
+      visibleEvents.forEach(e => {
+        const co = e.project.company_name || '-';
+        const coShort = co.length > 14 ? co.substr(0, 14) + '…' : co;
+        const dayBadge = e.dayNo > 0
+          ? `<span style="background:${e.color};color:#FFF;font-size:8.5px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:4px;letter-spacing:.02em">วันที่ ${e.dayNo}${e.totalDays>1?`/${e.totalDays}`:''}</span>`
+          : '';
+        const tip = e.dayNo > 0 ? `${co} — ${e.jobType} (วันที่ ${e.dayNo}/${e.totalDays})` : `${co} — ${e.jobType}`;
+        evHtml += `<div onclick="event.stopPropagation();Pages.calendar.openProj(${e.project.id})"
+          style="font-size:11px;padding:3px 8px;border-radius:4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;background:${e.color}1F;color:${e.color};border-left:3px solid ${e.color};line-height:1.4"
+          title="${U.esc(tip)}">${U.esc(coShort)}${dayBadge}</div>`;
+      });
+
+      if(dayEvents.length > maxEvents) {
+        evHtml += `<div style="font-size:10px;color:#6B7280;font-style:italic;font-weight:700;margin-top:2px">+${dayEvents.length - maxEvents} รายการ</div>`;
+      }
+
+      let cellBg = 'background:#FFFFFF';
+      if(isToday) cellBg = 'background:#FFFBEB;box-shadow:inset 0 0 0 2px #C9A84C';
+      else if(isPast) cellBg = 'background:#FAFBFC;opacity:.65';
+      else if(isWeekend) cellBg = 'background:#F8FAFC';
+
+      const numHTML = isToday
+        ? `<span style="background:#C9A84C;color:#FFFFFF;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;box-shadow:0 2px 10px rgba(201,168,76,.5)">${day}</span>`
+        : day;
+
+      html += `<div onclick="Pages.calendar.openDay('${ds}')"
+        style="min-height:110px;padding:5px 7px;border-right:1px solid #E5EAF0;border-bottom:1px solid #E5EAF0;cursor:pointer;position:relative;transition:background .12s;${cellBg}">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:${isToday?'#92400E':isWeekend?'#DC2626':isPast?'#94A3B8':'#1A2940'};text-align:right;margin-bottom:3px">${numHTML}</div>
         <div>${evHtml}</div>
       </div>`;
     }
-    // Fill remaining cells
-    const total=firstDay+dim;
-    const remainder=(7-total%7)%7;
-    for(let i=0;i<remainder;i++)html+=`<div style="min-height:88px;border-right:1px solid #E5EAF0;border-bottom:1px solid #E5EAF0;background:#F8FAFC"></div>`;
-    grid.innerHTML=html;
-    // Legend
-    const leg=document.getElementById('cal-legend-bar');
-    if(leg){
-      // Show job_type legend from actual projects
-      const jobTypes=[...new Set(projs.filter(p=>p.job_type).map(p=>p.job_type))];
-      const statusList=[...new Set(projs.map(p=>p.status))];
-      const allLegend=[
-        ...jobTypes.map(jt=>({label:jt,color:this.JOB_TYPE_COLORS[jt]||'#888',prefix:'ประเภท'})),
-        ...statusList.filter(s=>!projs.some(p=>p.job_type)).map(s=>({label:s,color:this.STATUS_COLORS[s]||'#888',prefix:'สถานะ'})),
-      ];
-      const legItems = jobTypes.length > 0 ? allLegend.filter(l=>l.prefix==='ประเภท') : allLegend;
-      leg.innerHTML=legItems.map(l=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#3A5166;padding:3px 10px;background:#fff;border-radius:20px;border:1px solid #DCE5EF;box-shadow:0 1px 3px rgba(11,35,64,.06)"><div style="width:8px;height:8px;border-radius:50%;background:${l.color}"></div><span style="font-weight:600">${l.label}</span></div>`).join('');
+
+    const total = firstDay + dim;
+    const remainder = (7 - total % 7) % 7;
+    for(let i = 0; i < remainder; i++) {
+      html += `<div style="min-height:110px;border-right:1px solid #E5EAF0;border-bottom:1px solid #E5EAF0;background:#F8FAFC"></div>`;
     }
+    grid.innerHTML = html;
   },
-  openDay(ds){
-    const evs=DB.sales.listProjects().filter(p=>p.onsite_date===ds);
-    if(!evs.length)return;
-    if(evs.length===1){this.openProj(evs[0].id);return;}
-    Modal.open(evs.map(p=>`<div onclick="Modal.close();Pages.calendar.openProj(${p.id})" style="padding:11px;border:1px solid var(--bdr);border-radius:10px;cursor:pointer;margin-bottom:8px;transition:background .15s" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''"><div class="fw6">${U.esc(p.project_code)}</div><div class="t-sm t-muted">${U.esc(p.company_name)}</div></div>`).join(''),`งานวันที่ ${ds}`);
+
+  toggleType(jt) {
+    if(this._activeTypes.has(jt)) this._activeTypes.delete(jt);
+    else this._activeTypes.add(jt);
+    this.draw();
   },
-  async openProj(id){
-    const p=DB.sales.getProject(id);if(!p)return;
-    const jo=DB.operation.getJobOrder(p.id);
-    const lp=DB.lab.getLabProject(p.id);
-    const rp=DB.report.getPlan(p.id);
-    const inv=DB.billing.getInvoice(p.id);
-    const col=this._getEventColor(p);
-    const dL=p.onsite_date?Math.ceil((new Date(p.onsite_date)-new Date())/86400000):null;
-    const steps=[
-      {l:'Handover',done:!!DB.sales.getHandover(p.id)&&!!p.handover_sent,icon:'💼'},
-      {l:'ใบแจ้งงาน',done:!!jo&&jo.status!=='Draft',icon:'📋'},
-      {l:'Onsite',done:['Lab','Report','Billing','Completed'].includes(p.status),icon:'🚑'},
-      {l:'ส่ง Lab',done:!!lp,icon:'🔬'},{l:'TAT',done:lp?.status==='reported',icon:'⏱'},
-      {l:'Set Plan',done:!!JSON.parse(localStorage.getItem('rp_meta_'+p.id)||'{}').set_plan,icon:'📄'},
-      {l:'ส่งผล',done:rp?.status==='sent',icon:'📨'},
-      {l:'Invoice',done:!!inv,icon:'💰'},{l:'ชำระ',done:inv?.status==='Paid',icon:'🏦'},
+
+  allTypes() {
+    const projs = DB.sales.listProjects().filter(p => p.onsite_date);
+    this._activeTypes = new Set(projs.map(p => p.job_type).filter(Boolean));
+    this.draw();
+  },
+
+  openDay(ds) {
+    const projs = DB.sales.listProjects();
+    const jos = DB.operation.listJobOrders() || [];
+    const matchedIds = new Set();
+    jos.forEach(jo => { if ((jo.onsite_date||'').substr(0,10) === ds) matchedIds.add(jo.project_id); });
+    projs.forEach(p => {
+      const hasJO = jos.some(j => j.project_id === p.id);
+      if (!hasJO && (p.onsite_date||'').substr(0,10) === ds) matchedIds.add(p.id);
+    });
+    const evs = projs.filter(p => matchedIds.has(p.id));
+    if(!evs.length) return;
+    if(evs.length === 1) { this.openProj(evs[0].id); return; }
+    Modal.open(evs.map(p => `<div onclick="Modal.close();Pages.calendar.openProj(${p.id})" style="padding:11px;border:1px solid var(--bdr);border-radius:10px;cursor:pointer;margin-bottom:8px;transition:background .15s" onmouseover="this.style.background='var(--surf2)'" onmouseout="this.style.background=''"><div class="fw6">${U.esc(p.project_code)}</div><div class="t-sm t-muted">${U.esc(p.company_name)}</div></div>`).join(''), `งานวันที่ ${ds}`);
+  },
+
+  async openProj(id) {
+    const p = DB.sales.getProject(id); if(!p) return;
+    const jo = DB.operation.getJobOrder(p.id);
+    const lp = DB.lab.getLabProject(p.id);
+    const rp = DB.report.getPlan(p.id);
+    const inv = DB.billing.getInvoice(p.id);
+    const col = this._getEventColor(p);
+    const dL = p.onsite_date ? Math.ceil((new Date(p.onsite_date) - new Date()) / 86400000) : null;
+    const steps = [
+      {l:'Handover', done: !!DB.sales.getHandover(p.id) && !!p.handover_sent, icon:'💼'},
+      {l:'ใบแจ้งงาน', done: !!jo && jo.status !== 'Draft', icon:'📋'},
+      {l:'Onsite', done: ['Lab','Report','Billing','Completed'].includes(p.status), icon:'🚑'},
+      {l:'ส่ง Lab', done: !!lp, icon:'🔬'},
+      {l:'TAT', done: lp?.status === 'reported', icon:'⏱'},
+      {l:'Set Plan', done: !!JSON.parse(localStorage.getItem('rp_meta_' + p.id) || '{}').set_plan, icon:'📄'},
+      {l:'ส่งผล', done: rp?.status === 'sent', icon:'📨'},
+      {l:'Invoice', done: !!inv, icon:'💰'},
+      {l:'ชำระ', done: inv?.status === 'Paid', icon:'🏦'}
     ];
     Modal.open(`
     <div style="background:${col}18;border-radius:10px;padding:13px;margin-bottom:13px">
@@ -6216,29 +6433,22 @@ Pages.calendar={
         <div>
           <div style="font-family:'Prompt',sans-serif;font-size:16px;font-weight:700;color:var(--navy)">${U.esc(p.project_code)}</div>
           <div style="font-size:12px;color:var(--txt-md);margin-top:2px">${U.esc(p.company_name)}</div>
+          ${dL !== null ? `<div style="font-size:11px;color:${dL<0?'#F87171':dL===0?'#F0CD7F':'#7DD3FC'};margin-top:5px;font-weight:600">${dL<0?`ผ่านมา ${-dL} วัน`:dL===0?'วันนี้':`อีก ${dL} วัน`}</div>` : ''}
         </div>
         <span class="badge" style="background:${col}22;color:${col};border:1px solid ${col}44">${p.status}</span>
       </div>
     </div>
-    ${dL!==null&&dL>=0&&dL<=3?`<div class="ab warning mb4">⚠️ วันตรวจอีก ${dL} วัน!</div>`:''}
-    <div class="sr"><span>วันตรวจ</span><span class="fw6">${U.fmtD(p.onsite_date)} ${p.onsite_time||''}</span></div>
-    <div class="sr"><span>สถานที่</span><span>${U.esc(p.location||'-')}</span></div>
-    <div class="sr"><span>จำนวน</span><span>${(p.headcount||0).toLocaleString()} คน</span></div>
-    <div class="sr"><span>กำหนดส่งผล</span><span>${U.fmtD(p.due_date)||'-'}</span></div>
-    <div class="sr"><span>ผู้ประสานงาน</span><span>${U.esc((p.coordinator_name||'-')+' '+(p.coordinator_phone||''))}</span></div>
-    <div class="divider"></div>
-    <div class="sec-title">Workflow — ${steps.filter(s=>s.done).length}/${steps.length} ขั้นตอน</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px">
-      ${steps.map(s=>`<div style="text-align:center;padding:8px 4px;border-radius:8px;background:${s.done?'#F0FDF4':'var(--surf2)'};border:1px solid ${s.done?'#86EFAC':'var(--bdr)'}">
-        <div style="font-size:16px">${s.icon}</div>
-        <div style="font-size:9px;font-weight:600;color:${s.done?'var(--suc)':'var(--txt-lt)'};margin-top:2px">${s.l}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+      ${steps.map(s => `<div style="padding:8px 11px;border:1px solid var(--bdr);border-radius:8px;display:flex;justify-content:space-between;align-items:center;background:${s.done?'rgba(16,185,129,.08)':'transparent'}">
+        <div><div style="font-size:11px;color:var(--txt-md);text-transform:uppercase;letter-spacing:.04em">${s.icon}</div><div style="font-size:12px;font-weight:600;color:${s.done?'#10B981':'var(--txt)'};margin-top:2px">${s.l}</div></div>
         <div style="font-size:13px">${s.done?'✅':'⬜'}</div>
       </div>`).join('')}
-    </div>`,`Project — ${p.project_code}`);
+    </div>`, `Project — ${p.project_code}`);
   },
-  prev(){this._m--;if(this._m<0){this._m=11;this._y--;}this.draw();},
-  next(){this._m++;if(this._m>11){this._m=0;this._y++;}this.draw();},
-  goToday(){this._y=new Date().getFullYear();this._m=new Date().getMonth();this.draw();}
+
+  prev() { this._m--; if(this._m < 0) { this._m = 11; this._y--; } this.draw(); },
+  next() { this._m++; if(this._m > 11) { this._m = 0; this._y++; } this.draw(); },
+  goToday() { this._y = new Date().getFullYear(); this._m = new Date().getMonth(); this.draw(); }
 };
 
 /* ── CONFIG ── */
@@ -8572,6 +8782,60 @@ Pages.assessment_report = {
         </div>`:''}
       `;
 
+    // Build reverse link section — staff assessments for this project
+    let staffLink = '';
+    if(proj && summary){
+      const staffAssessments = DB.staff_assessment.listByProject(proj.id);
+      if(staffAssessments.length>0){
+        // Group by station_id → calculate avg per staff
+        const byStation = {};
+        staffAssessments.forEach(a=>{
+          if(!byStation[a.station_id]){
+            const st = (DB._get('operation_db','job_stations')||[]).find(s=>s.id===a.station_id);
+            byStation[a.station_id]={name:st?st.station_name:'-', staff:{}};
+          }
+          if(!byStation[a.station_id].staff[a.station_staff_id]){
+            byStation[a.station_id].staff[a.station_staff_id]={name:a.staff_name, prof:a.profession, sum:0, n:0};
+          }
+          byStation[a.station_id].staff[a.station_staff_id].sum += DB.staff_assessment.avgOf(a);
+          byStation[a.station_id].staff[a.station_staff_id].n += 1;
+        });
+
+        const tierColor = v=>v>=4.5?'#6EE7B7':(v>=3.5?'#F0CD7F':'#FCA5A5');
+
+        staffLink = `
+        <div class="card mb4" style="border-left:3px solid #9D8BED">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <span class="card-title" style="color:#9D8BED">🔗 📍 เจ้าหน้าที่ที่ทำงานในโปรเจคนี้ (จาก Staff Assessment)</span>
+            <button class="btn btn-out btn-xs" onclick="Router.navigate('staff_assessment')">→ ดูใน Staff Assessment</button>
+          </div>
+          <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+            ${Object.values(byStation).map(s=>{
+              const staffList = Object.values(s.staff).map(p=>({...p, avg:p.sum/p.n}));
+              return `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(157,139,237,0.2);border-radius:6px;padding:10px">
+                <div style="font-size:11px;color:#F0CD7F;font-family:'IBM Plex Mono',monospace;margin-bottom:6px;font-weight:600">${U.esc(s.name)} (${staffList.length} คน)</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px">
+                  ${staffList.map(p=>{
+                    const col = tierColor(p.avg);
+                    return `<div style="padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:4px;display:flex;justify-content:space-between;align-items:center;border:1px solid ${col}30">
+                      <div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#F0CD7F;font-weight:600">${U.esc(p.name||'-')}</div>
+                        <div style="font-size:9px;color:#9CA3AF">${U.esc(p.prof||'-')}</div>
+                      </div>
+                      <div style="text-align:right">
+                        <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${col};font-size:14px">${p.avg.toFixed(1)}</div>
+                        <div style="font-size:9px;color:#9CA3AF">${p.n} ครั้ง</div>
+                      </div>
+                    </div>`;
+                  }).join('')}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }
+    }
+
     document.getElementById('content').innerHTML=`
       <div class="ph">
         <div><h2>🌟 ผลประเมินความพึงพอใจ</h2><p>สรุปคะแนนจาก QR แบบประเมินที่ลูกค้าตอบหน้างาน</p></div>
@@ -8587,6 +8851,7 @@ Pages.assessment_report = {
         </div>
       </div>
       ${content}
+      ${staffLink}
     `;
   }
 };
@@ -9013,6 +9278,1095 @@ Pages.op_summary = {
 
   _onSelect(projId){
     this._selectedProjectId = parseInt(projId);
+    this.render();
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   Pages.staff_assessment — ประเมินเจ้าหน้าที่ตามจุด Station ตาม JO
+   3 Tabs: ประเมิน (Cards form) | Report | ประวัติรายคน
+   ═══════════════════════════════════════════════════════════ */
+Pages.staff_assessment = {
+  _tab: 'assess',           // 'assess' | 'report' | 'history'
+  _selectedJoId: null,      // For Tab 1
+  _stationFilter: 'all',    // For Tab 1
+  _reportScope: 'jo',       // 'jo' | 'project' | 'month' | '3months'
+  _selectedStaffId: null,   // For Tab 3
+  _searchStaff: '',
+
+  // CRITERIA now loaded dynamically from DB.staff_assessment.listCriteria()
+  // Old hardcoded list kept as fallback (DB seeds these if empty)
+  get CRITERIA(){ return DB.staff_assessment.listCriteria(); },
+
+  // Color tier helpers
+  _tier(v){return v>=4.5?'high':(v>=3.5?'mid':'low');},
+  _tierColor(v){return v>=4.5?'#6EE7B7':(v>=3.5?'#F0CD7F':'#FCA5A5');},
+  _tierBadgeText(v){return v>=4.5?'✓ เสร็จ':(v>=3.5?'✓ เสร็จ':'⚠️ เสร็จ');},
+
+  async render(){
+    const allJOs = (DB.operation.listJobOrders()||[]).filter(j=>j.project_id);
+    const projs = DB.sales.listProjects();
+    // Default to most recent JO if none selected
+    if(!this._selectedJoId && allJOs.length){
+      const sorted = [...allJOs].sort((a,b)=> (b.onsite_date||'').localeCompare(a.onsite_date||''));
+      this._selectedJoId = sorted[0].id;
+    }
+    const joOpts = allJOs
+      .map(jo => ({...jo, _project: projs.find(p=>p.id===jo.project_id)}))
+      .filter(j=>j._project)
+      .sort((a,b)=>(b.onsite_date||'').localeCompare(a.onsite_date||''))
+      .map(j=>{
+        const dn = parseInt(j.day_no)||0;
+        const dayLbl = dn>0?` — วันที่ ${dn}/${j.total_days||1}`:'';
+        return `<option value="${j.id}" ${this._selectedJoId===j.id?'selected':''}>${U.esc(j._project.project_code)}${dayLbl} — ${U.esc(j._project.company_name||'')} (${U.fmtD(j.onsite_date||j._project.onsite_date)})</option>`;
+      }).join('');
+
+    document.getElementById('content').innerHTML = `
+      <div class="ph">
+        <div>
+          <h2>⭐ Staff Assessment</h2>
+          <p>ประเมินเจ้าหน้าที่ตามจุด Station หลังจบหน่วย — บันทึก + Report + ประวัติรายคน</p>
+        </div>
+      </div>
+
+      <div class="card mb4">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <span class="card-title">⭐ เลือกใบแจ้งงาน</span>
+          <select id="sa_jo" onchange="Pages.staff_assessment._onJoChange(this.value)" style="min-width:280px;max-width:480px">
+            ${joOpts || '<option value="">— ไม่มีใบแจ้งงาน —</option>'}
+          </select>
+        </div>
+
+        <div style="display:flex;border-bottom:1px solid var(--c-line,#E5EAF0);gap:2px;margin-top:8px">
+          <button class="${this._tab==='assess'?'sa-tab sa-tab-active':'sa-tab'}" onclick="Pages.staff_assessment._switchTab('assess')">⭐ ประเมิน</button>
+          <button class="${this._tab==='report'?'sa-tab sa-tab-active':'sa-tab'}" onclick="Pages.staff_assessment._switchTab('report')">📊 Report</button>
+          <button class="${this._tab==='history'?'sa-tab sa-tab-active':'sa-tab'}" onclick="Pages.staff_assessment._switchTab('history')">👤 ประวัติรายคน</button>
+        </div>
+      </div>
+
+      <style>
+        .sa-tab{padding:8px 16px;background:transparent;border:none;border-bottom:2px solid transparent;font-weight:500;font-size:13px;color:var(--t-dim,#9CA3AF);cursor:pointer;font-family:inherit}
+        .sa-tab-active{border-bottom-color:#F0CD7F;color:#F0CD7F;font-weight:700;font-family:'IBM Plex Mono',monospace}
+        .sa-chip{padding:4px 12px;background:transparent;border:1px solid rgba(240,205,127,0.3);border-radius:14px;font-size:11px;cursor:pointer;color:#D1D5DB;font-family:inherit;transition:all .15s}
+        .sa-chip:hover{border-color:#F0CD7F;color:#F0CD7F}
+        .sa-chip-active{background:#F0CD7F;color:#0F1729;border-color:#F0CD7F;font-weight:700;font-family:'IBM Plex Mono',monospace}
+        .sa-star{cursor:pointer;font-size:18px;letter-spacing:2px;user-select:none}
+        .sa-star span{color:rgba(255,255,255,0.15)}
+        .sa-star span.on{color:#F0CD7F;text-shadow:0 0 4px rgba(240,205,127,0.5)}
+        .sa-card{border:1px solid rgba(240,205,127,0.15);border-radius:8px;padding:11px;position:relative;background:rgba(255,255,255,0.02);transition:all .2s}
+        .sa-card-done-high{background:rgba(15,110,86,0.08);border-color:rgba(110,231,183,0.4)}
+        .sa-card-done-mid{background:rgba(240,205,127,0.04);border-color:rgba(240,205,127,0.4)}
+        .sa-card-done-low{background:rgba(220,38,38,0.08);border-color:rgba(252,165,165,0.45)}
+        .sa-card-active{background:rgba(240,205,127,0.06);border:1.5px solid #F0CD7F;box-shadow:0 0 12px rgba(240,205,127,0.15)}
+        .sa-card-pending{opacity:.75;border-style:dashed;border-color:rgba(240,205,127,0.25)}
+        .sa-badge{position:absolute;top:8px;right:8px;font-size:9px;padding:2px 7px;border-radius:8px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+        .sa-badge-done{background:linear-gradient(180deg,#6EE7B7,#10B981);color:#0F1729}
+        .sa-badge-mid{background:linear-gradient(180deg,#F0CD7F,#BA7517);color:#0F1729}
+        .sa-badge-low{background:linear-gradient(180deg,#FCA5A5,#DC2626);color:#FFF}
+        .sa-badge-active{background:#F0CD7F;color:#0F1729}
+        .sa-badge-pending{background:rgba(255,255,255,0.05);color:#9CA3AF;border:1px solid rgba(255,255,255,0.1)}
+        .sa-name{font-family:'IBM Plex Mono',monospace;font-weight:700;color:#F0CD7F;font-size:12px}
+        .sa-meta{font-size:9.5px;color:#9CA3AF}
+        .sa-score-big{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:28px;line-height:1}
+        .sa-score-high{color:#6EE7B7;text-shadow:0 0 8px rgba(110,231,183,0.4)}
+        .sa-score-mid{color:#F0CD7F;text-shadow:0 0 8px rgba(240,205,127,0.4)}
+        .sa-score-low{color:#FCA5A5;text-shadow:0 0 8px rgba(252,165,165,0.4)}
+        .sa-crit-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;text-align:center;margin-top:4px}
+        .sa-crit-grid .sa-crit-lbl{font-size:8px;color:#9CA3AF}
+        .sa-crit-grid .sa-crit-val{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px}
+        .sa-remark-high{color:#6EE7B7}
+        .sa-remark-mid{color:#F0CD7F}
+        .sa-remark-low{color:#FCA5A5}
+        .sa-list-item{padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:3px;border-left:2px solid transparent}
+        .sa-list-item:hover{background:rgba(240,205,127,0.05)}
+        .sa-list-active{background:rgba(240,205,127,0.1);border-left-color:#F0CD7F}
+        .sa-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+        .sa-avatar-high{background:linear-gradient(135deg,#F0CD7F,#BA7517);color:#0F1729}
+        .sa-avatar-mid{background:linear-gradient(135deg,#3C3489,#1F1A4D);color:#F0CD7F}
+        .sa-avatar-low{background:linear-gradient(135deg,#DC2626,#7F1D1D);color:#FFF}
+        .sa-avatar-pending{background:rgba(255,255,255,0.05);color:#9CA3AF;border:1px solid rgba(240,205,127,0.2)}
+        .sa-kpi-card{padding:10px;border-radius:8px;border:1px solid}
+        .sa-kpi-label{font-size:9px;color:#9CA3AF;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.4px}
+        .sa-kpi-value{font-size:24px;font-weight:700;font-family:'IBM Plex Mono',monospace;line-height:1.1}
+        .sa-kpi-sub{font-size:9px;color:#9CA3AF}
+        .sa-btn-save{padding:5px;background:linear-gradient(180deg,#F0CD7F,#BA7517);color:#0F1729;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+        .sa-btn-cancel{padding:5px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#9CA3AF;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit}
+        .sa-btn-start{padding:6px;background:transparent;border:1px dashed rgba(240,205,127,0.4);border-radius:6px;font-size:11px;width:100%;color:#F0CD7F;font-weight:600;cursor:pointer;font-family:inherit}
+        .sa-btn-start:hover{background:rgba(240,205,127,0.05);border-color:#F0CD7F}
+      </style>
+
+      <div id="sa_body"></div>
+    `;
+
+    this._renderTab();
+  },
+
+  _switchTab(tab){this._tab=tab;this._renderTab();},
+  _onJoChange(v){this._selectedJoId=parseInt(v)||null;this._renderTab();},
+
+  _renderTab(){
+    const body = document.getElementById('sa_body');
+    if(!body) return;
+    if(this._tab==='assess') body.innerHTML = this._renderAssess();
+    else if(this._tab==='report') body.innerHTML = this._renderReport();
+    else if(this._tab==='history') body.innerHTML = this._renderHistory();
+  },
+
+  // ─── TAB 1: ประเมิน ───
+  _renderAssess(){
+    const joId = this._selectedJoId;
+    if(!joId) return '<div class="card"><div class="empty"><p>เลือกใบแจ้งงานก่อน</p></div></div>';
+    const jo = DB.operation.listJobOrders().find(j=>j.id===joId);
+    if(!jo) return '<div class="card"><div class="empty"><p>ไม่พบใบแจ้งงาน</p></div></div>';
+    const stations = DB.operation.listStations(joId)||[];
+    if(stations.length===0){
+      const proj = DB.sales.listProjects().find(p=>p.id===jo.project_id);
+      return `<div class="card"><div class="empty">
+        <div class="icon">⚠️</div>
+        <p><strong>ใบแจ้งงานนี้ยังไม่มี Station</strong></p>
+        <p style="font-size:11px;color:var(--t-dim,#888);margin-top:4px">
+          ${proj?U.esc(proj.project_code):'-'} — ${proj?U.esc(proj.company_name||''):''}<br>
+          ให้ไปที่เมนู <strong>🚑 Operation — เตรียมงาน/ใบแจ้งงาน</strong> เพื่อเพิ่ม Station + เจ้าหน้าที่ก่อน
+        </p>
+      </div></div>`;
+    }
+    // Collect all staff across stations — รองรับทั้ง modern (staff_list) + legacy (top-level fields)
+    const allStaff = [];
+    stations.forEach(st=>{
+      let list = (st.staff_list||[]).filter(s=>s.staff_name && s.staff_name.trim());
+      // Fallback: ถ้า staff_list ว่าง แต่มี top-level staff_name → ใช้เป็น 1 entry
+      if(list.length===0 && st.staff_name && st.staff_name.trim()){
+        list = [{
+          staff_name: st.staff_name,
+          profession: st.profession||'',
+          staff_type: st.staff_type||'',
+          wage_per_day: st.wage_per_day||0,
+          phone: st.phone||''
+        }];
+      }
+      list.forEach((s,idx)=>{
+        // staff_list ไม่มี id — สร้าง composite ID stationId_idx
+        allStaff.push({...s, _sid:`${st.id}_${idx}`, _station: st, _idx: idx});
+      });
+    });
+    // ถ้ายังไม่มีเจ้าหน้าที่เลย → แสดงคำแนะนำชัดเจน
+    if(allStaff.length===0){
+      const proj = DB.sales.listProjects().find(p=>p.id===jo.project_id);
+      const stList = stations.map(st=>`<li>${U.esc(st.station_code||'')} ${U.esc(st.station_name||'')} — <span style="color:var(--c-warn,#FBBF24)">ยังไม่มีชื่อเจ้าหน้าที่</span></li>`).join('');
+      return `<div class="card"><div class="empty">
+        <div class="icon">📝</div>
+        <p><strong>Station มี ${stations.length} จุด แต่ยังไม่ได้ใส่ชื่อเจ้าหน้าที่</strong></p>
+        <ul style="text-align:left;display:inline-block;font-size:11px;color:var(--t-dim,#888);margin:8px 0">${stList}</ul>
+        <p style="font-size:11px;color:var(--t-dim,#888);margin-top:4px">
+          ${proj?U.esc(proj.project_code):'-'} — ${proj?U.esc(proj.company_name||''):''}<br><br>
+          ให้ไป <strong>🚑 Op-เตรียมงาน</strong> → เปิด JO นี้ → คลิกแก้ไข Station แต่ละจุด → ใส่ชื่อเจ้าหน้าที่
+        </p>
+        <button class="btn btn-pri btn-sm" style="margin-top:8px" onclick="Router.navigate('op_prep')">→ ไปที่ Op-เตรียมงาน</button>
+      </div></div>`;
+    }
+    // Filter by station
+    const filtered = this._stationFilter==='all'
+      ? allStaff
+      : allStaff.filter(s=>s._station.id===this._stationFilter || s._station.station_name===this._stationFilter);
+    // Existing assessments
+    const existing = DB.staff_assessment.listByJO(joId);
+    const existsByStaff = {};
+    existing.forEach(e=>{existsByStaff[e.station_staff_id]=e;});
+    const doneCount = allStaff.filter(s=>existsByStaff[s._sid]).length;
+    const totalCount = allStaff.length;
+    const pct = totalCount>0 ? Math.round(doneCount/totalCount*100) : 0;
+
+    const canEdit = DB.auth.can('add','staff_assessment') || DB.auth.can('edit','staff_assessment');
+
+    // Station filter chips
+    const stChips = `<button class="${this._stationFilter==='all'?'sa-chip sa-chip-active':'sa-chip'}" onclick="Pages.staff_assessment._filterStation('all')">ทั้งหมด (${allStaff.length})</button>` +
+      stations.map(st=>{
+        let n = (st.staff_list||[]).filter(s=>s.staff_name && s.staff_name.trim()).length;
+        if(n===0 && st.staff_name && st.staff_name.trim()) n = 1;
+        const active = this._stationFilter===st.id;
+        return `<button class="${active?'sa-chip sa-chip-active':'sa-chip'}" onclick="Pages.staff_assessment._filterStation(${st.id})">${U.esc(st.station_name||'-')} (${n})</button>`;
+      }).join('');
+
+    const cards = filtered.map(s=>{
+      const ex = existsByStaff[s._sid];
+      const isEditing = this._editingStaff===s._sid;
+      if(isEditing && canEdit){
+        return this._renderEditCard(s, ex);
+      }
+      if(ex){
+        const avg = DB.staff_assessment.avgOf(ex);
+        const tier = this._tier(avg);
+        return `
+        <div class="sa-card sa-card-done-${tier}">
+          <span class="sa-badge sa-badge-${tier==='high'?'done':(tier==='mid'?'mid':'low')}">${tier==='low'?'⚠️':'✓'} เสร็จ</span>
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;padding-right:55px">
+            <div class="sa-avatar sa-avatar-${tier}">${U.esc((s.staff_name||'-').charAt(0))}</div>
+            <div>
+              <div class="sa-name">${U.esc(s.staff_name||'-')}</div>
+              <div class="sa-meta">${U.esc(s._station.station_name||'-')}${s.profession?' · '+U.esc(s.profession):''}</div>
+            </div>
+          </div>
+          <div style="text-align:center;padding:6px 0;border-top:1px solid rgba(240,205,127,0.12);border-bottom:1px solid rgba(240,205,127,0.12);margin:6px 0">
+            <div class="sa-score-big sa-score-${tier}">${avg.toFixed(1)}</div>
+            <div style="font-size:11px;color:#F0CD7F;letter-spacing:1px;text-shadow:0 0 4px rgba(240,205,127,0.5);margin-top:2px${tier!=='high'?';opacity:.7':''}">${'⭐'.repeat(Math.round(avg))}</div>
+          </div>
+          <div class="sa-crit-grid">
+            ${this.CRITERIA.map(c=>{
+              const v = Number(ex[c.key])||0;
+              const col = this._tierColor(v);
+              return `<div><div class="sa-crit-lbl">${c.icon}${c.short}</div><div class="sa-crit-val" style="color:${col}">${v}</div></div>`;
+            }).join('')}
+          </div>
+          ${ex.remark?`<div style="margin-top:8px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.08);font-size:10px;font-style:italic" class="sa-remark-${tier}">"${U.esc(ex.remark)}"</div>`:''}
+          ${canEdit?`<button class="btn btn-out btn-xs" style="margin-top:8px;width:100%" onclick="Pages.staff_assessment._editAssess('${s._sid}')">✏️ แก้ไข</button>`:''}
+        </div>`;
+      }
+      // Pending
+      return `
+      <div class="sa-card sa-card-pending">
+        <span class="sa-badge sa-badge-pending">⏳ ยัง</span>
+        <div style="display:flex;align-items:center;gap:7px">
+          <div class="sa-avatar sa-avatar-pending">${U.esc((s.staff_name||'-').charAt(0))}</div>
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#D1D5DB">${U.esc(s.staff_name||'-')}</div>
+            <div class="sa-meta">${U.esc(s._station.station_name||'-')}${s.profession?' · '+U.esc(s.profession):''}</div>
+          </div>
+        </div>
+        ${canEdit?`<button class="sa-btn-start" style="margin-top:10px" onclick="Pages.staff_assessment._editAssess('${s._sid}')">+ เริ่มประเมิน</button>`:'<div style="font-size:10px;text-align:center;color:#9CA3AF;margin-top:8px">view only</div>'}
+      </div>`;
+    }).join('');
+
+    return `
+    <div class="card mb4">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:11px;color:var(--t-dim,#888)">กรอง:</span>
+          ${stChips}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:var(--t-dim,#888)">ความคืบหน้า:</span>
+          <div style="width:80px;height:6px;background:#E5EAF0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#0F6E56"></div></div>
+          <span style="font-size:11px;font-weight:600;color:#0F6E56">${doneCount}/${totalCount}</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
+        ${cards || '<div class="empty" style="grid-column:1/-1"><p>ไม่มีเจ้าหน้าที่ในจุดนี้</p></div>'}
+      </div>
+    </div>`;
+  },
+
+  _filterStation(s){this._stationFilter=s;this._editingStaff=null;this._renderTab();},
+
+  _editAssess(sid){
+    this._editingStaff = sid;
+    // Pre-fill from existing if any
+    const ex = DB.staff_assessment.findOne(this._selectedJoId, sid);
+    this._editValues = ex
+      ? {punctuality:ex.punctuality,skill:ex.skill,attitude:ex.attitude,teamwork:ex.teamwork,appearance:ex.appearance,remark:ex.remark||''}
+      : {punctuality:0,skill:0,attitude:0,teamwork:0,appearance:0,remark:''};
+    this._renderTab();
+  },
+
+  _renderEditCard(s, ex){
+    const v = this._editValues || {punctuality:0,skill:0,attitude:0,teamwork:0,appearance:0,remark:''};
+    return `
+    <div class="sa-card sa-card-active">
+      <span class="sa-badge sa-badge-active">▶ ประเมิน</span>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;padding-right:60px">
+        <div class="sa-avatar sa-avatar-mid">${U.esc((s.staff_name||'-').charAt(0))}</div>
+        <div>
+          <div class="sa-name">${U.esc(s.staff_name||'-')}</div>
+          <div class="sa-meta">${U.esc(s._station.station_name||'-')}${s.profession?' · '+U.esc(s.profession):''}</div>
+        </div>
+      </div>
+      ${this.CRITERIA.map(c=>{
+        const val = Number(v[c.key])||0;
+        const stars = [1,2,3,4,5].map(n=>`<span class="${n<=val?'on':''}" onclick="Pages.staff_assessment._setStar('${c.key}',${n})">⭐</span>`).join('');
+        return `<div style="display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center;margin-bottom:4px">
+          <span style="font-size:11px;color:#9CA3AF">${c.icon} ${c.label}</span>
+          <span class="sa-star">${stars}</span>
+        </div>`;
+      }).join('')}
+      <textarea id="sa_remark" placeholder="หมายเหตุ..." style="width:100%;margin-top:6px;padding:5px;font-size:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(240,205,127,0.2);border-radius:4px;color:#E8EAED;resize:none;height:36px;font-family:inherit;box-sizing:border-box">${U.esc(v.remark||'')}</textarea>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="sa-btn-cancel" style="flex:1" onclick="Pages.staff_assessment._cancelEdit()">ยกเลิก</button>
+        <button class="sa-btn-save" style="flex:2" onclick="Pages.staff_assessment._saveAssess('${s._sid}',${s._station.id})">💾 บันทึก</button>
+      </div>
+    </div>`;
+  },
+
+  _setStar(key, n){
+    if(!this._editValues) this._editValues = {punctuality:0,skill:0,attitude:0,teamwork:0,appearance:0,remark:''};
+    this._editValues[key] = n;
+    // Re-render just to update stars
+    this._renderTab();
+  },
+
+  _cancelEdit(){
+    this._editingStaff = null;
+    this._editValues = null;
+    this._renderTab();
+  },
+
+  _saveAssess(sid, stationId){
+    const v = this._editValues || {};
+    const rem = (document.getElementById('sa_remark')||{}).value || '';
+    if(!v.punctuality||!v.skill||!v.attitude||!v.teamwork||!v.appearance){
+      U.toast('กรุณาให้คะแนนครบทุกเกณฑ์','danger');
+      return;
+    }
+    // Parse composite sid: "stationId_idx"
+    const [sStId, sIdx] = sid.split('_');
+    const stations = DB.operation.listStations(this._selectedJoId)||[];
+    let staffInfo = null;
+    stations.forEach(st=>{
+      if(st.id===Number(sStId)){
+        let list = (st.staff_list||[]).filter(s=>s.staff_name && s.staff_name.trim());
+        if(list.length===0 && st.staff_name && st.staff_name.trim()){
+          list = [{staff_name:st.staff_name, profession:st.profession||'', staff_type:st.staff_type||'', wage_per_day:st.wage_per_day||0, phone:st.phone||''}];
+        }
+        const s = list[Number(sIdx)];
+        if(s) staffInfo = {...s, _station:st};
+      }
+    });
+    if(!staffInfo){ U.toast('ไม่พบข้อมูลเจ้าหน้าที่','danger'); return; }
+    const data = {
+      job_order_id: this._selectedJoId,
+      station_id: stationId,
+      station_staff_id: sid,
+      staff_name: staffInfo.staff_name||'',
+      profession: staffInfo.profession||'',
+      punctuality: Number(v.punctuality),
+      skill: Number(v.skill),
+      attitude: Number(v.attitude),
+      teamwork: Number(v.teamwork),
+      appearance: Number(v.appearance),
+      remark: rem,
+      assessed_at: DB._now()
+    };
+    // If editing existing — pass id
+    const existing = DB.staff_assessment.findOne(this._selectedJoId, sid);
+    if(existing) data.id = existing.id;
+    DB.staff_assessment.save(data);
+    U.toast('✅ บันทึกประเมินแล้ว','success');
+    this._editingStaff = null;
+    this._editValues = null;
+    this._renderTab();
+  },
+
+  // ─── TAB 2: Report ───
+  _renderReport(){
+    let rows = [];
+    if(this._reportScope==='jo'){
+      rows = DB.staff_assessment.listByJO(this._selectedJoId);
+    } else if(this._reportScope==='project'){
+      const jo = DB.operation.listJobOrders().find(j=>j.id===this._selectedJoId);
+      if(jo) rows = DB.staff_assessment.listByProject(jo.project_id);
+    } else if(this._reportScope==='month' || this._reportScope==='3months'){
+      const now = new Date();
+      const cutoff = new Date(now);
+      cutoff.setMonth(now.getMonth() - (this._reportScope==='3months'?3:1));
+      const cutISO = cutoff.toISOString();
+      rows = DB.staff_assessment.list().filter(r=>(r.assessed_at||r.created_at||'')>=cutISO);
+    }
+
+    const totalCount = rows.length;
+    const avg = totalCount>0 ? rows.reduce((s,r)=>s+DB.staff_assessment.avgOf(r),0)/totalCount : 0;
+    const lowCount = rows.filter(r=>DB.staff_assessment.avgOf(r)<3.5).length;
+    const stations = new Set();
+    rows.forEach(r=>stations.add(r.station_id));
+
+    // ── Customer Assessment Link — Average across involved projects ──
+    let customerAvg = null;
+    if(this._reportScope==='jo' || this._reportScope==='project'){
+      const jo = DB.operation.listJobOrders().find(j=>j.id===this._selectedJoId);
+      if(jo) customerAvg = DB.staff_assessment.customerOverallForProject(jo.project_id);
+    } else {
+      // Multi-project — average across distinct projects
+      const projIds = new Set();
+      rows.forEach(r=>{
+        const j = DB.operation.listJobOrders().find(jx=>jx.id===r.job_order_id);
+        if(j) projIds.add(j.project_id);
+      });
+      const projAvgs = [];
+      projIds.forEach(pid=>{
+        const v = DB.staff_assessment.customerOverallForProject(pid);
+        if(v!==null) projAvgs.push(v);
+      });
+      if(projAvgs.length) customerAvg = projAvgs.reduce((s,v)=>s+v,0)/projAvgs.length;
+    }
+    const diff = (customerAvg!==null) ? (avg-customerAvg) : null;
+
+    // Per-criteria averages
+    const criteriaAvg = {};
+    this.CRITERIA.forEach(c=>{
+      const sum = rows.reduce((s,r)=>s+(Number(r[c.key])||0),0);
+      criteriaAvg[c.key] = totalCount>0 ? sum/totalCount : 0;
+    });
+
+    // Top 5 staff
+    const byStaff = {};
+    rows.forEach(r=>{
+      if(!byStaff[r.station_staff_id]) byStaff[r.station_staff_id]={name:r.staff_name,prof:r.profession,sum:0,n:0,stations:new Set()};
+      byStaff[r.station_staff_id].sum += DB.staff_assessment.avgOf(r);
+      byStaff[r.station_staff_id].n += 1;
+      byStaff[r.station_staff_id].stations.add(r.station_id);
+    });
+    const topStaff = Object.entries(byStaff)
+      .map(([id,s])=>({id,name:s.name,prof:s.prof,avg:s.sum/s.n,jos:s.n,stations:s.stations.size}))
+      .sort((a,b)=>b.avg-a.avg)
+      .slice(0,5);
+
+    // Per-station averages
+    const byStation = {};
+    rows.forEach(r=>{
+      if(!byStation[r.station_id]) byStation[r.station_id]={name:'',scores:{}};
+      this.CRITERIA.forEach(c=>{
+        if(!byStation[r.station_id].scores[c.key]) byStation[r.station_id].scores[c.key]={sum:0,n:0};
+        byStation[r.station_id].scores[c.key].sum += Number(r[c.key])||0;
+        byStation[r.station_id].scores[c.key].n += 1;
+      });
+    });
+    // Resolve station names (must iterate all stations across JOs)
+    const allStations = DB._get('operation_db','job_stations')||[];
+    Object.keys(byStation).forEach(sid=>{
+      const st = allStations.find(s=>s.id===Number(sid));
+      byStation[sid].name = st ? (st.station_name||'-') : '-';
+    });
+
+    const scopeChips = [
+      ['jo','JO นี้'],['project','โปรเจคทั้งหมด'],['month','เดือนนี้'],['3months','3 เดือนล่าสุด']
+    ].map(([k,l])=>`<button class="${this._reportScope===k?'sa-chip sa-chip-active':'sa-chip'}" onclick="Pages.staff_assessment._setScope('${k}')">${l}</button>`).join('');
+
+    return `
+    <div class="card mb4">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        <span style="font-size:11px;color:var(--t-dim,#888);align-self:center">ขอบเขต:</span>
+        ${scopeChips}
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">
+        <div class="sa-kpi-card" style="background:rgba(110,231,183,0.08);border-color:rgba(110,231,183,0.3)">
+          <div class="sa-kpi-label">เจ้าหน้าที่เฉลี่ย</div>
+          <div class="sa-kpi-value sa-score-${this._tier(avg)}">${avg.toFixed(2)}</div>
+          <div class="sa-kpi-sub" style="color:#F0CD7F">${'⭐'.repeat(Math.round(avg))}</div>
+        </div>
+        <div class="sa-kpi-card" style="background:rgba(60,52,137,0.15);border-color:rgba(157,139,237,0.4);border-left:3px solid #9D8BED">
+          <div class="sa-kpi-label">🔗 ลูกค้าพึงพอใจ</div>
+          <div class="sa-kpi-value" style="color:#9D8BED">${customerAvg!==null?customerAvg.toFixed(2):'—'}</div>
+          <div class="sa-kpi-sub" style="color:${diff===null?'#9CA3AF':(Math.abs(diff)<0.1?'#9CA3AF':(diff>0?'#6EE7B7':'#FCA5A5'))}">${diff===null?'ไม่มีข้อมูล':(Math.abs(diff)<0.1?'≈ ใกล้เคียง':(diff>0?'↑ '+diff.toFixed(2):'↓ '+Math.abs(diff).toFixed(2)))}</div>
+        </div>
+        <div class="sa-kpi-card" style="background:rgba(240,205,127,0.06);border-color:rgba(240,205,127,0.3)">
+          <div class="sa-kpi-label">ประเมินแล้ว</div>
+          <div class="sa-kpi-value" style="color:#F0CD7F">${totalCount}</div>
+          <div class="sa-kpi-sub">รายการ</div>
+        </div>
+        <div class="sa-kpi-card" style="background:rgba(60,52,137,0.15);border-color:rgba(157,139,237,0.3)">
+          <div class="sa-kpi-label">Stations</div>
+          <div class="sa-kpi-value" style="color:#9D8BED">${stations.size}</div>
+          <div class="sa-kpi-sub">ครอบคลุม</div>
+        </div>
+        <div class="sa-kpi-card" style="background:rgba(220,38,38,0.08);border-color:rgba(252,165,165,0.4)">
+          <div class="sa-kpi-label">ต่ำกว่าเกณฑ์</div>
+          <div class="sa-kpi-value" style="color:${lowCount>0?'#FCA5A5':'#9CA3AF'}">${lowCount}</div>
+          <div class="sa-kpi-sub">avg &lt; 3.5</div>
+        </div>
+      </div>
+
+      ${totalCount===0?'<div class="empty"><p>ยังไม่มีข้อมูลประเมินใน scope นี้</p></div>':`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(240,205,127,0.15);border-radius:8px;padding:12px">
+          <div style="font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#F0CD7F;margin-bottom:8px;letter-spacing:.4px;text-transform:uppercase">🏆 TOP 5 ดีเด่น</div>
+          <table style="width:100%;font-size:11px;color:#E8EAED">
+            <tbody>${topStaff.map((s,i)=>{
+              const col = this._tierColor(s.avg);
+              return `<tr style="border-bottom:1px solid rgba(240,205,127,0.1)">
+                <td style="padding:5px 2px;width:18px;color:#9CA3AF;font-family:'IBM Plex Mono',monospace">${i+1}.</td>
+                <td style="padding:5px 2px;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${U.esc(s.name||'-')}</td>
+                <td style="padding:5px 2px;color:#9CA3AF;font-size:10px">${s.jos} JO</td>
+                <td style="padding:5px 2px;text-align:right;font-weight:700;color:${col};font-family:'IBM Plex Mono',monospace">${s.avg.toFixed(2)}</td>
+              </tr>`;
+            }).join('')||'<tr><td style="text-align:center;padding:8px;color:#9CA3AF;font-size:11px">ไม่มีข้อมูล</td></tr>'}</tbody>
+          </table>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(240,205,127,0.15);border-radius:8px;padding:12px">
+          <div style="font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#F0CD7F;margin-bottom:8px;letter-spacing:.4px;text-transform:uppercase">📊 เฉลี่ยตามเกณฑ์</div>
+          <div style="display:grid;grid-template-columns:90px 1fr 36px;gap:6px;align-items:center;font-size:11px">
+            ${this.CRITERIA.map(c=>{
+              const v = criteriaAvg[c.key];
+              const pct = (v/5)*100;
+              const col = this._tierColor(v);
+              return `<span style="color:#D1D5DB">${c.icon} ${c.label}</span>
+                <div style="background:rgba(255,255,255,0.08);height:8px;border-radius:4px;overflow:hidden"><div style="background:${col};height:100%;width:${pct}%;box-shadow:0 0 6px ${col}40"></div></div>
+                <span style="text-align:right;font-weight:700;color:${col};font-family:'IBM Plex Mono',monospace">${v.toFixed(1)}</span>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(240,205,127,0.15);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#F0CD7F;margin-bottom:8px;letter-spacing:.4px;text-transform:uppercase">🔥 HEATMAP ตาม STATION + 🔗 ความพึงพอใจลูกค้า</div>
+        <div class="tbl-wrap"><table style="width:100%;font-size:11px;text-align:center;color:#E8EAED">
+          <thead><tr style="color:#9CA3AF;font-family:'IBM Plex Mono',monospace">
+            <th style="text-align:left;padding:5px">Station</th>
+            ${this.CRITERIA.map(c=>`<th title="${c.label}">${c.icon}</th>`).join('')}
+            <th style="background:rgba(60,52,137,0.2);color:#9D8BED">เจ้าหน้าที่</th>
+            <th style="background:rgba(157,139,237,0.15);color:#9D8BED;border-left:2px solid #9D8BED">🔗 👥 ลูกค้า</th>
+            <th style="background:rgba(110,231,183,0.08);color:#6EE7B7">Δ Diff</th>
+          </tr></thead>
+          <tbody>
+          ${Object.entries(byStation).map(([sid,s])=>{
+            let totalSum=0, totalN=0;
+            const tds = this.CRITERIA.map(c=>{
+              const sc = s.scores[c.key];
+              if(!sc||sc.n===0) return '<td style="padding:5px;color:#9CA3AF">-</td>';
+              const v = sc.sum/sc.n;
+              totalSum+=sc.sum; totalN+=sc.n;
+              const bg = v>=4.5?'rgba(110,231,183,0.25)':(v>=3.5?'rgba(240,205,127,0.18)':'rgba(252,165,165,0.2)');
+              const tx = this._tierColor(v);
+              return `<td style="background:${bg};padding:5px;color:${tx};font-weight:700;font-family:'IBM Plex Mono',monospace">${v.toFixed(1)}</td>`;
+            }).join('');
+            const overall = totalN>0?(totalSum/totalN):0;
+            const ocol = this._tierColor(overall);
+            // Customer score for this station
+            const jo = DB.operation.listJobOrders().find(j=>j.id===rows.find(r=>r.station_id===Number(sid))?.job_order_id);
+            let custScore = null;
+            if(jo) custScore = DB.staff_assessment.customerScoreForStation(jo.project_id, s.name);
+            const diff = custScore!==null ? (overall-custScore) : null;
+            const diffCol = diff===null?'#9CA3AF':(Math.abs(diff)<0.2?'#9CA3AF':(diff>0?'#6EE7B7':'#FCA5A5'));
+            const diffLbl = diff===null?'-':(Math.abs(diff)<0.2?'≈':(diff>0?`+${diff.toFixed(1)}`:`${diff.toFixed(1)} ⚠️`));
+            return `<tr style="border-top:1px solid rgba(240,205,127,0.08)">
+              <td style="text-align:left;padding:5px;font-weight:600;color:#D1D5DB">${U.esc(s.name)}</td>
+              ${tds}
+              <td style="background:rgba(60,52,137,0.2);padding:5px;font-weight:700;color:${ocol};font-family:'IBM Plex Mono',monospace;text-shadow:0 0 4px ${ocol}40">${overall.toFixed(1)}</td>
+              <td style="background:rgba(157,139,237,0.1);padding:5px;font-weight:700;color:#9D8BED;font-family:'IBM Plex Mono',monospace">${custScore!==null?custScore.toFixed(1):'-'}</td>
+              <td style="padding:5px;font-weight:700;color:${diffCol};font-family:'IBM Plex Mono',monospace">${diffLbl}</td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table></div>
+        <div style="margin-top:6px;font-size:10px;color:#9CA3AF;padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:4px;border-left:2px solid #9D8BED">
+          💡 <strong style="color:#F0CD7F">Tip:</strong> Δ Diff = เจ้าหน้าที่ − ลูกค้า · <span style="color:#FCA5A5">⚠️ ค่าลบมาก</span> = ทีมประเมินตนเองสูงกว่าลูกค้าพึงพอใจ (อาจมีปัญหาที่ลูกค้า)
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-out btn-xs" onclick="Pages.staff_assessment._exportReport()">📥 Export Excel</button>
+        <button class="btn btn-out btn-xs" onclick="window.print()">🖨 พิมพ์รายงาน</button>
+      </div>
+      `}
+    </div>`;
+  },
+
+  _setScope(s){this._reportScope=s;this._renderTab();},
+
+  _exportReport(){
+    let rows = [];
+    if(this._reportScope==='jo') rows = DB.staff_assessment.listByJO(this._selectedJoId);
+    else if(this._reportScope==='project'){
+      const jo = DB.operation.listJobOrders().find(j=>j.id===this._selectedJoId);
+      if(jo) rows = DB.staff_assessment.listByProject(jo.project_id);
+    } else {
+      const now = new Date();
+      const cutoff = new Date(now);
+      cutoff.setMonth(now.getMonth() - (this._reportScope==='3months'?3:1));
+      rows = DB.staff_assessment.list().filter(r=>(r.assessed_at||r.created_at||'')>=cutoff.toISOString());
+    }
+    if(!rows.length){U.toast('ไม่มีข้อมูลให้ export','danger');return;}
+    const header = ['ID','JO','Station','ชื่อ','วิชาชีพ','ตรงเวลา','ทักษะ','ทัศนคติ','ทีมเวิร์ค','บุคลิกภาพ','เฉลี่ย','หมายเหตุ','วันที่ประเมิน'];
+    const csv = [header.join(',')].concat(rows.map(r=>{
+      const avg = DB.staff_assessment.avgOf(r).toFixed(2);
+      return [r.id,r.job_order_id,r.station_id,r.staff_name||'',r.profession||'',r.punctuality,r.skill,r.attitude,r.teamwork,r.appearance,avg,(r.remark||'').replace(/,/g,';'),U.fmtD(r.assessed_at)].join(',');
+    })).join('\n');
+    const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `staff_assessment_${this._reportScope}_${Date.now()}.csv`;
+    a.click();
+    U.toast('✅ Export CSV แล้ว','success');
+  },
+
+  // ─── TAB 3: ประวัติรายคน ───
+  _renderHistory(){
+    // Build unique staff list from all assessments + current JO stations
+    const allAssess = DB.staff_assessment.list();
+    const staffMap = {};
+    allAssess.forEach(a=>{
+      if(!staffMap[a.station_staff_id]){
+        staffMap[a.station_staff_id] = {
+          id:a.station_staff_id, name:a.staff_name, profession:a.profession,
+          assessments:[]
+        };
+      }
+      staffMap[a.station_staff_id].assessments.push(a);
+    });
+    // Also add staff from ALL JOs (even if not yet assessed) — รองรับทั้ง modern + legacy
+    const allStations = DB._get('operation_db','job_stations')||[];
+    allStations.forEach(st=>{
+      let list = (st.staff_list||[]).filter(s=>s.staff_name && s.staff_name.trim());
+      if(list.length===0 && st.staff_name && st.staff_name.trim()){
+        list = [{staff_name:st.staff_name, profession:st.profession||''}];
+      }
+      list.forEach((s,idx)=>{
+        const sid = `${st.id}_${idx}`;
+        if(!staffMap[sid]){
+          staffMap[sid]={id:sid, name:s.staff_name, profession:s.profession, assessments:[]};
+        }
+      });
+    });
+    let staffList = Object.values(staffMap);
+
+    // Filter by search
+    const q = (this._searchStaff||'').toLowerCase().trim();
+    if(q) staffList = staffList.filter(s=>(s.name||'').toLowerCase().includes(q)||(s.profession||'').toLowerCase().includes(q));
+    // Sort by avg desc
+    staffList = staffList.map(s=>{
+      const stats = DB.staff_assessment.statsForStaff(s.id);
+      return {...s, stats};
+    }).sort((a,b)=>{
+      const av = a.stats?a.stats.overall:0;
+      const bv = b.stats?b.stats.overall:0;
+      return bv-av;
+    });
+
+    // Default select first
+    if(!this._selectedStaffId && staffList.length) this._selectedStaffId = staffList[0].id;
+    const selected = staffList.find(s=>s.id===this._selectedStaffId);
+
+    const listHtml = staffList.map(s=>{
+      const stats = s.stats;
+      const avg = stats ? stats.overall : 0;
+      const n = stats ? stats.count : 0;
+      const warn = avg>0 && avg<3.5 ? ' ⚠️' : '';
+      const active = this._selectedStaffId===s.id;
+      const initial = (s.name||'-').charAt(0);
+      const tier = avg>0 ? this._tier(avg) : 'pending';
+      const tierCol = avg>0 ? this._tierColor(avg) : '#9CA3AF';
+      return `<div class="${active?'sa-list-item sa-list-active':'sa-list-item'}" onclick="Pages.staff_assessment._selectStaff('${s.id}')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="sa-avatar sa-avatar-${tier}" style="width:28px;height:28px;font-size:11px">${U.esc(initial)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:${active?'700':'600'};color:${active?'#F0CD7F':'#D1D5DB'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(s.name||'-')}</div>
+            <div style="font-size:9px;color:#9CA3AF">${U.esc(s.profession||'-')} · ${n} JO${avg>0?` · <span style="color:${tierCol};font-weight:700;font-family:'IBM Plex Mono',monospace">⭐${avg.toFixed(2)}${warn}</span>`:''}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    let detailHtml = '<div class="empty"><p>เลือกเจ้าหน้าที่ทางซ้ายเพื่อดูประวัติ</p></div>';
+    if(selected){
+      detailHtml = this._renderStaffDetail(selected);
+    }
+
+    return `
+    <div class="card mb4">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:11px;color:var(--t-dim,#888)">ค้นหา:</span>
+        <input type="text" placeholder="🔍 ชื่อหรือวิชาชีพ..." value="${U.esc(this._searchStaff||'')}" oninput="Pages.staff_assessment._searchStaff=this.value;Pages.staff_assessment._renderTab()" style="padding:5px 10px;font-size:12px;border:1px solid var(--c-line,#E5EAF0);border-radius:6px;width:240px;font-family:inherit">
+        <span style="font-size:11px;color:var(--t-dim,#888)">(${staffList.length} คน)</span>
+      </div>
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:12px">
+        <div style="border:1px solid var(--c-line,#E5EAF0);border-radius:8px;padding:8px;background:var(--surf2,rgba(0,0,0,0.02));max-height:560px;overflow-y:auto">
+          ${listHtml || '<div class="empty"><p>ไม่พบเจ้าหน้าที่</p></div>'}
+        </div>
+        <div>${detailHtml}</div>
+      </div>
+    </div>`;
+  },
+
+  _selectStaff(id){this._selectedStaffId=id;this._renderTab();},
+
+  _renderStaffDetail(staff){
+    const stats = staff.stats;
+    if(!stats || stats.count===0){
+      return `<div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div class="sa-avatar sa-avatar-pending" style="width:54px;height:54px;font-size:22px">${U.esc((staff.name||'-').charAt(0))}</div>
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#F0CD7F">${U.esc(staff.name||'-')}</div>
+            <div style="font-size:11px;color:#9CA3AF">${U.esc(staff.profession||'-')}</div>
+          </div>
+        </div>
+        <div class="empty"><p>ยังไม่มีประวัติการประเมิน</p></div>
+      </div>`;
+    }
+
+    const rows = stats.rows.sort((a,b)=>(b.assessed_at||'').localeCompare(a.assessed_at||''));
+    const avg = stats.overall;
+    const tier = this._tier(avg);
+    const trend = rows.length>=4 ? (() => {
+      const half = Math.floor(rows.length/2);
+      const recent = rows.slice(0,half);
+      const older = rows.slice(half);
+      const ra = recent.reduce((s,r)=>s+DB.staff_assessment.avgOf(r),0)/recent.length;
+      const oa = older.reduce((s,r)=>s+DB.staff_assessment.avgOf(r),0)/older.length;
+      return ra-oa;
+    })() : 0;
+    const trendLabel = Math.abs(trend)<0.1?'≈ คงที่':(trend>0?'↗ ดีขึ้น':'↘ ลดลง');
+    const trendColor = Math.abs(trend)<0.1?'#9CA3AF':(trend>0?'#6EE7B7':'#FCA5A5');
+
+    // Find weak criteria
+    const weakCriteria = this.CRITERIA.reduce((min,c)=>(stats.avg[c.key]<stats.avg[min.key]?c:min), this.CRITERIA[0]);
+
+    // Projects count
+    const projects = new Set();
+    rows.forEach(r=>{
+      const jo = DB.operation.listJobOrders().find(j=>j.id===r.job_order_id);
+      if(jo) projects.add(jo.project_id);
+    });
+
+    // Per-station stats
+    const byStation = {};
+    rows.forEach(r=>{
+      if(!byStation[r.station_id]) byStation[r.station_id]={name:'',scores:[],count:0};
+      byStation[r.station_id].scores.push(DB.staff_assessment.avgOf(r));
+      byStation[r.station_id].count += 1;
+    });
+    Object.keys(byStation).forEach(sid=>{
+      const st = (DB._get('operation_db','job_stations')||[]).find(s=>s.id===Number(sid));
+      byStation[sid].name = st?(st.station_name||'-'):'-';
+      const arr = byStation[sid].scores;
+      byStation[sid].avg = arr.reduce((s,v)=>s+v,0)/arr.length;
+    });
+
+    // Trend SVG (last 12)
+    const last12 = rows.slice(0,12).reverse();
+    const pathPoints = last12.map((r,i)=>{
+      const x = 20 + (i*(560/(last12.length-1||1)));
+      const v = DB.staff_assessment.avgOf(r);
+      const y = 90 - (v/5*70);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const circles = last12.map((r,i)=>{
+      const x = 20 + (i*(560/(last12.length-1||1)));
+      const v = DB.staff_assessment.avgOf(r);
+      const y = 90 - (v/5*70);
+      const col = this._tierColor(v);
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${col}"/>`;
+    }).join('');
+
+    return `
+    <div class="card mb4">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(240,205,127,0.15)">
+        <div class="sa-avatar sa-avatar-${tier}" style="width:54px;height:54px;font-size:22px">${U.esc((staff.name||'-').charAt(0))}</div>
+        <div style="flex:1">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#F0CD7F">${U.esc(staff.name||'-')}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${U.esc(staff.profession||'-')}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="sa-score-big sa-score-${tier}">${avg.toFixed(2)}</div>
+          <div style="font-size:10px;color:#9CA3AF;font-family:'IBM Plex Mono',monospace">เฉลี่ยรวม ⭐</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+        <div><div class="sa-kpi-label">JO ทั้งหมด</div><div style="font-size:18px;font-weight:700;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${stats.count}</div></div>
+        <div><div class="sa-kpi-label">โปรเจค</div><div style="font-size:18px;font-weight:700;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${projects.size}</div></div>
+        <div><div class="sa-kpi-label">เกณฑ์อ่อน</div><div style="font-size:14px;font-weight:700;color:#F0CD7F">${weakCriteria.label}</div></div>
+        <div><div class="sa-kpi-label">Trend</div><div style="font-size:14px;font-weight:700;color:${trendColor}">${trendLabel}</div></div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(240,205,127,0.15);border-radius:8px;padding:10px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#F0CD7F;margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase">📈 แนวโน้มคะแนน (${last12.length} JO ล่าสุด)</div>
+        <svg viewBox="0 0 600 100" style="width:100%;height:80px">
+          <line x1="0" y1="20" x2="600" y2="20" stroke="rgba(240,205,127,0.15)" stroke-width="0.5" stroke-dasharray="2,2"/>
+          <line x1="0" y1="55" x2="600" y2="55" stroke="rgba(240,205,127,0.15)" stroke-width="0.5" stroke-dasharray="2,2"/>
+          <text x="2" y="22" font-size="9" fill="#9CA3AF" font-family="IBM Plex Mono, monospace">5</text>
+          <text x="2" y="57" font-size="9" fill="#9CA3AF" font-family="IBM Plex Mono, monospace">3</text>
+          <polyline points="${pathPoints}" fill="none" stroke="#F0CD7F" stroke-width="2" filter="drop-shadow(0 0 3px rgba(240,205,127,0.5))"/>
+          ${circles}
+        </svg>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(240,205,127,0.15);border-radius:8px;padding:10px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#F0CD7F;margin-bottom:8px;letter-spacing:.4px;text-transform:uppercase">📋 ประวัติการประเมิน (${rows.length} รายการ)</div>
+        <div class="tbl-wrap"><table style="width:100%;font-size:11px;color:#E8EAED">
+          <thead><tr style="color:#9CA3AF;font-family:'IBM Plex Mono',monospace">
+            <th style="text-align:left;padding:5px">วันที่</th>
+            <th style="text-align:left;padding:5px">JO</th>
+            <th style="text-align:left;padding:5px">Station</th>
+            ${this.CRITERIA.map(c=>`<th style="text-align:center;padding:5px" title="${c.label}">${c.icon}</th>`).join('')}
+            <th style="text-align:right;padding:5px">เฉลี่ย</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+          ${rows.map(r=>{
+            const jo = DB.operation.listJobOrders().find(j=>j.id===r.job_order_id);
+            const proj = jo ? DB.sales.listProjects().find(p=>p.id===jo.project_id) : null;
+            const st = (DB._get('operation_db','job_stations')||[]).find(s=>s.id===r.station_id);
+            const avg = DB.staff_assessment.avgOf(r);
+            const acol = this._tierColor(avg);
+            return `<tr style="border-top:1px solid rgba(240,205,127,0.08)">
+              <td style="padding:5px;color:#9CA3AF;font-family:'IBM Plex Mono',monospace">${U.fmtD(r.assessed_at)}</td>
+              <td style="padding:5px"><span style="font-family:'IBM Plex Mono',monospace;color:#F0CD7F;font-size:10px;font-weight:700">${U.esc(proj?proj.project_code:'-')}</span>${jo&&jo.day_no>0?`<span style="color:#9CA3AF;font-size:9px"> วันที่ ${jo.day_no}</span>`:''}</td>
+              <td style="padding:5px;color:#D1D5DB">${U.esc(st?st.station_name:'-')}</td>
+              ${this.CRITERIA.map(c=>{const v=Number(r[c.key])||0; const col=this._tierColor(v); return `<td style="text-align:center;padding:5px;color:${col};font-weight:700;font-family:'IBM Plex Mono',monospace">${v}</td>`;}).join('')}
+              <td style="text-align:right;padding:5px;font-weight:700;color:${acol};font-family:'IBM Plex Mono',monospace;text-shadow:0 0 4px ${acol}40">${avg.toFixed(2)}</td>
+              <td style="padding:5px">${r.remark?`<span title="${U.esc(r.remark)}" style="cursor:help">💬</span>`:''}</td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table></div>
+      </div>
+
+      ${Object.keys(byStation).length>0?`
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(240,205,127,0.15);border-radius:8px;padding:10px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#F0CD7F;margin-bottom:8px;letter-spacing:.4px;text-transform:uppercase">📍 คะแนนเฉลี่ยตาม STATION ที่เคยทำ</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+          ${Object.values(byStation).map(s=>{
+            const t = this._tier(s.avg);
+            const col = this._tierColor(s.avg);
+            return `<div style="padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;text-align:center;border:1px solid ${col}30">
+              <div style="font-size:11px;color:#D1D5DB">${U.esc(s.name)}</div>
+              <div style="font-size:18px;font-weight:700;color:${col};font-family:'IBM Plex Mono',monospace;text-shadow:0 0 4px ${col}40">${s.avg.toFixed(2)}</div>
+              <div style="font-size:10px;color:#9CA3AF;font-family:'IBM Plex Mono',monospace">${s.count} ครั้ง</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`:''}
+
+      ${rows.filter(r=>r.remark).length>0?`
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(240,205,127,0.15);border-radius:8px;padding:10px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#F0CD7F;margin-bottom:8px;letter-spacing:.4px;text-transform:uppercase">💬 ความเห็นจากผู้ประเมิน (5 ล่าสุด)</div>
+        ${rows.filter(r=>r.remark).slice(0,5).map(r=>{
+          const proj = (()=>{const jo=DB.operation.listJobOrders().find(j=>j.id===r.job_order_id);return jo?DB.sales.listProjects().find(p=>p.id===jo.project_id):null;})();
+          const avg = DB.staff_assessment.avgOf(r);
+          const bcol = this._tierColor(avg);
+          return `<div style="padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px;border-left:2px solid ${bcol};margin-bottom:5px">
+            <div style="color:#9CA3AF;font-size:9px;margin-bottom:2px;font-family:'IBM Plex Mono',monospace">${U.esc(proj?proj.project_code:'-')} · ${U.fmtD(r.assessed_at)}</div>
+            <div style="font-size:11px;color:${bcol};font-style:italic">"${U.esc(r.remark)}"</div>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-out btn-xs" onclick="Pages.staff_assessment._exportStaffHistory('${staff.id}')">📥 Export ประวัติ (CSV)</button>
+        <button class="btn btn-out btn-xs" onclick="window.print()">🖨 พิมพ์</button>
+      </div>
+    </div>`;
+  },
+
+  _exportStaffHistory(staffId){
+    const stats = DB.staff_assessment.statsForStaff(staffId);
+    if(!stats||stats.count===0){U.toast('ไม่มีข้อมูล','danger');return;}
+    const header = ['วันที่','Project','JO Day','Station','ตรงเวลา','ทักษะ','ทัศนคติ','ทีมเวิร์ค','บุคลิกภาพ','เฉลี่ย','หมายเหตุ'];
+    const csv = [header.join(',')].concat(stats.rows.map(r=>{
+      const jo = DB.operation.listJobOrders().find(j=>j.id===r.job_order_id);
+      const proj = jo?DB.sales.listProjects().find(p=>p.id===jo.project_id):null;
+      const st = (DB._get('operation_db','job_stations')||[]).find(s=>s.id===r.station_id);
+      const avg = DB.staff_assessment.avgOf(r).toFixed(2);
+      return [U.fmtD(r.assessed_at),proj?proj.project_code:'-',jo&&jo.day_no?`วันที่ ${jo.day_no}`:'-',st?st.station_name:'-',r.punctuality,r.skill,r.attitude,r.teamwork,r.appearance,avg,(r.remark||'').replace(/,/g,';')].join(',');
+    })).join('\n');
+    const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `staff_history_${stats.rows[0].staff_name||staffId}_${Date.now()}.csv`;
+    a.click();
+    U.toast('✅ Export CSV แล้ว','success');
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   Pages.config_staff_assessment — CRUD เกณฑ์ประเมินเจ้าหน้าที่
+   ═══════════════════════════════════════════════════════════ */
+Pages.config_staff_assessment = {
+  _editingId: null,
+  _newRow: null,
+  _showDisabled: false,
+
+  async render(){
+    const all = DB.staff_assessment.listCriteria(true)||[];
+    const active = all.filter(c=>c.enabled!==false).sort((a,b)=>(a.order||0)-(b.order||0));
+    const disabled = all.filter(c=>c.enabled===false);
+    const canEdit = DB.auth.can('add','config_staff_assessment') || DB.auth.can('edit','config_staff_assessment');
+    const canDel = DB.auth.can('delete','config_staff_assessment');
+
+    document.getElementById('content').innerHTML = `
+      <div class="ph">
+        <div>
+          <h2>⚙ ตั้งค่าเกณฑ์ประเมินเจ้าหน้าที่</h2>
+          <p>เพิ่ม / ปรับ / แก้ไข / ลบ เกณฑ์การประเมินเจ้าหน้าที่ — เปลี่ยนได้ตลอดเวลา · ลบเป็น soft-delete (ข้อมูลเก่ายังอยู่)</p>
+        </div>
+      </div>
+
+      <style>
+        .csa-row{display:grid;grid-template-columns:36px 60px 90px 1fr 90px 140px;gap:8px;align-items:center;padding:10px 12px;border-radius:6px;border:1px solid rgba(240,205,127,0.15);background:rgba(255,255,255,0.02);margin-bottom:6px}
+        .csa-row-editing{background:rgba(240,205,127,0.06);border:1px solid #F0CD7F}
+        .csa-input{background:rgba(255,255,255,0.05);color:#F0CD7F;border:1px solid rgba(240,205,127,0.3);padding:5px 8px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:12px;width:100%;box-sizing:border-box}
+        .csa-input:focus{outline:none;border-color:#F0CD7F;box-shadow:0 0 6px rgba(240,205,127,0.3)}
+        .csa-order{font-family:'IBM Plex Mono',monospace;color:#9CA3AF;font-size:11px;text-align:center}
+        .csa-icon-display{font-size:20px;text-align:center}
+        .csa-name-display{font-family:'IBM Plex Mono',monospace;color:#F0CD7F;font-weight:600;font-size:12px}
+        .csa-meta-display{color:#9CA3AF;font-size:10px;font-family:'IBM Plex Mono',monospace}
+        .csa-btn{padding:4px 8px;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;font-family:'IBM Plex Mono',monospace}
+        .csa-btn-edit{background:rgba(240,205,127,0.15);color:#F0CD7F;border:1px solid rgba(240,205,127,0.3)}
+        .csa-btn-del{background:rgba(252,165,165,0.15);color:#FCA5A5;border:1px solid rgba(252,165,165,0.3)}
+        .csa-btn-save{background:linear-gradient(180deg,#F0CD7F,#BA7517);color:#0F1729}
+        .csa-btn-cancel{background:transparent;color:#9CA3AF;border:1px solid rgba(255,255,255,0.15)}
+        .csa-btn-restore{background:rgba(110,231,183,0.15);color:#6EE7B7;border:1px solid rgba(110,231,183,0.3)}
+        .csa-btn-add{background:transparent;border:1px dashed rgba(240,205,127,0.5);color:#F0CD7F;padding:10px;border-radius:6px;width:100%;font-weight:600;cursor:pointer;font-family:inherit}
+        .csa-btn-add:hover{background:rgba(240,205,127,0.05);border-color:#F0CD7F}
+      </style>
+
+      <div class="card mb4">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span class="card-title">เกณฑ์ที่ใช้งาน (${active.length})</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="font-size:10px;color:#9CA3AF">⚠️ หมายเหตุ: ถ้าเกณฑ์ &lt; 1 จะใช้ไม่ได้</span>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:grid;grid-template-columns:36px 60px 90px 1fr 90px 140px;gap:8px;padding:6px 12px;color:#9CA3AF;font-size:10px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.4px">
+          <span>#</span><span>icon</span><span>ชื่อย่อ</span><span>ชื่อเต็ม</span><span>สถานะ</span><span style="text-align:right">การจัดการ</span>
+        </div>
+
+        ${active.map(c=>this._renderRow(c, canEdit, canDel)).join('')}
+
+        ${this._newRow ? this._renderNewRow() : (canEdit ? `<button class="csa-btn-add" onclick="Pages.config_staff_assessment._addNew()">+ เพิ่มเกณฑ์ใหม่</button>` : '')}
+      </div>
+
+      ${disabled.length>0 ? `
+      <div class="card mb4">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span class="card-title" style="color:#9CA3AF">🗂 เกณฑ์ที่ปิดใช้งานแล้ว (${disabled.length})</span>
+          <button class="csa-btn csa-btn-cancel" onclick="Pages.config_staff_assessment._showDisabled=!Pages.config_staff_assessment._showDisabled;Pages.config_staff_assessment.render()">${this._showDisabled?'ซ่อน':'แสดง'}</button>
+        </div>
+        ${this._showDisabled ? disabled.map(c=>`
+          <div class="csa-row" style="opacity:.6">
+            <span class="csa-order">${c.order||'-'}</span>
+            <span class="csa-icon-display">${c.icon||'❓'}</span>
+            <span class="csa-meta-display">${U.esc(c.short||'-')}</span>
+            <span class="csa-name-display" style="color:#9CA3AF">${U.esc(c.label||'-')}</span>
+            <span class="csa-meta-display" style="color:#FCA5A5">ปิดใช้</span>
+            <div style="text-align:right">
+              ${canEdit?`<button class="csa-btn csa-btn-restore" onclick="Pages.config_staff_assessment._restore(${c.id})">↺ คืนสภาพ</button>`:''}
+            </div>
+          </div>
+        `).join('') : ''}
+      </div>
+      ` : ''}
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">📖 คำอธิบาย</span></div>
+        <div style="font-size:12px;color:#D1D5DB;line-height:1.7;padding:6px 4px">
+          <p style="margin:4px 0"><strong style="color:#F0CD7F">• ลำดับ (#):</strong> ลำดับการแสดงในการ์ดประเมิน — ใช้ปุ่ม ↑↓ เพื่อสลับ</p>
+          <p style="margin:4px 0"><strong style="color:#F0CD7F">• Icon:</strong> Emoji ที่จะแสดงข้างชื่อเกณฑ์ (เช่น ⏰, 🎯, 😊)</p>
+          <p style="margin:4px 0"><strong style="color:#F0CD7F">• ชื่อย่อ:</strong> ใช้แสดงในตาราง heatmap (เช่น "ตรง", "ทักษะ")</p>
+          <p style="margin:4px 0"><strong style="color:#F0CD7F">• ชื่อเต็ม:</strong> ชื่อเกณฑ์ที่แสดงใน form ประเมิน (เช่น "ตรงต่อเวลา")</p>
+          <p style="margin:4px 0"><strong style="color:#FCA5A5">• ลบ (Soft-delete):</strong> ปิดใช้งานเกณฑ์ — ข้อมูลย้อนหลังยังอยู่ แต่ฟอร์มประเมินใหม่จะไม่ใช้เกณฑ์นี้</p>
+        </div>
+      </div>
+    `;
+  },
+
+  _renderRow(c, canEdit, canDel){
+    if(this._editingId===c.id) return this._renderEditingRow(c, canEdit);
+    return `
+      <div class="csa-row">
+        <span class="csa-order">${c.order||'-'}</span>
+        <span class="csa-icon-display">${c.icon||'❓'}</span>
+        <span class="csa-meta-display">${U.esc(c.short||'-')}</span>
+        <span class="csa-name-display">${U.esc(c.label||'-')}</span>
+        <span class="csa-meta-display" style="color:#6EE7B7">ใช้งาน</span>
+        <div style="text-align:right;display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">
+          ${canEdit?`<button class="csa-btn csa-btn-edit" title="เลื่อนขึ้น" onclick="Pages.config_staff_assessment._move(${c.id},-1)">↑</button>`:''}
+          ${canEdit?`<button class="csa-btn csa-btn-edit" title="เลื่อนลง" onclick="Pages.config_staff_assessment._move(${c.id},1)">↓</button>`:''}
+          ${canEdit?`<button class="csa-btn csa-btn-edit" onclick="Pages.config_staff_assessment._edit(${c.id})">✏️</button>`:''}
+          ${canDel?`<button class="csa-btn csa-btn-del" onclick="Pages.config_staff_assessment._delete(${c.id},'${U.esc(c.label||'')}')">🗑</button>`:''}
+        </div>
+      </div>`;
+  },
+
+  _renderEditingRow(c, canEdit){
+    return `
+      <div class="csa-row csa-row-editing">
+        <span class="csa-order">${c.order||'-'}</span>
+        <input class="csa-input" id="csa_icon_${c.id}" value="${U.esc(c.icon||'')}" maxlength="2" style="text-align:center;font-size:18px">
+        <input class="csa-input" id="csa_short_${c.id}" value="${U.esc(c.short||'')}" placeholder="ชื่อย่อ" maxlength="10">
+        <input class="csa-input" id="csa_label_${c.id}" value="${U.esc(c.label||'')}" placeholder="ชื่อเต็ม" maxlength="50">
+        <span class="csa-meta-display" style="color:#6EE7B7">ใช้งาน</span>
+        <div style="text-align:right;display:flex;gap:4px;justify-content:flex-end">
+          <button class="csa-btn csa-btn-save" onclick="Pages.config_staff_assessment._save(${c.id})">💾 บันทึก</button>
+          <button class="csa-btn csa-btn-cancel" onclick="Pages.config_staff_assessment._cancel()">✕</button>
+        </div>
+      </div>`;
+  },
+
+  _renderNewRow(){
+    return `
+      <div class="csa-row csa-row-editing">
+        <span class="csa-order">ใหม่</span>
+        <input class="csa-input" id="csa_new_icon" value="${U.esc(this._newRow.icon||'')}" maxlength="2" placeholder="🎯" style="text-align:center;font-size:18px">
+        <input class="csa-input" id="csa_new_short" value="${U.esc(this._newRow.short||'')}" placeholder="ย่อ" maxlength="10">
+        <input class="csa-input" id="csa_new_label" value="${U.esc(this._newRow.label||'')}" placeholder="ชื่อเกณฑ์เต็ม" maxlength="50">
+        <span class="csa-meta-display" style="color:#6EE7B7">ใช้งาน</span>
+        <div style="text-align:right;display:flex;gap:4px;justify-content:flex-end">
+          <button class="csa-btn csa-btn-save" onclick="Pages.config_staff_assessment._saveNew()">💾 สร้าง</button>
+          <button class="csa-btn csa-btn-cancel" onclick="Pages.config_staff_assessment._cancelNew()">✕</button>
+        </div>
+      </div>`;
+  },
+
+  _addNew(){
+    this._newRow = {icon:'',short:'',label:''};
+    this.render();
+  },
+  _cancelNew(){
+    this._newRow = null;
+    this.render();
+  },
+  _saveNew(){
+    const icon = (document.getElementById('csa_new_icon')||{}).value || '';
+    const short = (document.getElementById('csa_new_short')||{}).value || '';
+    const label = (document.getElementById('csa_new_label')||{}).value || '';
+    if(!label.trim()){U.toast('กรุณากรอกชื่อเกณฑ์','danger');return;}
+    if(!short.trim()){U.toast('กรุณากรอกชื่อย่อ','danger');return;}
+    DB.staff_assessment.saveCriterion({
+      icon: icon.trim()||'⭐',
+      short: short.trim(),
+      label: label.trim(),
+      enabled: true
+    });
+    this._newRow = null;
+    U.toast('✅ เพิ่มเกณฑ์ใหม่แล้ว','success');
+    this.render();
+  },
+
+  _edit(id){
+    this._editingId = id;
+    this.render();
+  },
+  _cancel(){
+    this._editingId = null;
+    this.render();
+  },
+  _save(id){
+    const icon = (document.getElementById('csa_icon_'+id)||{}).value || '';
+    const short = (document.getElementById('csa_short_'+id)||{}).value || '';
+    const label = (document.getElementById('csa_label_'+id)||{}).value || '';
+    if(!label.trim()){U.toast('กรุณากรอกชื่อเกณฑ์','danger');return;}
+    DB.staff_assessment.saveCriterion({id, icon:icon.trim()||'⭐', short:short.trim(), label:label.trim()});
+    this._editingId = null;
+    U.toast('✅ บันทึกเกณฑ์แล้ว','success');
+    this.render();
+  },
+
+  _delete(id, label){
+    if(!confirm(`ปิดใช้งานเกณฑ์ "${label}"?\n\n• ข้อมูลประเมินเก่ายังอยู่ — ใช้ดูประวัติได้\n• ฟอร์มประเมินใหม่จะไม่ใช้เกณฑ์นี้\n• สามารถ "คืนสภาพ" ได้ภายหลัง`)) return;
+    DB.staff_assessment.removeCriterion(id);
+    U.toast('✅ ปิดใช้งานเกณฑ์แล้ว','success');
+    this.render();
+  },
+
+  _restore(id){
+    DB.staff_assessment.restoreCriterion(id);
+    U.toast('✅ คืนสภาพเกณฑ์แล้ว','success');
+    this.render();
+  },
+
+  _move(id, dir){
+    DB.staff_assessment.moveCriterion(id, dir);
     this.render();
   }
 };

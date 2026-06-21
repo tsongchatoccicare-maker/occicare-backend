@@ -742,6 +742,197 @@ const DB={
   },
 
   // ═══ ASSESSMENT — แบบประเมินความพึงพอใจ (จาก QR Code) ═══
+  // ── Staff Assessment (ประเมินเจ้าหน้าที่ per JO per Station) ──
+  staff_assessment:{
+    DEFAULT_CRITERIA:[
+      {key:'punctuality', label:'ตรงต่อเวลา', icon:'⏰', short:'ตรง'},
+      {key:'skill',       label:'ทักษะวิชาชีพ', icon:'🎯', short:'ทักษะ'},
+      {key:'attitude',    label:'ทัศนคติ', icon:'😊', short:'ทัศน'},
+      {key:'teamwork',    label:'ทำงานเป็นทีม', icon:'🤝', short:'ทีม'},
+      {key:'appearance',  label:'บุคลิกภาพ', icon:'👔', short:'บุคล'}
+    ],
+
+    // ── CRITERIA CRUD (config) ──
+    listCriteria(includeDisabled){
+      let rows = DB._get('staff_assessment_db','criteria');
+      if(!rows || !rows.length){
+        // Seed default
+        rows = this.DEFAULT_CRITERIA.map((c,idx)=>({
+          ...c, id:idx+1, enabled:true, order:idx+1
+        }));
+        DB._set('staff_assessment_db','criteria',rows);
+      }
+      rows = [...rows].sort((a,b)=>(a.order||0)-(b.order||0));
+      return includeDisabled ? rows : rows.filter(c=>c.enabled!==false);
+    },
+    saveCriterion(data){
+      const rows = this.listCriteria(true)||[];
+      if(data.id){
+        const i = rows.findIndex(r=>r.id===data.id);
+        if(i>=0) rows[i] = {...rows[i], ...data};
+      } else {
+        data.id = (Math.max(0, ...rows.map(r=>r.id||0))||0)+1;
+        data.enabled = data.enabled!==false;
+        data.order = data.order || (rows.length+1);
+        if(!data.key) data.key = 'c'+data.id;
+        rows.push(data);
+      }
+      DB._set('staff_assessment_db','criteria',rows);
+      return data;
+    },
+    removeCriterion(id){
+      // Soft delete
+      const rows = this.listCriteria(true)||[];
+      const i = rows.findIndex(r=>r.id===id);
+      if(i>=0) rows[i].enabled = false;
+      DB._set('staff_assessment_db','criteria',rows);
+    },
+    restoreCriterion(id){
+      const rows = this.listCriteria(true)||[];
+      const i = rows.findIndex(r=>r.id===id);
+      if(i>=0) rows[i].enabled = true;
+      DB._set('staff_assessment_db','criteria',rows);
+    },
+    moveCriterion(id, direction){
+      // direction: -1 (up) or +1 (down)
+      const rows = this.listCriteria(true)||[];
+      const active = rows.filter(r=>r.enabled!==false).sort((a,b)=>(a.order||0)-(b.order||0));
+      const idx = active.findIndex(r=>r.id===id);
+      if(idx<0) return;
+      const newIdx = idx + direction;
+      if(newIdx<0 || newIdx>=active.length) return;
+      // Swap orders
+      const tmp = active[idx].order;
+      active[idx].order = active[newIdx].order;
+      active[newIdx].order = tmp;
+      DB._set('staff_assessment_db','criteria',rows);
+    },
+
+    // ── Customer Assessment Link (per Project + Station name) ──
+    customerScoreForStation(projectId, stationName){
+      const proj = DB.sales.listProjects().find(p=>p.id===projectId);
+      if(!proj) return null;
+      const responses = DB.assessment.listByProject(proj.project_code);
+      if(!responses.length) return null;
+      const Q = DB.assessment.getQuestions();
+      // Normalize station names for matching
+      const normalize = s => (s||'').replace(/จุด|station/gi,'').trim().toLowerCase();
+      const target = normalize(stationName);
+      const stationQ = Q.stations.find(q=>{
+        const lbl = normalize(q.label);
+        return lbl===target || lbl.includes(target) || target.includes(lbl);
+      });
+      if(!stationQ) return null;
+      const scores = responses.map(r=>Number(r[stationQ.key])||0).filter(v=>v>0);
+      if(!scores.length) return null;
+      return scores.reduce((s,v)=>s+v,0)/scores.length;
+    },
+    customerOverallForProject(projectId){
+      const proj = DB.sales.listProjects().find(p=>p.id===projectId);
+      if(!proj) return null;
+      const responses = DB.assessment.listByProject(proj.project_code);
+      if(!responses.length) return null;
+      const Q = DB.assessment.getQuestions();
+      const keys = [...Q.staff.map(q=>q.key), ...Q.stations.map(q=>q.key)];
+      let sum=0, n=0;
+      responses.forEach(r=>{
+        keys.forEach(k=>{
+          const v = Number(r[k]);
+          if(v>0){sum+=v; n++;}
+        });
+      });
+      return n>0 ? sum/n : null;
+    },
+    // Get staff who worked at a Project + Station_name (for reverse link)
+    staffForProjectStation(projectId, stationName){
+      const jos = DB.operation.listJobOrders().filter(j=>j.project_id===projectId);
+      const joIds = jos.map(j=>j.id);
+      const allStations = DB._get('operation_db','job_stations')||[];
+      const normalize = s => (s||'').replace(/จุด|station/gi,'').trim().toLowerCase();
+      const target = normalize(stationName);
+      const matchedStations = allStations.filter(st=>{
+        if(!joIds.includes(st.job_order_id)) return false;
+        const nm = normalize(st.station_name);
+        return nm===target || nm.includes(target) || target.includes(nm);
+      });
+      const matchedStationIds = matchedStations.map(s=>s.id);
+      // Get assessments for those stations
+      const all = this.list();
+      return all.filter(a=>matchedStationIds.includes(a.station_id));
+    },
+
+    list(){return DB._get('staff_assessment_db','assessments')||[];},
+    listByJO(jobOrderId){
+      return (DB._get('staff_assessment_db','assessments')||[]).filter(r=>r.job_order_id===jobOrderId);
+    },
+    listByStaff(stationStaffId){
+      return (DB._get('staff_assessment_db','assessments')||[]).filter(r=>r.station_staff_id===stationStaffId);
+    },
+    listByProject(projectId){
+      const jos = DB.operation.listJobOrders().filter(j=>j.project_id===projectId).map(j=>j.id);
+      return (DB._get('staff_assessment_db','assessments')||[]).filter(r=>jos.includes(r.job_order_id));
+    },
+    get(id){return (DB._get('staff_assessment_db','assessments')||[]).find(r=>r.id===id)||null;},
+    findOne(jobOrderId, stationStaffId){
+      return (DB._get('staff_assessment_db','assessments')||[])
+        .find(r=>r.job_order_id===jobOrderId && r.station_staff_id===stationStaffId)||null;
+    },
+    save(data){
+      data = DB._stampUser(data, !data.id);
+      const rows = DB._get('staff_assessment_db','assessments')||[];
+      if(data.id){
+        const i = rows.findIndex(r=>r.id===data.id);
+        if(i>=0) rows[i] = {...rows[i], ...data, updated_at:DB._now()};
+        else { data.created_at=DB._now(); data.updated_at=DB._now(); rows.push(data); }
+      } else {
+        const existing = rows.find(r=>r.job_order_id===data.job_order_id && r.station_staff_id===data.station_staff_id);
+        if(existing){
+          Object.assign(existing, data, {updated_at:DB._now()});
+          DB._set('staff_assessment_db','assessments',rows);
+          return existing;
+        }
+        data.id = DB._nextId('staff_assessment_db','assessments');
+        data.created_at = DB._now();
+        data.updated_at = DB._now();
+        data.assessed_at = data.assessed_at || DB._now();
+        rows.push(data);
+      }
+      DB._set('staff_assessment_db','assessments',rows);
+      return data;
+    },
+    remove(id){
+      DB._set('staff_assessment_db','assessments',(DB._get('staff_assessment_db','assessments')||[]).filter(r=>r.id!==id));
+    },
+    // Helper: avg of one assessment — uses dynamic criteria keys
+    avgOf(a){
+      if(!a) return 0;
+      const criteria = this.listCriteria(true); // include disabled to count old values
+      let sum=0, n=0;
+      criteria.forEach(c=>{
+        const v = Number(a[c.key]);
+        if(v>0){sum+=v; n++;}
+      });
+      return n>0 ? sum/n : 0;
+    },
+    // Aggregate: per-staff stats
+    statsForStaff(stationStaffId){
+      const rows = this.listByStaff(stationStaffId);
+      if(!rows.length) return null;
+      const n = rows.length;
+      const criteria = this.listCriteria(true);
+      const sum={};
+      criteria.forEach(c=>{sum[c.key]=0;});
+      rows.forEach(r=>{
+        criteria.forEach(c=>{sum[c.key] += Number(r[c.key])||0;});
+      });
+      const avg={};
+      Object.keys(sum).forEach(k=>{avg[k]=Number((sum[k]/n).toFixed(2));});
+      const overallSum = Object.values(sum).reduce((s,v)=>s+v,0);
+      const overall = Number((overallSum/(n*criteria.length)).toFixed(2));
+      return {count:n, avg, overall, rows};
+    }
+  },
+
   assessment:{
     // ── Tokens (unique URL per QR generation) ──
     listTokens(){return DB._get('assessment_db','tokens')||[];},
@@ -1346,7 +1537,7 @@ const DB={
         dashboard:full, customers:full, sales:full, quotation:full,
         op_prep:full, op_onsite:full, op_report:full, op_checklist:full,
         lab:full, xray:full, report:full, opd:full, billing:full, medical:full,
-        config:full, staff:full, parttime:full, parttime_history:full, assessment:full, assessment_report:full, op_summary:full, config_assessment:full
+        config:full, staff:full, parttime:full, parttime_history:full, assessment:full, assessment_report:full, staff_assessment:full, op_summary:full, config_assessment:full, config_staff_assessment:full
       },created_at:DB._now(),updated_at:DB._now()},
 
       // sales — ทีมขาย: CRM, ใบเสนอราคา, Project & Handover
@@ -1355,7 +1546,7 @@ const DB={
       {role:'sales',modules:{
         dashboard:viewOnly, customers:fullNoDel, sales:fullNoDel, quotation:full,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, staff_assessment:viewOnly, op_summary:viewOnly, config_assessment:none, config_staff_assessment:none,
        
        
        
@@ -1368,7 +1559,7 @@ const DB={
       {role:'operation',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:full, op_onsite:full, op_report:full, op_checklist:fullNoDel,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, staff_assessment:full, op_summary:viewOnly, config_assessment:none, config_staff_assessment:none,
        
        
         config:none
@@ -1380,7 +1571,7 @@ const DB={
       {role:'lab',modules:{
         dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
         op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
-        lab:fullNoDel, xray:viewOnly, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
+        lab:fullNoDel, xray:viewOnly, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, staff_assessment:viewOnly, op_summary:viewOnly, config_assessment:none, config_staff_assessment:none,
        
        
        
@@ -1393,7 +1584,7 @@ const DB={
       {role:'xray',modules:{
         dashboard:viewOnly, customers:none, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:viewOnly, op_report:none,
-        lab:none, xray:fullNoDel, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
+        lab:none, xray:fullNoDel, report:none, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, staff_assessment:viewOnly, op_summary:viewOnly, config_assessment:none, config_staff_assessment:none,
        
        
        
@@ -1406,7 +1597,7 @@ const DB={
       {role:'report',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:viewOnly, op_onsite:viewOnly, op_report:none,
-        lab:viewOnly, xray:none, report:fullNoDel, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
+        lab:viewOnly, xray:none, report:fullNoDel, opd:none, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, staff_assessment:viewOnly, op_summary:viewOnly, config_assessment:none, config_staff_assessment:none,
        
        
        
@@ -1419,7 +1610,7 @@ const DB={
       {role:'billing',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:viewOnly, opd:none, billing:fullNoDel, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:viewOnly, opd:none, billing:fullNoDel, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, staff_assessment:viewOnly, op_summary:viewOnly, config_assessment:none, config_staff_assessment:none,
        
        
        
@@ -1430,7 +1621,7 @@ const DB={
       {role:'opd',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:viewOnly, op_report:none,
-        lab:none, xray:none, report:none, opd:fullNoDel, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:none, opd:fullNoDel, billing:none, medical:none, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, staff_assessment:viewOnly, op_summary:viewOnly, config_assessment:none, config_staff_assessment:none,
        
        
         config:none
@@ -1440,7 +1631,7 @@ const DB={
       {role:'medical',modules:{
         dashboard:viewOnly, customers:viewOnly, sales:viewOnly, quotation:none,
         op_prep:none, op_onsite:none, op_report:none,
-        lab:none, xray:none, report:none, opd:none, billing:none, medical:fullNoDel, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, op_summary:viewOnly, config_assessment:none,
+        lab:none, xray:none, report:none, opd:none, billing:none, medical:fullNoDel, op_checklist:none, staff:viewOnly, parttime:viewOnly, parttime_history:viewOnly, assessment:viewOnly, assessment_report:viewOnly, staff_assessment:viewOnly, op_summary:viewOnly, config_assessment:none, config_staff_assessment:none,
        
        
         config:none
