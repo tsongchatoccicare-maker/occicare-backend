@@ -5241,6 +5241,9 @@ Pages.report={async render(){
     const sd=!!(rp.send_doc||meta.send_doc);     const sdd=rp.send_doc_date||meta.send_doc_date||'';
     const rr=!!(rp.receive_raw||meta.receive_raw); const rrd=rp.receive_raw_date||meta.receive_raw_date||'';
     const kr=!!(rp.key_raw||meta.key_raw);       const krd=rp.key_raw_date||meta.key_raw_date||'';
+    // ★ คีย์ผลดิบเก็บตก (Follow-up) — opt-in per project
+    const hasFollowup = !!(rp.has_followup||meta.has_followup);
+    const krf = !!(rp.key_raw_followup||meta.key_raw_followup); const krfd = rp.key_raw_followup_date||meta.key_raw_followup_date||'';
     const ip=!!(rp.interpret||meta.interpret);   const ipd=rp.interpret_date||meta.interpret_date||'';
     const bk=!!(rp.booklet||meta.booklet);       const bkd=rp.booklet_date||meta.booklet_date||'';
     const rs=!!(rp.ready_to_send||meta.ready_to_send); const rsd=rp.ready_to_send_date||meta.ready_to_send_date||'';
@@ -5263,6 +5266,25 @@ Pages.report={async render(){
       ${mkCk(rp.project_id,'send_doc','เวียนเอกสารแล้ว',sd,sdd)}
       ${mkCk(rp.project_id,'receive_raw','รับผลดิบแล้ว',rr,rrd)}
       ${mkCk(rp.project_id,'key_raw','คีย์ผลดิบแล้ว',kr,krd)}
+      ${(()=>{
+        // Special cell: คีย์เก็บตก — ถ้ายังไม่ flag has_followup → แสดงปุ่ม "+ เปิดใช้"
+        if(!hasFollowup){
+          return `<td style="text-align:center;vertical-align:middle;padding:6px 4px">
+            ${canEdit?`<button class="btn btn-out btn-xs" style="font-size:9px;padding:2px 6px;color:#9CA3AF;border-color:rgba(255,255,255,0.15)" title="เปิดใช้ช่องเก็บตก (สำหรับ Project ที่มีการตรวจเก็บตก)" onclick="Pages.report._enableFollowup(${rp.project_id})">+ เก็บตก</button>`:'<span style="color:var(--t-muted);font-size:10px">-</span>'}
+          </td>`;
+        }
+        // มี followup → render checkbox + วันที่
+        const dateLabel = krfd?`<div style="font-size:9px;color:#6EE7B7;margin-top:1px">${U.fmtD(krfd)}</div>`:'';
+        return `<td style="text-align:center;vertical-align:middle;padding:6px 4px;background:rgba(110,231,183,0.04)">
+          ${krf
+            ? `<div style="display:inline-flex;flex-direction:column;align-items:center"><span style="font-size:18px;line-height:1">✅</span>${dateLabel}</div>`
+            : canEdit
+              ? `<input type="checkbox" style="width:16px;height:16px;accent-color:#6EE7B7;cursor:pointer" onchange="Pages.report._toggleMeta(${rp.project_id},'key_raw_followup',this.checked)" title="คีย์ผลดิบเก็บตก" class="rp-ck"/>`
+              : `<span style="color:var(--t-muted);font-size:16px">⬜</span>`
+          }
+          ${canEdit?`<div style="margin-top:2px"><button onclick="Pages.report._disableFollowup(${rp.project_id})" title="ยกเลิกการเก็บตก" style="background:none;border:none;color:#9CA3AF;font-size:9px;cursor:pointer;padding:1px 3px">✕</button></div>`:''}
+        </td>`;
+      })()}
       ${mkCk(rp.project_id,'interpret','แปลผลแล้ว',ip,ipd)}
       ${mkCk(rp.project_id,'booklet','ทำเล่มแล้ว',bk,bkd)}
       ${mkCk(rp.project_id,'ready_to_send','พร้อมส่ง',rs,rsd)}
@@ -5279,7 +5301,7 @@ Pages.report={async render(){
     <div style="padding:12px 16px 0;display:flex;gap:8px;align-items:center">
       <input id="rp_search" placeholder="🔍 ค้นหา Project / บริษัท..." style="max-width:320px;padding:7px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;font-family:'Sarabun',sans-serif;outline:none" oninput="Pages.report._filterTable(this.value)"/>
     </div>
-    <div class="tbl-wrap"><table id="rp_table"><thead><tr><th>Project</th><th>บริษัท</th><th>จำนวน</th><th>วันตรวจ</th><th>กำหนดส่งผล</th><th style="text-align:center" title="Set Plan">Set Plan</th><th style="text-align:center" title="เวียนเอกสาร">เวียนเอกสาร</th><th style="text-align:center" title="รับผลดิบ">รับผลดิบ</th><th style="text-align:center" title="คีย์ผลดิบ">คีย์ผลดิบ</th><th style="text-align:center" title="แปลผล">แปลผล</th><th style="text-align:center" title="ทำเล่ม">ทำเล่ม</th><th style="text-align:center" title="รอส่ง">รอส่ง</th><th>SLA</th><th>สถานะ</th><th></th></tr></thead><tbody id="rp_tbody">${rows||'<tr><td colspan="15" class="empty"><div class="icon">📋</div><p>ยังไม่มี Project Plan</p></td></tr>'}</tbody></table></div>
+    <div class="tbl-wrap"><table id="rp_table"><thead><tr><th>Project</th><th>บริษัท</th><th>จำนวน</th><th>วันตรวจ</th><th>กำหนดส่งผล</th><th style="text-align:center" title="Set Plan">Set Plan</th><th style="text-align:center" title="เวียนเอกสาร">เวียนเอกสาร</th><th style="text-align:center" title="รับผลดิบ">รับผลดิบ</th><th style="text-align:center" title="คีย์ผลดิบ">คีย์ผลดิบ</th><th style="text-align:center;background:rgba(110,231,183,0.06);color:#6EE7B7" title="คีย์ผลดิบเก็บตก (กรณี Project มีการตรวจเก็บตก)">🆕 คีย์เก็บตก</th><th style="text-align:center" title="แปลผล">แปลผล</th><th style="text-align:center" title="ทำเล่ม">ทำเล่ม</th><th style="text-align:center" title="รอส่ง">รอส่ง</th><th>SLA</th><th>สถานะ</th><th></th></tr></thead><tbody id="rp_tbody">${rows||'<tr><td colspan="16" class="empty"><div class="icon">📋</div><p>ยังไม่มี Project Plan</p></td></tr>'}</tbody></table></div>
   </div>`;
 },
 _toggleMeta(pid,key,val){
@@ -5294,7 +5316,7 @@ _toggleMeta(pid,key,val){
   if(rp){
     rp[key]=val?1:0;
     if(val){rp[key+'_date']=today;} else {rp[key+'_date']=null;}
-    // ถ้าครบทุก 7 ขั้นตอน → auto-set status=sent
+    // ถ้าครบทุก 7 ขั้นตอน → auto-set status=sent (ไม่นับ key_raw_followup เพราะเป็น opt-in)
     const allDone=!!(rp.set_plan||m.set_plan)&&!!(rp.send_doc||m.send_doc)&&!!(rp.receive_raw||m.receive_raw)&&!!(rp.key_raw||m.key_raw)&&!!(rp.interpret||m.interpret)&&!!(rp.booklet||m.booklet)&&!!(rp.ready_to_send||m.ready_to_send);
     if(allDone&&rp.status!=='sent'){rp.status='sent';rp.sent_at=DB._now();}
     DB.report.savePlan(rp);
@@ -5303,6 +5325,39 @@ _toggleMeta(pid,key,val){
   Pages.report.render();
   if(typeof NavBadges!=='undefined') NavBadges.update();
   U.toast(val?`✅ บันทึกแล้ว — ${new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})}`:'↩ ยกเลิก');
+},
+
+// ─── เก็บตก (Follow-up) ───
+_enableFollowup(pid){
+  const rp = DB.report.getPlan(pid);
+  if(!rp){U.toast('ไม่พบ Report Plan','danger'); return;}
+  if(!confirm('เปิดใช้ช่อง "คีย์ผลดิบเก็บตก" สำหรับ Project นี้?\n\n(สำหรับกรณีที่ Project มีการตรวจเก็บตกหลังจาก onsite หลัก)')) return;
+  rp.has_followup = 1;
+  rp.has_followup_at = DB._now();
+  DB.report.savePlan(rp);
+  // sync to meta cache
+  const m = JSON.parse(localStorage.getItem('rp_meta_'+pid)||'{}');
+  m.has_followup = 1;
+  localStorage.setItem('rp_meta_'+pid, JSON.stringify(m));
+  U.toast('✅ เปิดใช้ช่องเก็บตกแล้ว','success');
+  Pages.report.render();
+},
+_disableFollowup(pid){
+  if(!confirm('ยกเลิกการใช้ช่อง "คีย์ผลดิบเก็บตก"?\n\n• ข้อมูลคีย์เก็บตกจะถูกลบ\n• สามารถเปิดใช้ใหม่ได้ภายหลัง')) return;
+  const rp = DB.report.getPlan(pid);
+  if(rp){
+    rp.has_followup = 0;
+    rp.key_raw_followup = 0;
+    rp.key_raw_followup_date = null;
+    DB.report.savePlan(rp);
+  }
+  const m = JSON.parse(localStorage.getItem('rp_meta_'+pid)||'{}');
+  delete m.has_followup;
+  delete m.key_raw_followup;
+  delete m.key_raw_followup_date;
+  localStorage.setItem('rp_meta_'+pid, JSON.stringify(m));
+  U.toast('↩ ยกเลิกการเก็บตกแล้ว');
+  Pages.report.render();
 },
 _filterTable(q){
   const tb=document.getElementById('rp_tbody');
@@ -6926,9 +6981,17 @@ Pages.config.addManpower=function(id){
 };
 Pages.config.delManpower=function(id){if(!U.confirm('ลบรายการนี้?'))return;DB.manpowerCost.delete(id);Pages.config.renderManpower();U.toast('✅ ลบแล้ว');};
 
-document.addEventListener('DOMContentLoaded',()=>{
-  // Seed mock data (localStorage backend)
-  DB.seedMockData();
+document.addEventListener('DOMContentLoaded',async ()=>{
+  // ★ Wait for API preload before any local seeding/login check
+  if(DB._ready){
+    try { await DB._ready; } catch(e){ console.warn('DB ready failed:', e); }
+  }
+
+  // Seed mock data — only if localStorage is empty (preload may have populated it)
+  const hasUsers = (DB._get('auth_db','users')||[]).length > 0;
+  if(!hasUsers){
+    DB.seedMockData();
+  }
 
   // Auto-migrate: ensure xray01 exists
   const _users=DB._get('auth_db','users');
@@ -6941,18 +7004,34 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(sess){showApp();Router.navigate('dashboard');}
   else showLogin();
 
-  // Login form
-  document.getElementById('login-form').addEventListener('submit',e=>{
+  // Login form — async to await API auth + reload preload
+  document.getElementById('login-form').addEventListener('submit',async e=>{
     e.preventDefault();
     const u=document.getElementById('l_user').value.trim();
     const p=document.getElementById('l_pass').value;
     const btn=document.querySelector('.btn-login');
     if(btn){btn.disabled=true;btn.textContent='กำลังเข้าสู่ระบบ...';}
+
+    // Try API login first (Iron Session); fall back to localStorage
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials: 'include',
+        body: JSON.stringify({username:u, password:p})
+      });
+      if(res.ok){
+        const j = await res.json();
+        // After API login, reload all data from API
+        DB._ready = DB._preload();
+        try { await DB._ready; } catch(_) {}
+      }
+    } catch(_) { /* offline or no API — fall through */ }
+
     const s=DB.auth.login(u,p);
     if(s){
       showApp();
       Router.navigate('dashboard');
-      // เด้ง popup งานใหม่หลัง login (delay เล็กน้อยให้ dashboard render เสร็จก่อน)
       setTimeout(()=>showLoginNotificationPopup(s),400);
     } else {
       const errEl=document.getElementById('l_err');
@@ -7219,17 +7298,12 @@ Pages.op_station_checklist = {
           </tr></thead>
           <tbody>${itemRows}</tbody>
         </table>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">ผู้จัดเตรียม</label><input id="opck_prep_by" value="${U.esc(m.prep_by)}" placeholder="ชื่อ-นามสกุล" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">วันที่</label><input id="opck_prep_date" type="date" value="${m.prep_date}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">ผู้ตรวจสอบ</label><input id="opck_verify_by" value="${U.esc(m.verify_by)}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">วันที่</label><input id="opck_verify_date" type="date" value="${m.verify_date}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">Director</label><input id="opck_director" value="${U.esc(m.director)}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">วันที่</label><input id="opck_director_date" type="date" value="${m.director_date}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">ผู้นำกลับ</label><input id="opck_return_by" value="${U.esc(m.return_by)}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">วันที่</label><input id="opck_return_date" type="date" value="${m.return_date}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">ผู้รับคืน</label><input id="opck_receive_by" value="${U.esc(m.receive_by)}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">วันที่</label><input id="opck_receive_date" type="date" value="${m.receive_date}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
+          ${this._renderSignCard('prep', 'ผู้จัดเตรียม', '📝', m)}
+          ${this._renderSignCard('verify', 'ผู้ตรวจสอบ', '✓', m)}
+          ${this._renderSignCard('director', 'Director', '👔', m)}
+          ${this._renderSignCard('return', 'ผู้นำกลับ', '↩️', m)}
+          ${this._renderSignCard('receive', 'ผู้รับคืน', '✋', m)}
         </div>
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">${U.recordedByField((DB.station_checklist.getForProject(this._pid)||{}).recorded_by, 'opck_rb')}</div>
       </div>
@@ -7250,18 +7324,89 @@ Pages.op_station_checklist = {
       const find = (f)=>{const el=tbl.querySelector(`[data-it="${idx}"][data-f="${f}"]`);return el?el.value:'';};
       return {qty_out:find('qty_out'),qty_back:find('qty_back'),qty_receive:find('qty_receive'),note:find('note')};
     });
-    // capture meta
+    // ★ Preserve signer fields from this._meta (set by _sign) — only overwrite editable inputs
     const getV=(id)=>document.getElementById(id)?.value||'';
     this._meta = {
+      ...this._meta,  // ← preserve prep_by/_date, verify_by/_date, etc.
       n_stations: getV('opck_n_stations'),
       n_people: getV('opck_n_people'),
-      check_time: getV('opck_check_time'),
-      prep_by: getV('opck_prep_by'), prep_date: getV('opck_prep_date'),
-      verify_by: getV('opck_verify_by'), verify_date: getV('opck_verify_date'),
-      director: getV('opck_director'), director_date: getV('opck_director_date'),
-      return_by: getV('opck_return_by'), return_date: getV('opck_return_date'),
-      receive_by: getV('opck_receive_by'), receive_date: getV('opck_receive_date')
+      check_time: getV('opck_check_time')
     };
+  },
+
+  // ─── Click-to-Sign helpers ───
+  _fmtSignDT(iso){
+    if(!iso) return '-';
+    try {
+      const d = new Date(iso);
+      if(isNaN(d.getTime())) return '-';
+      return d.toLocaleString('th-TH', {
+        day:'numeric', month:'short', year:'2-digit',
+        hour:'2-digit', minute:'2-digit'
+      }).replace(' ', ' · ');
+    } catch { return '-'; }
+  },
+  _renderSignCard(role, label, icon, m){
+    // Special case: 'director' stores as `director` (not `director_by`) for backward compat
+    const byKey = role === 'director' ? 'director' : role+'_by';
+    const dateKey = role+'_date';
+    const name = m[byKey] || '';
+    const dt = m[dateKey] || '';
+    const sess = DB.auth.session();
+    const isAdmin = sess && sess.role === 'admin';
+
+    if(name){
+      // Signed state
+      return `
+        <div style="background:rgba(110,231,183,0.08);border:1px solid rgba(110,231,183,0.4);border-radius:6px;padding:10px;position:relative">
+          <div style="font-size:10px;color:#6EE7B7;font-weight:600;margin-bottom:4px;font-family:'IBM Plex Mono',monospace">${icon} ${label}</div>
+          <div style="color:#F0CD7F;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700">${U.esc(name)}</div>
+          <div style="color:#9CA3AF;font-size:10px;margin-top:3px;display:flex;align-items:center;gap:4px">
+            <span>${this._fmtSignDT(dt)}</span>
+            <span style="color:#6EE7B7">🔒</span>
+          </div>
+          ${isAdmin?`<button onclick="Pages.op_station_checklist._unsign('${role}')" title="ยกเลิกลายเซ็น (admin)" style="position:absolute;top:6px;right:6px;background:rgba(252,165,165,0.15);border:1px solid rgba(252,165,165,0.3);color:#FCA5A5;font-size:10px;padding:2px 6px;border-radius:3px;cursor:pointer">↺</button>`:''}
+        </div>`;
+    } else {
+      // Empty state — show "ลงชื่อ" button
+      return `
+        <div style="background:rgba(255,255,255,0.02);border:1px dashed rgba(240,205,127,0.3);border-radius:6px;padding:10px">
+          <div style="font-size:10px;color:#9CA3AF;font-weight:600;margin-bottom:6px;font-family:'IBM Plex Mono',monospace">${icon} ${label}</div>
+          <button onclick="Pages.op_station_checklist._sign('${role}')" style="width:100%;padding:8px 12px;background:transparent;border:1px dashed #F0CD7F;color:#F0CD7F;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">✋ ลงชื่อ</button>
+          <div style="font-size:9px;color:#9CA3AF;margin-top:4px;text-align:center">บันทึกอัตโนมัติ — เปลี่ยนไม่ได้</div>
+        </div>`;
+    }
+  },
+  _sign(role){
+    const sess = DB.auth.session();
+    if(!sess){U.toast('กรุณา login ก่อน','danger');return;}
+    if(!confirm(`ลงชื่อในฐานะ "${sess.name}" สำหรับขั้นตอน "${role}"?\n\nการลงชื่อจะบันทึก:\n• ชื่อ: ${sess.name}\n• วันเวลา: ${new Date().toLocaleString('th-TH')}\n\n(ไม่สามารถแก้ไขได้ — admin เท่านั้นที่ยกเลิกได้)`)) return;
+    // Capture current state of items + non-signer fields first
+    this._captureCurrentTab();
+    // Then set the signer (director special case: stored as `director`, not `director_by`)
+    if(!this._meta) this._meta = {};
+    const byKey = role === 'director' ? 'director' : role+'_by';
+    this._meta[byKey] = sess.name + (sess.username && sess.username !== sess.name ? ` (${sess.username})` : '');
+    this._meta[role+'_date'] = new Date().toISOString();
+    // Re-render modal
+    const p = DB.sales.getProject(this._pid);
+    const templates = DB.station_checklist.getTemplates();
+    this._renderModal(p, templates);
+    U.toast('✅ ลงชื่อแล้ว','success');
+  },
+  _unsign(role){
+    const sess = DB.auth.session();
+    if(!sess || sess.role !== 'admin'){U.toast('admin เท่านั้น','danger');return;}
+    if(!confirm(`ยกเลิกลายเซ็นของขั้นตอน "${role}"?\n\nลายเซ็นจะถูกลบและสามารถลงชื่อใหม่ได้`)) return;
+    this._captureCurrentTab();
+    if(!this._meta) this._meta = {};
+    const byKey = role === 'director' ? 'director' : role+'_by';
+    this._meta[byKey] = '';
+    this._meta[role+'_date'] = '';
+    const p = DB.sales.getProject(this._pid);
+    const templates = DB.station_checklist.getTemplates();
+    this._renderModal(p, templates);
+    U.toast('↺ ยกเลิกลายเซ็นแล้ว');
   },
 
   _switchTab(key){
@@ -7338,13 +7483,27 @@ Pages.op_station_checklist = {
         <div><strong>ผู้รับบริการ:</strong> ${ck.n_people||p.headcount||'-'} ราย</div>
       </div>
       ${stationSections}
-      <div class="sigs">
-        <div><strong>ผู้จัดเตรียม:</strong> ${ck.prep_by||'_________________'} (${ck.prep_date||'__/__/__'})</div>
-        <div><strong>ผู้ตรวจสอบ:</strong> ${ck.verify_by||'_________________'} (${ck.verify_date||'__/__/__'})</div>
-        <div><strong>Director:</strong> ${ck.director||'_________________'} (${ck.director_date||'__/__/__'})</div>
-        <div><strong>ผู้นำกลับ:</strong> ${ck.return_by||'_________________'} (${ck.return_date||'__/__/__'})</div>
-        <div><strong>ผู้รับคืน:</strong> ${ck.receive_by||'_________________'} (${ck.receive_date||'__/__/__'})</div>
-      </div>
+      ${(()=>{
+        // Format datetime helper for PDF
+        const fmtDT = iso => {
+          if(!iso) return '__/__/__ __:__';
+          try {
+            const d = new Date(iso);
+            if(isNaN(d.getTime())) return iso; // fallback for old date-only strings
+            return d.toLocaleString('th-TH', {
+              day:'numeric', month:'short', year:'2-digit',
+              hour:'2-digit', minute:'2-digit'
+            });
+          } catch { return iso; }
+        };
+        return `<div class="sigs">
+        <div><strong>ผู้จัดเตรียม:</strong> ${ck.prep_by||'_________________'} (${fmtDT(ck.prep_date)})</div>
+        <div><strong>ผู้ตรวจสอบ:</strong> ${ck.verify_by||'_________________'} (${fmtDT(ck.verify_date)})</div>
+        <div><strong>Director:</strong> ${ck.director||'_________________'} (${fmtDT(ck.director_date)})</div>
+        <div><strong>ผู้นำกลับ:</strong> ${ck.return_by||'_________________'} (${fmtDT(ck.return_date)})</div>
+        <div><strong>ผู้รับคืน:</strong> ${ck.receive_by||'_________________'} (${fmtDT(ck.receive_date)})</div>
+      </div>`;
+      })()}
       <button class="no-print" onclick="window.print()" style="position:fixed;top:10px;right:10px;padding:8px 14px;background:#0E9F6E;color:white;border:none;border-radius:6px;font-size:13px;cursor:pointer">🖨 พิมพ์</button>
     </body></html>`);
     w.document.close();
@@ -9304,6 +9463,7 @@ Pages.staff_assessment = {
   _tierBadgeText(v){return v>=4.5?'✓ เสร็จ':(v>=3.5?'✓ เสร็จ':'⚠️ เสร็จ');},
 
   async render(){
+    console.log('[Pages.staff_assessment] render v2025-06-23 — tab:', this._tab);
     const allJOs = (DB.operation.listJobOrders()||[]).filter(j=>j.project_id);
     const projs = DB.sales.listProjects();
     // Default to most recent JO if none selected
@@ -9401,7 +9561,19 @@ Pages.staff_assessment = {
     this._renderTab();
   },
 
-  _switchTab(tab){this._tab=tab;this._renderTab();},
+  _switchTab(tab){
+    console.log('[Pages.staff_assessment] _switchTab →', tab);
+    this._tab = tab;
+    // ★ Defense-in-depth: directly toggle classes on tab buttons (no re-render needed)
+    const tabs = document.querySelectorAll('button.sa-tab, button.sa-tab.sa-tab-active');
+    tabs.forEach(b => {
+      const onclick = b.getAttribute('onclick') || '';
+      const matches = onclick.includes(`_switchTab('${tab}')`);
+      b.className = matches ? 'sa-tab sa-tab-active' : 'sa-tab';
+    });
+    // Then update only the body content (faster than full re-render)
+    this._renderTab();
+  },
   _onJoChange(v){this._selectedJoId=parseInt(v)||null;this._renderTab();},
 
   _renderTab(){
@@ -9943,7 +10115,8 @@ Pages.staff_assessment = {
       const initial = (s.name||'-').charAt(0);
       const tier = avg>0 ? this._tier(avg) : 'pending';
       const tierCol = avg>0 ? this._tierColor(avg) : '#9CA3AF';
-      return `<div class="${active?'sa-list-item sa-list-active':'sa-list-item'}" onclick="Pages.staff_assessment._selectStaff('${s.id}')">
+      const searchText = ((s.name||'') + ' ' + (s.profession||'')).toLowerCase();
+      return `<div class="${active?'sa-list-item sa-list-active':'sa-list-item'}" data-search="${U.esc(searchText)}" onclick="Pages.staff_assessment._selectStaff('${s.id}')">
         <div style="display:flex;align-items:center;gap:8px">
           <div class="sa-avatar sa-avatar-${tier}" style="width:28px;height:28px;font-size:11px">${U.esc(initial)}</div>
           <div style="flex:1;min-width:0">
@@ -9963,16 +10136,125 @@ Pages.staff_assessment = {
     <div class="card mb4">
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
         <span style="font-size:11px;color:var(--t-dim,#888)">ค้นหา:</span>
-        <input type="text" placeholder="🔍 ชื่อหรือวิชาชีพ..." value="${U.esc(this._searchStaff||'')}" oninput="Pages.staff_assessment._searchStaff=this.value;Pages.staff_assessment._renderTab()" style="padding:5px 10px;font-size:12px;border:1px solid var(--c-line,#E5EAF0);border-radius:6px;width:240px;font-family:inherit">
-        <span style="font-size:11px;color:var(--t-dim,#888)">(${staffList.length} คน)</span>
+        <input type="text" id="sa_history_search" placeholder="🔍 ชื่อหรือวิชาชีพ..." value="${U.esc(this._searchStaff||'')}" oninput="Pages.staff_assessment._onSearch(this.value)" style="padding:5px 10px;font-size:12px;border:1px solid var(--c-line,#E5EAF0);border-radius:6px;width:240px;font-family:inherit">
+        <span id="sa_history_count" style="font-size:11px;color:var(--t-dim,#888)">(${staffList.length} คน)</span>
       </div>
       <div style="display:grid;grid-template-columns:280px 1fr;gap:12px">
-        <div style="border:1px solid var(--c-line,#E5EAF0);border-radius:8px;padding:8px;background:var(--surf2,rgba(0,0,0,0.02));max-height:560px;overflow-y:auto">
+        <div id="sa_history_sidebar" style="border:1px solid var(--c-line,#E5EAF0);border-radius:8px;padding:8px;background:var(--surf2,rgba(0,0,0,0.02));max-height:560px;overflow-y:auto">
           ${listHtml || '<div class="empty"><p>ไม่พบเจ้าหน้าที่</p></div>'}
         </div>
-        <div>${detailHtml}</div>
+        <div id="sa_history_detail">${detailHtml}</div>
       </div>
     </div>`;
+  },
+
+  // ─── Pure CSS-based search — NEVER re-renders. Input keeps focus. ───
+  _onSearch(v){
+    this._searchStaff = v;
+    const q = (v||'').toLowerCase().trim();
+    const items = document.querySelectorAll('#sa_history_sidebar [data-search]');
+    let visible = 0;
+    items.forEach(item => {
+      const text = item.getAttribute('data-search') || '';
+      const match = !q || text.includes(q);
+      item.style.display = match ? '' : 'none';
+      if(match) visible++;
+    });
+    // Update count badge
+    const badge = document.getElementById('sa_history_count');
+    if(badge) badge.textContent = `(${visible} คน)`;
+    // Show "ไม่พบ" if nothing matches
+    const sidebar = document.getElementById('sa_history_sidebar');
+    if(sidebar){
+      let empty = sidebar.querySelector('.sa-history-empty');
+      if(visible === 0){
+        if(!empty){
+          empty = document.createElement('div');
+          empty.className = 'sa-history-empty empty';
+          empty.innerHTML = '<p>ไม่พบเจ้าหน้าที่</p>';
+          sidebar.appendChild(empty);
+        }
+        empty.style.display = '';
+      } else if(empty){
+        empty.style.display = 'none';
+      }
+    }
+  },
+  _refreshHistoryView(){
+    if(this._tab !== 'history') return;
+    // Save current caret position
+    const inp = document.getElementById('sa_history_search');
+    const caret = inp ? inp.selectionStart : null;
+    // Re-build sidebar + detail HTML (mirroring _renderHistory but without re-rendering input)
+    const allAssess = DB.staff_assessment.list();
+    const staffMap = {};
+    allAssess.forEach(a=>{
+      if(!staffMap[a.station_staff_id]){
+        staffMap[a.station_staff_id] = {id:a.station_staff_id, name:a.staff_name, profession:a.profession, assessments:[]};
+      }
+      staffMap[a.station_staff_id].assessments.push(a);
+    });
+    const allStations = DB._get('operation_db','job_stations')||[];
+    allStations.forEach(st=>{
+      let list = (st.staff_list||[]).filter(s=>s.staff_name && s.staff_name.trim());
+      if(list.length===0 && st.staff_name && st.staff_name.trim()){
+        list = [{staff_name:st.staff_name, profession:st.profession||''}];
+      }
+      list.forEach((s,idx)=>{
+        const sid = `${st.id}_${idx}`;
+        if(!staffMap[sid]){
+          staffMap[sid]={id:sid, name:s.staff_name, profession:s.profession, assessments:[]};
+        }
+      });
+    });
+    let staffList = Object.values(staffMap);
+    const q = (this._searchStaff||'').toLowerCase().trim();
+    if(q) staffList = staffList.filter(s=>(s.name||'').toLowerCase().includes(q)||(s.profession||'').toLowerCase().includes(q));
+    staffList = staffList.map(s=>{
+      const stats = DB.staff_assessment.statsForStaff(s.id);
+      return {...s, stats};
+    }).sort((a,b)=>{
+      const av = a.stats?a.stats.overall:0;
+      const bv = b.stats?b.stats.overall:0;
+      return bv-av;
+    });
+    if(!this._selectedStaffId && staffList.length) this._selectedStaffId = staffList[0].id;
+    const selected = staffList.find(s=>s.id===this._selectedStaffId);
+
+    const listHtml = staffList.map(s=>{
+      const stats = s.stats;
+      const avg = stats ? stats.overall : 0;
+      const n = stats ? stats.count : 0;
+      const warn = avg>0 && avg<3.5 ? ' ⚠️' : '';
+      const active = this._selectedStaffId===s.id;
+      const initial = (s.name||'-').charAt(0);
+      const tier = avg>0 ? this._tier(avg) : 'pending';
+      const tierCol = avg>0 ? this._tierColor(avg) : '#9CA3AF';
+      const searchText = ((s.name||'') + ' ' + (s.profession||'')).toLowerCase();
+      return `<div class="${active?'sa-list-item sa-list-active':'sa-list-item'}" data-search="${U.esc(searchText)}" onclick="Pages.staff_assessment._selectStaff('${s.id}')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="sa-avatar sa-avatar-${tier}" style="width:28px;height:28px;font-size:11px">${U.esc(initial)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:${active?'700':'600'};color:${active?'#F0CD7F':'#D1D5DB'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(s.name||'-')}</div>
+            <div style="font-size:9px;color:#9CA3AF">${U.esc(s.profession||'-')} · ${n} JO${avg>0?` · <span style="color:${tierCol};font-weight:700;font-family:'IBM Plex Mono',monospace">⭐${avg.toFixed(2)}${warn}</span>`:''}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    const sidebar = document.getElementById('sa_history_sidebar');
+    if(sidebar) sidebar.innerHTML = listHtml || '<div class="empty"><p>ไม่พบเจ้าหน้าที่</p></div>';
+    const detailEl = document.getElementById('sa_history_detail');
+    if(detailEl){
+      detailEl.innerHTML = selected ? this._renderStaffDetail(selected) : '<div class="empty"><p>เลือกเจ้าหน้าที่ทางซ้ายเพื่อดูประวัติ</p></div>';
+    }
+    // Update count badge
+    const span = document.querySelector('#sa_body span:nth-of-type(2)');
+    // Restore focus + caret to the input
+    const inp2 = document.getElementById('sa_history_search');
+    if(inp2 && document.activeElement !== inp2){
+      inp2.focus();
+      if(caret !== null) inp2.setSelectionRange(caret, caret);
+    }
   },
 
   _selectStaff(id){this._selectedStaffId=id;this._renderTab();},
