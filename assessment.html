@@ -85,21 +85,20 @@ body{padding-bottom:30px}
   © <span class="brand">OcciCare Mobile Checkup System</span> · ข้อมูลใช้เพื่อพัฒนาบริการเท่านั้น
 </div>
 
+<script src="js/config.js"></script>
 <script src="js/database.js"></script>
 <script>
 // ─────────────────────────────────────────────
 // แบบประเมิน — มาตรฐาน 2 sections + suggestions
 // ─────────────────────────────────────────────
-// ── Load editable questions from DB.assessment (config_assessment page can edit them) ──
-const QUESTIONS = (typeof DB !== 'undefined' && DB.assessment && DB.assessment.getQuestions)
-  ? DB.assessment.getQuestions()
-  : { staff:[], stations:[] };
-const STAFF_QUESTIONS = QUESTIONS.staff || [];
-const STATION_QUESTIONS = QUESTIONS.stations || [];
-
 const params = new URLSearchParams(window.location.search);
 const token = params.get('t') || '';
 const projectCodeParam = params.get('p') || params.get('project') || '';
+
+let QUESTIONS = { staff:[], stations:[] };
+let STAFF_QUESTIONS = [];
+let STATION_QUESTIONS = [];
+let project = null;
 
 function getProjectFromToken(t){
   if(!t) return null;
@@ -117,9 +116,6 @@ function getProjectFromCode(code){
   } catch(e){ return null; }
 }
 
-// Token URL (?t=TOKEN) takes priority, then legacy ?p=PROJECT_CODE
-const project = token ? getProjectFromToken(token) : getProjectFromCode(projectCodeParam);
-
 function renderError(msg){
   document.getElementById('error').style.display='';
   document.getElementById('error').innerHTML = `<div class="error-banner">⚠️ ${msg}</div>`;
@@ -127,6 +123,7 @@ function renderError(msg){
 
 function renderProjInfo(){
   if(!project){
+    document.getElementById('proj_info').innerHTML = '';
     const errMsg = token
       ? 'ลิงก์ QR หมดอายุ หรือถูกยกเลิกแล้ว — กรุณาขอ QR ใหม่จากเจ้าหน้าที่'
       : projectCodeParam
@@ -251,10 +248,28 @@ function showSuccess(){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-// Init
-if(renderProjInfo()){
-  renderForm();
-}
+// Init — ★ รอ Supabase sync เสร็จก่อน validate token (กันขึ้น "หมดอายุ" ผิด ๆ)
+(async function init(){
+  // แสดง loading ระหว่างรอ
+  document.getElementById('proj_info').innerHTML =
+    '<div style="text-align:center;padding:40px 20px;color:#6B7280;font-size:14px">⏳ กำลังโหลดข้อมูล...</div>';
+  try {
+    if(DB._ready && typeof DB._ready.then === 'function') await DB._ready;
+  } catch(e){ console.warn('DB._ready error', e); }
+
+  // โหลดคำถามหลัง sync เสร็จ
+  QUESTIONS = (typeof DB !== 'undefined' && DB.assessment && DB.assessment.getQuestions)
+    ? DB.assessment.getQuestions() : { staff:[], stations:[] };
+  STAFF_QUESTIONS  = QUESTIONS.staff    || [];
+  STATION_QUESTIONS = QUESTIONS.stations || [];
+
+  // หา project จาก token (ต้องอยู่ใน Supabase ที่ sync มาแล้ว) — fallback ไปที่ ?p=
+  project = token ? getProjectFromToken(token) : getProjectFromCode(projectCodeParam);
+
+  if(renderProjInfo()){
+    renderForm();
+  }
+})();
 </script>
 
 </body>

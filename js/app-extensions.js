@@ -129,9 +129,10 @@ function _checkLayout(){
    3. NAV ROLE BADGES
 ══════════════════════════════════════════════════ */
 const NavBadges = {
-  update(){
+  // ★ Compute role-based pending counts (per nav page). Pure — no DOM writes.
+  computeCounts(){
     const sess = DB.auth.session();
-    if(!sess) return;
+    if(!sess) return {};
     const role = sess.role;
     const counts = {};
     try {
@@ -167,8 +168,35 @@ const NavBadges = {
         const n = projs.filter(p=>p.status==='Billing'&&!existInv.includes(p.id)).length;
         if(n) counts['billing'] = n;
       }
+      // ★ Checklist Station — โปรเจกต์ Closed ที่ยังไม่ได้กรอก/ปิด Checklist
+      if(role==='operation'||role==='admin'){
+        const n = projs.filter(p=>p.status==='Closed').filter(p=>{
+          const ck = DB.station_checklist ? DB.station_checklist.getForProject(p.id) : null;
+          return !ck || !ck.is_complete;
+        }).length;
+        if(n) counts['op_station_checklist'] = n;
+      }
+      // ★ เวชระเบียน — โปรเจกต์ Closed ที่ยังไม่ได้ทำเวชระเบียนครบ (download_upload + document + equipment)
+      if(role==='medical'||role==='admin'){
+        const n = projs.filter(p=>p.status==='Closed').filter(p=>{
+          if(!DB.medical) return true;
+          const m = DB.medical.getMeta(p.id);
+          return !m || !(m.download_upload && m.document && m.equipment);
+        }).length;
+        if(n) counts['medical'] = n;
+      }
     } catch(e){ console.warn('NavBadges:', e); }
+    return counts;
+  },
 
+  // Sum of all counts — used by updateAlerts() to compose the bell total.
+  totalPending(){
+    return Object.values(this.computeCounts()).reduce((s,v)=>s+v,0);
+  },
+
+  // เฉพาะ DOM update ของ .nav-role-badge — ไม่แตะกระดิ่ง (ป้องกัน recursion กับ updateAlerts)
+  update(){
+    const counts = this.computeCounts();
     document.querySelectorAll('.nav-item[data-page]').forEach(el=>{
       const pg = el.dataset.page;
       let b = el.querySelector('.nav-role-badge');
@@ -178,10 +206,6 @@ const NavBadges = {
         b.textContent=c; b.style.display='inline-block';
       } else if(b){ b.style.display='none'; }
     });
-
-    const total = Object.values(counts).reduce((s,v)=>s+v,0);
-    const bell = document.getElementById('alert-count');
-    if(bell){ bell.textContent=total; bell.style.display=total>0?'inline-block':'none'; }
   }
 };
 window.NavBadges = NavBadges;

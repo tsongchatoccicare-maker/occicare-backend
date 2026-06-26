@@ -1,6 +1,5 @@
 /**
  * config.js — Frontend Configuration
- * Edit API_BASE to match your backend server URL
  */
 const API_BASE = (() => {
   if (window.location.hostname === 'localhost' ||
@@ -10,3 +9,11 @@ const API_BASE = (() => {
   // Production: same domain (frontend served by Express /public)
   return '';
 })();
+
+// ★ Supabase Configuration
+// ดึงจาก https://app.supabase.com → Project → Settings → API
+//   - Project URL  → SUPABASE_URL  (เช่น 'https://abcdefgh.supabase.co')
+//   - anon public  → SUPABASE_KEY  (key สำหรับ client — ปลอดภัยที่จะใส่ใน frontend)
+// ถ้าเว้นว่าง ระบบจะใช้ localStorage อย่างเดียว (QR ข้ามเครื่องจะไม่ทำงาน)
+const SUPABASE_URL = '';
+const SUPABASE_KEY = '';

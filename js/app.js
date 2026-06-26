@@ -541,13 +541,20 @@ function buildNav(){
 function updateAlerts(){
   try {
     const a=DB.checkAlerts()||[];
+    // ★ Single source of truth ของกระดิ่ง header
+    //    = alerts (TAT/SLA/X-Ray/Onsite/Invoice/Critical) + role-based pending (NavBadges) + .nav-badge counts (parttime)
+    const pendingRole = (window.NavBadges && typeof NavBadges.totalPending==='function')
+      ? NavBadges.totalPending() : 0;
+    const pendingNav = _getNavBadgeCount('parttime');
+    const total = a.length + pendingRole + pendingNav;
     const b=document.getElementById('alert-count');
     if(b){
-      b.textContent=a.length;
-      b.style.display=a.length>0?'inline-block':'none';
+      b.textContent=total;
+      b.style.display=total>0?'inline-block':'none';
     }
-    // อัปเดต nav badges (Part-Time pending count, etc.)
-    updateNavBadges();
+    // อัปเดต nav badges
+    updateNavBadges();  // .nav-badge (parttime)
+    if(window.NavBadges) NavBadges.update();  // .nav-role-badge (op_station_checklist, medical, ฯลฯ)
   } catch(e){}
 }
 
@@ -2849,7 +2856,7 @@ Pages.quotation={
     }
     U.toast('🎉 ปิดการขาย + สร้าง Project แล้ว! ทีม Operation เห็นแล้ว');
     this.render();
-    if(typeof NavBadges!=='undefined')NavBadges.update();
+    if(typeof updateAlerts==='function') updateAlerts();
   },
 
   async _filterTable(q){
@@ -7521,6 +7528,7 @@ Pages.medical = {
   _toggle(pid,key,val){
     DB.medical.setMeta(pid,{[key]:val});
     this.render();
+    if(typeof updateAlerts==='function') updateAlerts();
     U.toast(val?'✅ บันทึกแล้ว':'↩ ยกเลิก');
   },
   editMeta(pid){
@@ -7560,13 +7568,16 @@ Pages.medical = {
           download_upload:dl, document:dc, equipment:eq, note:nt,
           _override_recorded_by: rb || undefined
         });
-        Modal.close(); this.render(); U.toast('✅ บันทึกแล้ว');
+        Modal.close(); this.render();
+        if(typeof updateAlerts==='function') updateAlerts();
+        U.toast('✅ บันทึกแล้ว');
       });
   },
   del(pid){
     if(!confirm('ลบข้อมูลเวชระเบียนของ Project นี้?')) return;
     DB.medical.remove(pid);
     this.render();
+    if(typeof updateAlerts==='function') updateAlerts();
     U.toast('✅ ลบแล้ว');
   }
 };
@@ -7763,7 +7774,8 @@ Pages.op_station_checklist = {
     doctor: ['แพทย์'],
     vaccine: ['วัคซีน', 'ฉีดวัคซีน'],
     equip: ['ครุภัณฑ์'],
-    sweat: ['ซับเหงื่อ']
+    sweat: ['ซับเหงื่อ'],
+    xray: ['เอกซเรย์', 'เอ็กซเรย์', 'x-ray', 'xray', 'x ray']
   },
 
   // ★ Lookup staff_count รวม จาก JO ของ project นี้ตาม station key
@@ -7819,10 +7831,26 @@ Pages.op_station_checklist = {
   // ★ Map JO station_name → template station_key (substring keyword match)
   //   Returns: 'blood' / 'reg' / etc. — or null if no match
   _mapJOStationToKey(joStationName){
-    const name = (joStationName||'').toLowerCase();
+    const name = (joStationName||'').toLowerCase().trim();
+    if(!name) return null;
+
+    // 1) Hardcoded keywords (เร็ว · มี alias สำหรับ 16 station เดิม)
     for(const [key, keywords] of Object.entries(this._STATION_JO_KEYWORDS)){
       if(keywords.some(kw => name.includes(kw.toLowerCase()))) return key;
     }
+
+    // 2) ★ Fallback: auto-match template.name (สำหรับ template ที่ user เพิ่มใหม่)
+    //    - exact match
+    //    - substring match (ทั้งสองทาง)
+    const templates = DB.station_checklist.getTemplates();
+    for(const [key, tpl] of Object.entries(templates)){
+      const tplName = (tpl.name||'').toLowerCase().trim();
+      if(!tplName) continue;
+      if(tplName === name) return key;            // exact
+      if(name.includes(tplName)) return key;       // JO name contains template name
+      if(tplName.includes(name)) return key;       // template name contains JO name
+    }
+
     return null;
   },
 
@@ -8212,6 +8240,7 @@ Pages.op_station_checklist = {
     DB.station_checklist.markComplete(this._pid);
     Modal.close();
     this.render();
+    if(typeof updateAlerts==='function') updateAlerts();
     U.toast('✅ บันทึก Checklist Station สำเร็จ');
   },
 
@@ -8861,13 +8890,13 @@ Pages.parttime = {
         DB.parttime.save({...r, status:'approved', status_note:reason, work_status: workStatus});
         Modal.close();
         this.render();
-        if(typeof updateNavBadges==='function') updateNavBadges();
+        if(typeof updateAlerts==='function') updateAlerts();
         U.toast(`✅ อนุมัติแล้ว — เพิ่มเข้า Staff Directory (${newStaff.employee_id})`);
       } else {
         DB.parttime.save({...r, status:newStatus, status_note:reason, work_status: workStatus});
         Modal.close();
         this.render();
-        if(typeof updateNavBadges==='function') updateNavBadges();
+        if(typeof updateAlerts==='function') updateAlerts();
         U.toast(
           workStatus==='Blacklist' ? '⛔ ตั้งเป็น Blacklist แล้ว' :
           workStatus==='Give a chance' ? '⚠ ตั้งเป็น Give a chance แล้ว' :
@@ -8882,7 +8911,7 @@ Pages.parttime = {
     const newStaff = DB.parttime.approveAsStaff(id);
     if(newStaff){
       this.render();
-      if(typeof updateNavBadges==='function') updateNavBadges();
+      if(typeof updateAlerts==='function') updateAlerts();
       U.toast(`✅ อนุมัติแล้ว — Employee ID: ${newStaff.employee_id}`);
     } else {
       U.toast('❌ อนุมัติไม่สำเร็จ','danger');
@@ -8895,7 +8924,7 @@ Pages.parttime = {
     if(!confirm(`ลบใบสมัครของ "${r.full_name}"?`)) return;
     DB.parttime.remove(id);
     this.render();
-    if(typeof updateNavBadges==='function') updateNavBadges();
+    if(typeof updateAlerts==='function') updateAlerts();
     U.toast('✅ ลบแล้ว');
   },
 

@@ -219,10 +219,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 <!-- QRCode library (for Gen Assessment) -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-<!-- Database layer: localStorage (works without backend) -->
-<script src="js/database.js"></script>
-<!-- Config & optional API layer -->
+<!-- Config (SUPABASE_URL/KEY) ต้องโหลดก่อน database.js เพื่อให้ sync layer อ่าน config เจอ -->
 <script src="js/config.js"></script>
+<!-- Database layer: localStorage cache + Supabase sync -->
+<script src="js/database.js"></script>
 <!-- Notifications & Calendar -->
 <script src="js/line-notify.js"></script>
 <script src="js/calendar.js"></script>

@@ -1780,76 +1780,114 @@ window.DB=DB;
 
 
 /* ═══════════════════════════════════════════════════════════════════
-   ★ SUPABASE SYNC LAYER (Cache + API)
+   ★ SUPABASE SYNC LAYER (Cache + Supabase REST API)
    ─────────────────────────────────────────────────────────────────
-   Overrides DB._set() to also sync to /api/kv/{key}
-   Adds DB._preload() and DB._ready promise for startup sync.
-   localStorage = source of truth (cache); API = canonical store.
+   ยิงตรงเข้า Supabase REST API (/rest/v1/mck_kv) — ไม่ต้องมี backend ของตัวเอง
+   localStorage = cache, Supabase = canonical store.
+   ใช้ SUPABASE_URL / SUPABASE_KEY จาก js/config.js
+   ถ้าเว้นว่าง → fallback ใช้ localStorage อย่างเดียว
    ═══════════════════════════════════════════════════════════════════ */
 (function() {
-  const _origGet = DB._get.bind(DB);
   const _origSet = DB._set.bind(DB);
-  
-  // Skip sync for these keys (session, auth UI state, etc.)
+
+  // Skip sync for these keys (session, UI-only state)
   const SYNC_SKIP = ['mck_session', 'mck_ui_state'];
-  
+
+  const SB_URL = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) ? SUPABASE_URL.replace(/\/$/,'') : '';
+  const SB_KEY = (typeof SUPABASE_KEY !== 'undefined') ? SUPABASE_KEY : '';
+  const SB_ENABLED = !!(SB_URL && SB_KEY);
+
+  const sbHeaders = (extra) => Object.assign({
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Content-Type': 'application/json'
+  }, extra||{});
+
   DB._isOnline = false;
   DB._syncQueue = [];
-  
-  // Override _set to also sync to API
+  DB._supabaseEnabled = SB_ENABLED;
+
+  // Override _set to also upsert to Supabase
   DB._set = function(db, table, data) {
     _origSet(db, table, data);
     const key = `${db}__${table}`;
     if (SYNC_SKIP.includes(key)) return;
+    if (!SB_ENABLED) return;
     if (!DB._isOnline) {
-      // Queue the change for when online
       DB._syncQueue.push(key);
       return;
     }
-    // Fire and forget — log errors but don't block UI
-    fetch('/api/kv/' + encodeURIComponent(key), {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include',
-      body: JSON.stringify({ value: data })
+    // Upsert: POST + Prefer: resolution=merge-duplicates (need UNIQUE(db_name,tbl_name) in schema)
+    fetch(`${SB_URL}/rest/v1/mck_kv?on_conflict=db_name,tbl_name`, {
+      method: 'POST',
+      headers: sbHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify({ db_name: db, tbl_name: table, payload: data, updated_at: new Date().toISOString() })
     }).catch(err => {
-      console.warn('[KV sync failed]', key, err.message);
+      console.warn('[Supabase sync failed]', key, err.message);
     });
   };
-  
-  // Preload all KV from API → populate localStorage
+
+  // Preload: GET all rows from mck_kv → populate localStorage
   DB._preload = async function() {
+    if (!SB_ENABLED) {
+      console.log('[Sync] Supabase not configured — localStorage only (set SUPABASE_URL/SUPABASE_KEY in js/config.js)');
+      return false;
+    }
     try {
-      const res = await fetch('/api/kv', { credentials: 'include' });
+      const res = await fetch(`${SB_URL}/rest/v1/mck_kv?select=db_name,tbl_name,payload`, {
+        headers: sbHeaders()
+      });
       if (!res.ok) {
-        if (res.status === 401) {
-          console.log('[Sync] Not logged in — using localStorage only');
-        } else {
-          console.warn('[Sync] Preload failed:', res.status);
-        }
+        console.warn('[Sync] Supabase preload failed:', res.status, await res.text().catch(()=>''));
         return false;
       }
-      const j = await res.json();
-      const map = j.data || {};
+      const rows = await res.json();
       let count = 0;
-      Object.entries(map).forEach(([key, value]) => {
-        localStorage.setItem(key, JSON.stringify(value));
+      rows.forEach(r => {
+        const key = `${r.db_name}__${r.tbl_name}`;
+        localStorage.setItem(key, JSON.stringify(r.payload));
         count++;
       });
       DB._isOnline = true;
-      console.log(`[Sync] Loaded ${count} keys from API ✓`);
+      console.log(`[Sync] Loaded ${count} keys from Supabase ✓`);
+
+      // ★ First-time setup: ถ้า Supabase ว่างเปล่าและ localStorage มีข้อมูล → upload ขึ้นไป
+      // ทำงานครั้งเดียวตอนแรกที่เชื่อม Supabase (run ครั้งถัดไป rows>0 ก็ skip)
+      if (count === 0) {
+        const KNOWN_DBS = ['auth_db','customer_db','sales_db','operation_db','lab_db',
+          'report_db','quotation_db','config_db','billing_db','files_db','hr_db',
+          'staff_assessment_db','assessment_db'];
+        const uploaded = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || !k.includes('__')) continue;
+          if (SYNC_SKIP.includes(k)) continue;
+          const [db, table] = k.split('__');
+          if (!KNOWN_DBS.includes(db)) continue;
+          let value;
+          try { value = JSON.parse(localStorage.getItem(k) || 'null'); } catch { continue; }
+          if (value === null) continue;
+          fetch(`${SB_URL}/rest/v1/mck_kv?on_conflict=db_name,tbl_name`, {
+            method: 'POST',
+            headers: sbHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+            body: JSON.stringify({ db_name: db, tbl_name: table, payload: value, updated_at: new Date().toISOString() })
+          }).catch(() => null);
+          uploaded.push(k);
+        }
+        if (uploaded.length) console.log(`[Sync] First-time: uploaded ${uploaded.length} keys ✓`);
+      }
       // Flush queued changes
       if (DB._syncQueue.length > 0) {
         const keys = [...new Set(DB._syncQueue)];
         DB._syncQueue = [];
         for (const key of keys) {
+          const [db, table] = key.split('__');
           const value = JSON.parse(localStorage.getItem(key) || 'null');
           if (value !== null) {
-            fetch('/api/kv/' + encodeURIComponent(key), {
-              method: 'PUT',
-              headers: {'Content-Type': 'application/json'},
-              credentials: 'include',
-              body: JSON.stringify({ value })
+            fetch(`${SB_URL}/rest/v1/mck_kv?on_conflict=db_name,tbl_name`, {
+              method: 'POST',
+              headers: sbHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+              body: JSON.stringify({ db_name: db, tbl_name: table, payload: value, updated_at: new Date().toISOString() })
             }).catch(() => null);
           }
         }
@@ -1857,11 +1895,11 @@ window.DB=DB;
       }
       return true;
     } catch (e) {
-      console.error('[Sync] Preload error:', e);
+      console.error('[Sync] Supabase preload error:', e);
       return false;
     }
   };
-  
-  // Public ready promise — app.js awaits this before first render
+
+  // Public ready promise — UI awaits this before first render
   DB._ready = DB._preload();
 })();
