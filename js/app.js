@@ -474,7 +474,6 @@ function buildNav(){
     {section:'Operation'},
     {page:'op_checklist',icon:'✅',label:'เตรียมงาน (Checklist)',mod:'op_prep'},
     {page:'op_station_checklist',icon:'📋',label:'Checklist Station',mod:'op_checklist'},
-    {page:'op_usage_report',icon:'📦',label:'รายงานการใช้ของ',mod:'op_checklist'},
     {page:'op_prep',icon:'📋',label:'ใบแจ้งงาน',mod:'op_prep'},
     {page:'op_onsite',icon:'🚑',label:'Onsite',mod:'op_onsite'},
     {section:'ห้องปฏิบัติการ'},
@@ -493,6 +492,7 @@ function buildNav(){
     {page:'assessment',icon:'⭐',label:'สร้าง QR แบบประเมิน',mod:'assessment'},
     {section:'รายงาน'},
     {page:'op_report',icon:'📊',label:'รายงานสรุปค่าใช้จ่าย',mod:'op_report'},
+    {page:'op_usage_report',icon:'📦',label:'รายงานการใช้ของ',mod:'op_checklist'},
     {page:'assessment_report',icon:'🌟',label:'ผลประเมินความพึงพอใจ',mod:'assessment_report'},
     {page:'op_summary',icon:'📈',label:'ผลการประเมินบันทึกออกหน่วย',mod:'op_summary'},
     {page:'staff_assessment',icon:'⭐',label:'ประเมินเจ้าหน้าที่',mod:'staff_assessment'},
@@ -7730,22 +7730,18 @@ Pages.op_station_checklist = {
   openChecklist(pid){
     const p = DB.sales.getProject(pid);
     if(!p){U.toast('ไม่พบ Project','danger');return;}
-    const filteredTemplates = this._getFilteredTemplates();
+    this._pid = pid;  // ★ Set _pid BEFORE calling _getJOFilteredStations (which needs it)
+    const filteredTemplates = this._getJOFilteredStations();
     if(Object.keys(filteredTemplates).length === 0){
-      U.toast('⛔ ไม่มี Station ที่คุณมีสิทธิ์เข้าถึง','danger');
+      U.toast('⛔ Project นี้ไม่มี Station ในใบแจ้งงาน หรือคุณไม่มีสิทธิ์เข้าถึง','danger');
       return;
     }
 
     const saved = DB.station_checklist.getForProject(pid) || {};
     this._activeTab = Object.keys(filteredTemplates)[0];
-    this._pid = pid;
     this._draft = JSON.parse(JSON.stringify(saved.stations||{})); // working copy
-    // ★ NEW: _meta เก็บแค่ field ที่เป็น global — per-station data อยู่ใน this._draft[key]
     this._meta = {
       n_people: saved.n_people || p.headcount || ''
-      // n_stations → ย้ายไป this._draft[key].n_stations (per station)
-      // signatures (prep_by, etc.) → ย้ายไป this._draft[key].signatures (per station)
-      // check_time → ลบทิ้ง (ตามที่ user ขอ)
     };
     this._renderModal(p, filteredTemplates);
   },
@@ -7820,6 +7816,76 @@ Pages.op_station_checklist = {
     return Object.fromEntries(Object.entries(templates).filter(([k])=>sp.includes(k)));
   },
 
+  // ★ Map JO station_name → template station_key (substring keyword match)
+  //   Returns: 'blood' / 'reg' / etc. — or null if no match
+  _mapJOStationToKey(joStationName){
+    const name = (joStationName||'').toLowerCase();
+    for(const [key, keywords] of Object.entries(this._STATION_JO_KEYWORDS)){
+      if(keywords.some(kw => name.includes(kw.toLowerCase()))) return key;
+    }
+    return null;
+  },
+
+  // ★ NEW: filter by JO ∩ template + station_perms (Q2 = Option 2B)
+  //   Returns: {stationKey: {...templateOrVirtual, _from_jo, _no_template?, _jo_data?}}
+  //   - JO Station ∩ template → ใช้ template + แท็ก _from_jo=true
+  //   - JO Station ที่ไม่มี template → virtual entry _no_template=true
+  //   - ถ้า project ไม่มี JO เลย → fallback ใช้ _getFilteredTemplates()
+  _getJOFilteredStations(){
+    const allTemplates = DB.station_checklist.getTemplates();
+    const jos = DB.operation.listJobOrders().filter(j => j.project_id === this._pid);
+    // No JO at all → fallback to all templates with station_perms filter
+    if(jos.length === 0) return this._getFilteredTemplates();
+
+    // Collect all JO stations (across all JOs of this project)
+    const joStations = [];
+    jos.forEach(jo => {
+      DB.operation.listStations(jo.id).forEach(s => joStations.push(s));
+    });
+    if(joStations.length === 0) return this._getFilteredTemplates();
+
+    // Map JO stations → template keys (or virtual)
+    const stationsInJO = {};  // key → station data
+    const virtualStations = {};  // virtualKey → station data
+    joStations.forEach(js => {
+      const tKey = this._mapJOStationToKey(js.station_name);
+      if(tKey && allTemplates[tKey]){
+        // Match template — use template (overwrite or merge if multiple JOs have same station)
+        stationsInJO[tKey] = {
+          ...allTemplates[tKey],
+          _from_jo: true
+        };
+      } else {
+        // No template match → virtual entry (group by station_name to avoid duplicates)
+        const virtualKey = `_jo_${(js.station_code||js.station_name||'?').replace(/[^a-zA-Z0-9_]/g,'_')}`;
+        if(!virtualStations[virtualKey]){
+          virtualStations[virtualKey] = {
+            name: js.station_name || 'Station ไม่ระบุชื่อ',
+            form_code: js.station_code || '(ไม่มี template)',
+            items: [],
+            _from_jo: true,
+            _no_template: true
+          };
+        }
+      }
+    });
+
+    // Build result in template order, then append virtual stations
+    const result = {};
+    Object.keys(allTemplates).forEach(k => {
+      if(stationsInJO[k]) result[k] = stationsInJO[k];
+    });
+    Object.assign(result, virtualStations);
+
+    // Apply station_perms filter (admin/empty → no filter)
+    const sess = DB.auth.session();
+    if(!sess || sess.role === 'admin') return result;
+    const user = DB.auth.getUser(sess.userId);
+    const sp = user && Array.isArray(user.station_perms) ? user.station_perms : null;
+    if(!sp || sp.length === 0) return result;
+    return Object.fromEntries(Object.entries(result).filter(([k])=>sp.includes(k)));
+  },
+
   _renderModal(p, templates){
     const tabs = Object.entries(templates).map(([k,v])=>{
       const filled = this._draft[k] && Object.keys(this._draft[k]).length>0;
@@ -7843,26 +7909,84 @@ Pages.op_station_checklist = {
     }).join('');
 
     const m = this._meta;
-    // ★ Per-station signatures + n_stations + n_people + notes
+    // ★ Per-station signatures + n_staff (จำนวนคนตรวจ = staff_count) + n_people (ผู้เข้ารับบริการ = exam_count) + notes
     const curDraft = this._draft[this._activeTab] || {};
     const sigs = curDraft.signatures || {};
-    // Auto-fill n_stations จาก JO ถ้ายังว่าง
-    let curNStations = curDraft.n_stations;
-    if(curNStations === undefined || curNStations === ''){
-      const joCount = this._getJOStationCount(this._activeTab);
-      if(joCount > 0) curNStations = joCount;
+    const isVirtual = !!cur._no_template;  // ★ Station ที่ไม่มี template
+
+    // ★ Auto-fill จำนวนคนตรวจ (n_staff) จาก JO column "คน" (staff_count)
+    //   backward compat: รองรับข้อมูลเก่า n_exam และ n_stations
+    let curNStaff = curDraft.n_staff !== undefined ? curDraft.n_staff
+                  : (curDraft.n_exam !== undefined ? curDraft.n_exam
+                  : (curDraft.n_stations !== undefined ? curDraft.n_stations : undefined));
+    if(curNStaff === undefined || curNStaff === ''){
+      if(isVirtual){
+        // หา staff_count จาก station_code/name โดยตรง
+        const jos = DB.operation.listJobOrders().filter(j => j.project_id === this._pid);
+        let total = 0;
+        jos.forEach(jo => {
+          DB.operation.listStations(jo.id).forEach(s => {
+            if(s.station_name === cur.name || s.station_code === cur.form_code){
+              total += parseInt(s.staff_count) || 0;
+            }
+          });
+        });
+        if(total > 0) curNStaff = total;
+      } else {
+        const joStaff = this._getJOStationCount(this._activeTab);
+        if(joStaff > 0) curNStaff = joStaff;
+      }
     }
-    if(curNStations === undefined) curNStations = '';
-    // ★ Auto-fill n_people per-station จาก JO exam_count (fallback = project.headcount)
+    if(curNStaff === undefined) curNStaff = '';
+
+    // ★ ผู้เข้ารับบริการ (n_people) — จาก JO column "จำนวนตรวจ" (exam_count)
     let curNPeople = curDraft.n_people;
     if(curNPeople === undefined || curNPeople === ''){
-      const joExam = this._getJOExamCount(this._activeTab);
-      if(joExam > 0) curNPeople = joExam;
-      else curNPeople = p.headcount || '';
+      if(isVirtual){
+        // หา exam_count จาก station_code โดยตรง
+        const jos = DB.operation.listJobOrders().filter(j => j.project_id === this._pid);
+        let total = 0;
+        jos.forEach(jo => {
+          DB.operation.listStations(jo.id).forEach(s => {
+            if(s.station_name === cur.name || s.station_code === cur.form_code){
+              total += parseInt(s.exam_count) || 0;
+            }
+          });
+        });
+        if(total > 0) curNPeople = total;
+        else curNPeople = p.headcount || '';
+      } else {
+        const joExam = this._getJOExamCount(this._activeTab);
+        if(joExam > 0) curNPeople = joExam;
+        else curNPeople = p.headcount || '';
+      }
     }
     if(curNPeople === undefined) curNPeople = '';
     // ★ Notes per station
     const curNotes = curDraft.notes || '';
+
+    // ★ Render items table หรือ "ไม่มี template" message
+    const itemsSection = isVirtual ? `
+      <div style="padding:24px 18px;text-align:center;background:rgba(252,165,165,0.04);border:1px dashed rgba(252,165,165,0.4);border-radius:8px;margin:14px 0">
+        <div style="font-size:32px;margin-bottom:8px;opacity:.6">📋</div>
+        <div style="font-size:13px;color:#FCA5A5;font-weight:700;font-family:'IBM Plex Mono',monospace;margin-bottom:4px">ไม่มี Checklist Template สำหรับ Station นี้</div>
+        <div style="font-size:11px;color:#D1D5DB;line-height:1.6">
+          Station "<strong style="color:#F0CD7F">${U.esc(cur.name)}</strong>" (${U.esc(cur.form_code)}) มีในใบแจ้งงาน<br>
+          แต่ยังไม่มี Checklist template — สามารถกรอก <strong style="color:#F0CD7F">หมายเหตุ</strong> และ <strong style="color:#F0CD7F">ลงชื่อ</strong> ได้
+        </div>
+      </div>` : `
+      <table id="opck_items_tbl" style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="background:var(--s-2,#172236)">
+          <th style="padding:7px 8px;text-align:left;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:25px">#</th>
+          <th style="padding:7px 8px;text-align:left;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1)">รายการ</th>
+          <th style="padding:7px 8px;text-align:center;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:65px">นำออก</th>
+          <th style="padding:7px 8px;text-align:left;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:50px">หน่วย</th>
+          <th style="padding:7px 8px;text-align:center;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:65px">นำกลับ</th>
+          <th style="padding:7px 8px;text-align:center;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:65px">รับคืน</th>
+          <th style="padding:7px 8px;text-align:left;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1)">หมายเหตุ</th>
+        </tr></thead>
+        <tbody>${itemRows}</tbody>
+      </table>`;
 
     Modal.open(`
       <div style="padding:10px 14px;background:var(--s-2,#172236);border-radius:0;border-bottom:1px solid rgba(255,255,255,.08)">
@@ -7872,38 +7996,29 @@ Pages.op_station_checklist = {
       </div>
       <div id="opck_tabs" style="display:flex;gap:3px;padding:9px 12px;background:var(--s-2,#172236);border-bottom:1px solid rgba(255,255,255,.08);overflow-x:auto;flex-wrap:wrap">${tabs}</div>
       <div style="padding:14px 18px">
-        <div style="font-size:12px;color:#F0CD7F;margin-bottom:9px;font-weight:600">📋 แบบฟอร์ม ${cur.form_code} · ${cur.name} · ${cur.items.length} รายการ</div>
+        <div style="font-size:12px;color:#F0CD7F;margin-bottom:9px;font-weight:600">
+          📋 ${isVirtual?'<span style="color:#FCA5A5">⚠</span>':''} แบบฟอร์ม ${U.esc(cur.form_code)} · ${U.esc(cur.name)}${isVirtual?' <span style="color:#FCA5A5;font-size:10px;font-weight:400">(ไม่มี template)</span>':' · '+cur.items.length+' รายการ'}
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:12px">
           <div>
-            <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">จำนวนจุด <span style="font-size:9px;color:#9CA3AF;font-weight:400">(เฉพาะ Station นี้ · auto จาก JO)</span></label>
-            <input id="opck_n_stations" type="number" value="${curNStations}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/>
+            <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">จำนวนคนตรวจ <span style="font-size:9px;color:#9CA3AF;font-weight:400">(auto จาก JO column "คน")</span></label>
+            <input id="opck_n_staff" type="number" value="${curNStaff}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/>
           </div>
           <div>
-            <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">ผู้เข้ารับบริการ <span style="font-size:9px;color:#9CA3AF;font-weight:400">(เฉพาะ Station นี้ · auto จาก JO.จำนวนตรวจ)</span></label>
+            <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">ผู้เข้ารับบริการ <span style="font-size:9px;color:#9CA3AF;font-weight:400">(auto จาก JO column "จำนวนตรวจ")</span></label>
             <input id="opck_n_people" type="number" value="${curNPeople}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/>
           </div>
         </div>
-        <table id="opck_items_tbl" style="width:100%;font-size:12px;border-collapse:collapse">
-          <thead><tr style="background:var(--s-2,#172236)">
-            <th style="padding:7px 8px;text-align:left;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:25px">#</th>
-            <th style="padding:7px 8px;text-align:left;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1)">รายการ</th>
-            <th style="padding:7px 8px;text-align:center;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:65px">นำออก</th>
-            <th style="padding:7px 8px;text-align:left;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:50px">หน่วย</th>
-            <th style="padding:7px 8px;text-align:center;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:65px">นำกลับ</th>
-            <th style="padding:7px 8px;text-align:center;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);width:65px">รับคืน</th>
-            <th style="padding:7px 8px;text-align:left;color:#FFFFFF;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1)">หมายเหตุ</th>
-          </tr></thead>
-          <tbody>${itemRows}</tbody>
-        </table>
+        ${itemsSection}
 
         <!-- ★ Notes textarea for this station -->
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
-          <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">📝 หมายเหตุ Station: ${cur.name} <span style="font-size:9px;color:#9CA3AF;font-weight:400">(แยกตาม Station)</span></label>
+          <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">📝 หมายเหตุ Station: ${U.esc(cur.name)} <span style="font-size:9px;color:#9CA3AF;font-weight:400">(แยกตาม Station)</span></label>
           <textarea id="opck_notes" rows="3" placeholder="เช่น อุปกรณ์ชำรุด · ขาดของ · ปัญหาที่พบ..." style="width:100%;padding:8px 11px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit;resize:vertical;min-height:60px">${U.esc(curNotes)}</textarea>
         </div>
 
         <div style="margin-top:14px;padding:8px 12px;background:rgba(240,205,127,0.06);border:1px solid rgba(240,205,127,0.2);border-radius:5px">
-          <div style="font-size:11px;color:#F0CD7F;font-weight:600;font-family:'IBM Plex Mono',monospace">🖊 ลงชื่อสำหรับ Station: ${cur.name} <span style="font-size:9px;color:#9CA3AF;font-weight:400">(แยกตาม Station · เปลี่ยน tab จะแสดงลายเซ็นของ tab นั้น)</span></div>
+          <div style="font-size:11px;color:#F0CD7F;font-weight:600;font-family:'IBM Plex Mono',monospace">🖊 ลงชื่อสำหรับ Station: ${U.esc(cur.name)} <span style="font-size:9px;color:#9CA3AF;font-weight:400">(แยกตาม Station · เปลี่ยน tab จะแสดงลายเซ็นของ tab นั้น)</span></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">
           ${this._renderSignCard('prep', 'ผู้จัดเตรียม', '📝', sigs)}
@@ -7919,21 +8034,30 @@ Pages.op_station_checklist = {
   },
 
   _captureCurrentTab(){
-    // Save current tab's inputs into draft
-    const tbl = document.getElementById('opck_items_tbl');
-    if(!tbl) return;
-    const templates = DB.station_checklist.getTemplates();
+    const templates = this._getJOFilteredStations();
     const cur = templates[this._activeTab];
     if(!cur) return;
     const key = this._activeTab;
     if(!this._draft[key]) this._draft[key]={items:[]};
-    this._draft[key].items = cur.items.map((it,idx)=>{
-      const find = (f)=>{const el=tbl.querySelector(`[data-it="${idx}"][data-f="${f}"]`);return el?el.value:'';};
-      return {qty_out:find('qty_out'),qty_back:find('qty_back'),qty_receive:find('qty_receive'),note:find('note')};
-    });
-    // ★ n_stations + n_people + notes เป็น per-station
+
+    // ★ Items table only if station has template (not virtual)
+    const tbl = document.getElementById('opck_items_tbl');
+    if(tbl && !cur._no_template){
+      this._draft[key].items = cur.items.map((it,idx)=>{
+        const find = (f)=>{const el=tbl.querySelector(`[data-it="${idx}"][data-f="${f}"]`);return el?el.value:'';};
+        return {qty_out:find('qty_out'),qty_back:find('qty_back'),qty_receive:find('qty_receive'),note:find('note')};
+      });
+    } else if(cur._no_template){
+      // Virtual station — no items, save metadata
+      this._draft[key].items = [];
+      this._draft[key].is_virtual = true;
+      this._draft[key].station_name = cur.name;
+      this._draft[key].form_code = cur.form_code;
+    }
+
+    // ★ Field names: n_staff (จำนวนคนตรวจ = staff_count) + n_people (ผู้เข้ารับบริการ = exam_count) + notes — per-station
     const getV=(id)=>document.getElementById(id)?.value||'';
-    this._draft[key].n_stations = getV('opck_n_stations');
+    this._draft[key].n_staff = getV('opck_n_staff');
     this._draft[key].n_people = getV('opck_n_people');
     this._draft[key].notes = getV('opck_notes');
     // signatures already in this._draft[key].signatures (set by _sign)
@@ -8045,7 +8169,7 @@ Pages.op_station_checklist = {
     this._draft[key].signatures[role+'_date'] = new Date().toISOString();
     // Re-render modal
     const p = DB.sales.getProject(this._pid);
-    const tmpls = this._getFilteredTemplates();
+    const tmpls = this._getJOFilteredStations();
     this._renderModal(p, tmpls);
     U.toast(`✅ ลงชื่อแล้ว — Station "${stationName}"`,'success');
   },
@@ -8064,7 +8188,7 @@ Pages.op_station_checklist = {
       delete this._draft[key].signatures[role+'_date'];
     }
     const p = DB.sales.getProject(this._pid);
-    const tmpls = this._getFilteredTemplates();
+    const tmpls = this._getJOFilteredStations();
     this._renderModal(p, tmpls);
     U.toast(`↺ ยกเลิกลายเซ็นแล้ว — Station "${stationName}"`);
   },
@@ -8073,7 +8197,7 @@ Pages.op_station_checklist = {
     this._captureCurrentTab();
     this._activeTab = key;
     const p = DB.sales.getProject(this._pid);
-    const templates = this._getFilteredTemplates();
+    const templates = this._getJOFilteredStations();
     this._renderModal(p, templates);
   },
 
@@ -8112,10 +8236,26 @@ Pages.op_station_checklist = {
       } catch { return iso; }
     };
 
-    const stationSections = Object.entries(templates).map(([k,v])=>{
+    // ★ Iterate over SAVED stations (in JO order from template + virtual at end)
+    //   Include both templated + virtual (no_template) stations
+    const allTemplates = DB.station_checklist.getTemplates();
+    const savedKeys = Object.keys(ck.stations||{});
+    // Order: template keys first (in template order), then virtual (_jo_*) at end
+    const orderedKeys = [
+      ...Object.keys(allTemplates).filter(k => savedKeys.includes(k)),
+      ...savedKeys.filter(k => k.startsWith('_jo_'))
+    ];
+
+    const stationSections = orderedKeys.map(k=>{
       const d = ck.stations[k]||{};
+      const isVirtual = !!d.is_virtual;
+      const v = allTemplates[k] || {
+        name: d.station_name || k,
+        form_code: d.form_code || '(ไม่มี template)',
+        items: []
+      };
       const sigs = d.signatures || {};
-      const rows = v.items.map((it,idx)=>{
+      const rows = !isVirtual ? v.items.map((it,idx)=>{
         const di = (d.items&&d.items[idx])||{};
         return `<tr>
           <td>${it.no}</td>
@@ -8126,7 +8266,7 @@ Pages.op_station_checklist = {
           <td style="text-align:center">${di.qty_receive||'-'}</td>
           <td>${di.note||'-'}</td>
         </tr>`;
-      }).join('');
+      }).join('') : '';
       // ★ Per-station signatures inside each station section (no Director)
       const hasAnySig = sigs.prep_by || sigs.verify_by || sigs.return_by || sigs.receive_by;
       const sigSection = hasAnySig ? `
@@ -8142,16 +8282,22 @@ Pages.op_station_checklist = {
           <div>ผู้นำกลับ: _______</div>
           <div>ผู้รับคืน: _______</div>
         </div>`;
-      // จำนวนจุด + ผู้เข้ารับบริการ + notes per-station
-      const nStations = d.n_stations || '-';
+      // จำนวนคนตรวจ + ผู้เข้ารับบริการ + notes per-station
+      const nStaff = d.n_staff || d.n_exam || d.n_stations || '-';  // backward compat
       const nPeople = d.n_people || '-';
       const notesSection = d.notes ? `<div class="notes-section"><strong>📝 หมายเหตุ:</strong> ${U.esc(d.notes)}</div>` : '';
-      return `<div class="station-page">
-        <h3>${v.form_code} · ${v.name} <span style="font-size:10px;color:#666;font-weight:400">(จำนวนจุด: ${nStations} · ผู้เข้ารับบริการ: ${nPeople} ราย)</span></h3>
+      const virtualBadge = isVirtual ? ' <span style="color:#d44;font-size:10px;font-weight:400">(ไม่มี template)</span>' : '';
+      const itemsTable = isVirtual ? `
+        <div style="padding:10px;background:#fff4f4;border:1px dashed #d44;border-radius:4px;text-align:center;color:#666;font-size:11px">
+          ⚠️ Station นี้ไม่มี Checklist Template — มีเฉพาะหมายเหตุและลายเซ็น
+        </div>` : `
         <table class="ck-tbl">
           <thead><tr><th>No.</th><th>รายการ</th><th>นำออก</th><th>หน่วย</th><th>นำกลับ</th><th>รับคืน</th><th>หมายเหตุ</th></tr></thead>
           <tbody>${rows}</tbody>
-        </table>
+        </table>`;
+      return `<div class="station-page">
+        <h3>${v.form_code} · ${v.name}${virtualBadge} <span style="font-size:10px;color:#666;font-weight:400">(จำนวนคนตรวจ: ${nStaff} · ผู้เข้ารับบริการ: ${nPeople} ราย)</span></h3>
+        ${itemsTable}
         ${notesSection}
         ${sigSection}
       </div>`;
@@ -11329,57 +11475,56 @@ Pages.config_staff_assessment = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════
-   Pages.op_usage_report — รายงานการใช้ของ (Usage Report)
+   Pages.op_usage_report — Dashboard รายงานการใช้ของ
    ─────────────────────────────────────────────────────────────────
-   3 Tabs: รายเดือน | รายโปรเจค | Trends
-   Data source: station_checklist (qty_out, qty_back, qty_receive)
+   Layout: Multi-filter + 4 KPI cards + Stacked Bar Chart + Detail Table
+   Filters: Month | Project | Station | Item search
+   Export: CSV (filtered) + Print
    ─────────────────────────────────────────────────────────────────
    Field meanings:
-     qty_out      = นำออก (เบิก/ออกไปทำงาน)
-     qty_back     = นำกลับ (เอากลับมา)
-     qty_receive  = ผู้รับคืนยืนยันรับ
-     ยอดใช้     = qty_out - qty_back
-     ยอดสูญหาย = qty_back - qty_receive
+     qty_out      = นำออก (เบิก)
+     qty_back     = นำกลับ
+     qty_receive  = ผู้รับคืนยืนยัน
+     diff (ส่วนต่าง) = qty_out - qty_receive
    ═══════════════════════════════════════════════════════════════════ */
 Pages.op_usage_report = {
-  _tab: 'monthly',           // 'monthly' | 'project' | 'trends'
-  _month: '',                // 'YYYY-MM' or '' for all
-  _selectedProjectId: '',    // for project tab
-  _stationFilter: 'all',
-  _sortBy: 'used_desc',      // 'used_desc' | 'used_asc' | 'name_asc' | 'pct_desc'
+  _month: '',            // '' | 'YYYY-MM'
+  _projectId: '',        // '' | project ID
+  _stationKey: '',       // '' | station key
+  _itemSearch: '',       // substring search
+  _sortBy: 'out_desc',   // 'out_desc' | 'diff_desc' | 'name_asc' | 'project_asc'
 
-  // ─── Aggregate helpers ───
-  _aggregateAll(filterFn){
-    // Returns: [{project, station_key, item, qty_out, qty_back, qty_receive, used, lost}]
+  // ─── Aggregate rows from station_checklist ───
+  _aggregateAll(){
     const allProjs = DB.sales.listProjects()||[];
     const templates = DB.station_checklist.getTemplates();
     const rows = [];
     allProjs.forEach(p=>{
-      if(filterFn && !filterFn(p)) return;
       const ck = DB.station_checklist.getForProject(p.id);
       if(!ck || !ck.stations) return;
       Object.entries(ck.stations).forEach(([sk, sd])=>{
         const tpl = templates[sk];
-        if(!tpl) return;
-        (tpl.items||[]).forEach((it, idx)=>{
+        // Virtual stations (no template) have items=[] saved
+        if(!tpl && !sd.is_virtual) return;
+        const stationName = tpl ? tpl.name : (sd.station_name || sk);
+        const items = (tpl && tpl.items) || [];
+        items.forEach((it, idx)=>{
           const di = (sd.items||[])[idx] || {};
           const qOut = parseFloat(di.qty_out||it.qty_default||0)||0;
           const qBack = parseFloat(di.qty_back||0)||0;
           const qRec = parseFloat(di.qty_receive||0)||0;
-          // Skip empty rows (no data)
           if(qOut===0 && qBack===0 && qRec===0) return;
           rows.push({
             project: p,
             station_key: sk,
-            station_name: tpl.name,
+            station_name: stationName,
             item_no: it.no,
             item_name: it.name,
             unit: it.unit||'-',
             qty_out: qOut,
             qty_back: qBack,
             qty_receive: qRec,
-            used: Math.max(0, qOut - qBack),
-            lost: Math.max(0, qBack - qRec)
+            diff: qOut - qRec  // ส่วนต่าง
           });
         });
       });
@@ -11387,13 +11532,23 @@ Pages.op_usage_report = {
     return rows;
   },
 
-  _filterByMonth(rows, month){
-    if(!month) return rows;
-    return rows.filter(r=>{
-      const od = r.project.onsite_date;
-      if(!od) return false;
-      return od.startsWith(month);  // YYYY-MM prefix
-    });
+  // ─── Apply all filters ───
+  _filter(rows){
+    let r = rows.slice();
+    if(this._month){
+      r = r.filter(x => (x.project.onsite_date||'').startsWith(this._month));
+    }
+    if(this._projectId){
+      r = r.filter(x => String(x.project.id) === String(this._projectId));
+    }
+    if(this._stationKey){
+      r = r.filter(x => x.station_key === this._stationKey);
+    }
+    if(this._itemSearch){
+      const q = this._itemSearch.toLowerCase().trim();
+      if(q) r = r.filter(x => (x.item_name||'').toLowerCase().includes(q));
+    }
+    return r;
   },
 
   _availableMonths(){
@@ -11405,343 +11560,245 @@ Pages.op_usage_report = {
   },
 
   async render(){
-    console.log('[Pages.op_usage_report] render v2025-06-23 — tab:', this._tab);
     if(!DB.auth.can('view','op_checklist')){
       document.getElementById('content').innerHTML = '<div class="card"><div class="empty"><p>ไม่มีสิทธิ์เข้าหน้านี้</p></div></div>';
       return;
     }
     // Default month = latest available
-    if(!this._month){
+    if(this._month === '' && !this._monthInitialized){
       const months = this._availableMonths();
       this._month = months[0] || '';
+      this._monthInitialized = true;
     }
+
+    const allRows = this._aggregateAll();
+    const filtered = this._filter(allRows);
+
+    // KPIs
+    const kpiOut = filtered.reduce((s,r)=>s+r.qty_out, 0);
+    const kpiBack = filtered.reduce((s,r)=>s+r.qty_back, 0);
+    const kpiReceive = filtered.reduce((s,r)=>s+r.qty_receive, 0);
+    const kpiDiff = kpiOut - kpiReceive;
+    const kpiProjects = new Set(filtered.map(r=>r.project.id)).size;
+
+    // Group by item (for chart)
+    const byItem = {};
+    filtered.forEach(r=>{
+      const k = r.item_name + '_' + r.unit;
+      if(!byItem[k]){
+        byItem[k] = {name:r.item_name, unit:r.unit, qty_out:0, qty_back:0, qty_receive:0};
+      }
+      byItem[k].qty_out += r.qty_out;
+      byItem[k].qty_back += r.qty_back;
+      byItem[k].qty_receive += r.qty_receive;
+    });
+    const itemList = Object.values(byItem).sort((a,b)=>b.qty_out-a.qty_out);
+    const topItems = itemList.slice(0, 12);
+    const maxOut = Math.max(...topItems.map(i=>i.qty_out), 1);
+
+    // Sort detail table
+    const sortedDetail = filtered.slice().sort((a,b)=>{
+      switch(this._sortBy){
+        case 'out_desc': return b.qty_out - a.qty_out;
+        case 'diff_desc': return b.diff - a.diff;
+        case 'name_asc': return (a.item_name||'').localeCompare(b.item_name||'');
+        case 'project_asc': return (a.project.project_code||'').localeCompare(b.project.project_code||'');
+        default: return 0;
+      }
+    });
+
+    // Filter options data
+    const months = this._availableMonths();
+    const projects = (DB.sales.listProjects()||[]).filter(p=>{
+      if(this._month) return (p.onsite_date||'').startsWith(this._month);
+      return true;
+    });
+    const templates = DB.station_checklist.getTemplates();
 
     document.getElementById('content').innerHTML = `
       <div class="ph">
         <div>
-          <h2>📦 รายงานการใช้ของ</h2>
-          <p>เบิก / นำออก / นำกลับ / คงเหลือ — สรุปรายเดือน + รายโปรเจค + แนวโน้ม</p>
-        </div>
-        <div>
-          <button class="btn btn-out btn-xs" onclick="Router.navigate('op_station_checklist')">← กลับ Checklist</button>
+          <h2>📦 รายงานการใช้ของ — Dashboard</h2>
+          <p>นำออก / นำกลับ / รับคืน — Multi-filter + Chart + Detail · Export ได้</p>
         </div>
       </div>
 
       <style>
-        .ur-tab{padding:8px 16px;background:transparent;border:none;border-bottom:2px solid transparent;font-weight:500;font-size:13px;color:var(--t-dim,#9CA3AF);cursor:pointer;font-family:inherit}
-        .ur-tab-active{border-bottom-color:#F0CD7F;color:#F0CD7F;font-weight:700;font-family:'IBM Plex Mono',monospace}
-        .ur-kpi{padding:10px 12px;border-radius:8px;border:1px solid;text-align:center}
-        .ur-kpi-lbl{font-size:9px;color:#9CA3AF;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.4px}
-        .ur-kpi-val{font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace;line-height:1.2;margin-top:3px}
-        .ur-kpi-sub{font-size:9px;color:#9CA3AF;margin-top:2px}
-        .ur-bar{height:10px;background:rgba(255,255,255,0.05);border-radius:5px;overflow:hidden;position:relative}
-        .ur-bar-fill{height:100%;background:linear-gradient(90deg,#F0CD7F,#BA7517);border-radius:5px}
+        .ur-kpi{padding:14px 16px;border-radius:10px;border:1px solid;position:relative;overflow:hidden}
+        .ur-kpi-lbl{font-size:10px;color:#9CA3AF;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+        .ur-kpi-val{font-size:26px;font-weight:700;font-family:'IBM Plex Mono',monospace;line-height:1.2;margin-top:4px}
+        .ur-kpi-sub{font-size:10px;color:#9CA3AF;margin-top:2px}
+        .ur-filter-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:rgba(60,52,137,0.08);border:1px solid rgba(157,139,237,0.2);border-radius:8px;margin-bottom:14px}
+        .ur-filter-bar select, .ur-filter-bar input{padding:5px 10px;font-size:12px;border:1px solid rgba(157,139,237,0.3);background:var(--s-3,#1D2B42);color:#FFFFFF;border-radius:6px;font-family:inherit}
+        .ur-chart-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:11px}
+        .ur-chart-name{width:130px;color:#D1D5DB;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+        .ur-chart-bars{flex:1;position:relative;height:16px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden}
+        .ur-chart-out{position:absolute;top:0;left:0;height:33%;background:#F0CD7F;border-radius:0}
+        .ur-chart-back{position:absolute;top:33%;left:0;height:34%;background:#6EE7B7;border-radius:0}
+        .ur-chart-rec{position:absolute;top:67%;left:0;height:33%;background:#9D8BED;border-radius:0}
+        .ur-chart-val{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9CA3AF;width:90px;text-align:right;flex-shrink:0}
+        @media print{ .ur-no-print{display:none !important} body{background:white;color:black} }
       </style>
 
-      <div class="card mb4">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-          <span class="card-title">📊 รายงาน</span>
-          ${this._renderFilters()}
-        </div>
-        <div style="display:flex;border-bottom:1px solid var(--c-line,#E5EAF0);gap:2px;margin-top:8px">
-          <button class="${this._tab==='monthly'?'ur-tab ur-tab-active':'ur-tab'}" onclick="Pages.op_usage_report._switchTab('monthly')">📦 รายเดือน</button>
-          <button class="${this._tab==='project'?'ur-tab ur-tab-active':'ur-tab'}" onclick="Pages.op_usage_report._switchTab('project')">📋 รายโปรเจค</button>
-          <button class="${this._tab==='trends'?'ur-tab ur-tab-active':'ur-tab'}" onclick="Pages.op_usage_report._switchTab('trends')">📈 Trends</button>
+      <!-- Filter Bar -->
+      <div class="ur-filter-bar ur-no-print">
+        <span style="font-size:11px;color:#9D8BED;font-family:'IBM Plex Mono',monospace;font-weight:700">🔍 FILTERS:</span>
+
+        <span style="font-size:11px;color:#9CA3AF">📅</span>
+        <select onchange="Pages.op_usage_report._month=this.value;Pages.op_usage_report._projectId='';Pages.op_usage_report.render()">
+          <option value="">เดือนทั้งหมด</option>
+          ${months.map(m=>{
+            const [y,mm] = m.split('-');
+            const lbl = new Date(parseInt(y), parseInt(mm)-1, 1).toLocaleDateString('th-TH',{month:'long',year:'numeric'});
+            return `<option value="${m}" ${this._month===m?'selected':''}>${lbl}</option>`;
+          }).join('')}
+        </select>
+
+        <span style="font-size:11px;color:#9CA3AF">📋</span>
+        <select onchange="Pages.op_usage_report._projectId=this.value;Pages.op_usage_report.render()">
+          <option value="">Project ทั้งหมด</option>
+          ${projects.map(p=>`<option value="${p.id}" ${String(this._projectId)===String(p.id)?'selected':''}>${U.esc(p.project_code)} · ${U.esc(p.company_name||'')}</option>`).join('')}
+        </select>
+
+        <span style="font-size:11px;color:#9CA3AF">🩺</span>
+        <select onchange="Pages.op_usage_report._stationKey=this.value;Pages.op_usage_report.render()">
+          <option value="">Station ทั้งหมด</option>
+          ${Object.entries(templates).map(([k,v])=>`<option value="${k}" ${this._stationKey===k?'selected':''}>${U.esc(v.name)}</option>`).join('')}
+        </select>
+
+        <input type="text" placeholder="🔎 ค้นหา Item..." value="${U.esc(this._itemSearch)}" oninput="Pages.op_usage_report._onItemSearch(this.value)" style="width:160px"/>
+
+        <div style="margin-left:auto;display:flex;gap:6px">
+          ${(this._month||this._projectId||this._stationKey||this._itemSearch)?`<button class="btn btn-out btn-xs" onclick="Pages.op_usage_report._clearFilters()" title="ล้าง filter ทั้งหมด">↺ ล้าง</button>`:''}
+          <button class="btn btn-out btn-xs" onclick="Pages.op_usage_report._exportCSV()">📊 Export CSV</button>
+          <button class="btn btn-out btn-xs" onclick="window.print()">🖨 Print</button>
         </div>
       </div>
 
-      <div id="ur_body">${this._renderTabBody()}</div>
-    `;
-  },
-
-  _switchTab(tab){
-    this._tab = tab;
-    // Toggle tab buttons directly
-    document.querySelectorAll('button.ur-tab').forEach(b => {
-      const onclick = b.getAttribute('onclick') || '';
-      b.className = onclick.includes(`_switchTab('${tab}')`) ? 'ur-tab ur-tab-active' : 'ur-tab';
-    });
-    document.getElementById('ur_body').innerHTML = this._renderTabBody();
-  },
-
-  _renderFilters(){
-    const months = this._availableMonths();
-    const monthOpts = months.map(m=>{
-      const [y, mm] = m.split('-');
-      const lbl = new Date(parseInt(y), parseInt(mm)-1, 1).toLocaleDateString('th-TH',{month:'long',year:'numeric'});
-      return `<option value="${m}" ${this._month===m?'selected':''}>${lbl}</option>`;
-    }).join('');
-    return `
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <label style="font-size:11px;color:var(--t-dim,#888)">เดือน:</label>
-        <select onchange="Pages.op_usage_report._month=this.value;Pages.op_usage_report.render()" style="padding:5px 10px;font-size:12px;border:1px solid var(--c-line,#E5EAF0);border-radius:6px">
-          <option value="">ทั้งหมด</option>
-          ${monthOpts}
-        </select>
-        <button class="btn btn-out btn-xs" onclick="Pages.op_usage_report._exportCSV()">📊 Export CSV</button>
-        <button class="btn btn-out btn-xs" onclick="window.print()">🖨 Print</button>
-      </div>`;
-  },
-
-  _renderTabBody(){
-    if(this._tab==='monthly') return this._renderMonthly();
-    if(this._tab==='project') return this._renderProjectTab();
-    if(this._tab==='trends') return this._renderTrends();
-    return '';
-  },
-
-  // ─── TAB 1: Monthly Summary ───
-  _renderMonthly(){
-    const allRows = this._aggregateAll();
-    const monthRows = this._filterByMonth(allRows, this._month);
-    if(monthRows.length===0){
-      return `<div class="card"><div class="empty"><p>ไม่มีข้อมูลในเดือนที่เลือก</p></div></div>`;
-    }
-    const totalOut = monthRows.reduce((s,r)=>s+r.qty_out, 0);
-    const totalBack = monthRows.reduce((s,r)=>s+r.qty_back, 0);
-    const totalUsed = monthRows.reduce((s,r)=>s+r.used, 0);
-    const totalLost = monthRows.reduce((s,r)=>s+r.lost, 0);
-    const pctUsed = totalOut>0 ? (totalUsed/totalOut*100) : 0;
-    const projects = new Set(monthRows.map(r=>r.project.id));
-
-    // Group by item
-    const byItem = {};
-    monthRows.forEach(r=>{
-      const k = r.item_name + '_' + r.unit;
-      if(!byItem[k]){
-        byItem[k] = {name:r.item_name, unit:r.unit, qty_out:0, qty_back:0, used:0, lost:0};
-      }
-      byItem[k].qty_out += r.qty_out;
-      byItem[k].qty_back += r.qty_back;
-      byItem[k].used += r.used;
-      byItem[k].lost += r.lost;
-    });
-    const itemList = Object.values(byItem).sort((a,b)=>b.used-a.used);
-    const topItems = itemList.slice(0, 15);
-    const maxUsed = Math.max(...topItems.map(i=>i.used), 1);
-
-    return `
-      <!-- KPIs -->
-      <div class="card mb4">
-        <div class="card-header"><span class="card-title">📊 ภาพรวม — ${this._month?new Date(this._month+'-01').toLocaleDateString('th-TH',{month:'long',year:'numeric'}):'ทั้งหมด'}</span></div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:8px">
-          <div class="ur-kpi" style="background:rgba(157,139,237,0.08);border-color:rgba(157,139,237,0.3)">
-            <div class="ur-kpi-lbl">โปรเจค</div>
-            <div class="ur-kpi-val" style="color:#9D8BED">${projects.size}</div>
-            <div class="ur-kpi-sub">Project</div>
+      ${filtered.length === 0 ? `
+        <div class="card"><div class="empty"><div class="icon">📦</div><p>ไม่มีข้อมูลตาม filter ที่เลือก</p></div></div>
+      ` : `
+        <!-- KPI Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">
+          <div class="ur-kpi" style="background:rgba(157,139,237,0.08);border-color:rgba(157,139,237,0.4)">
+            <div class="ur-kpi-lbl">📋 Project</div>
+            <div class="ur-kpi-val" style="color:#9D8BED">${kpiProjects}</div>
+            <div class="ur-kpi-sub">รายการ</div>
           </div>
-          <div class="ur-kpi" style="background:rgba(240,205,127,0.08);border-color:rgba(240,205,127,0.3)">
-            <div class="ur-kpi-lbl">นำออก</div>
-            <div class="ur-kpi-val" style="color:#F0CD7F">${totalOut.toLocaleString()}</div>
+          <div class="ur-kpi" style="background:rgba(240,205,127,0.08);border-color:rgba(240,205,127,0.4)">
+            <div class="ur-kpi-lbl">📦 นำออก</div>
+            <div class="ur-kpi-val" style="color:#F0CD7F">${kpiOut.toLocaleString()}</div>
             <div class="ur-kpi-sub">หน่วยรวม</div>
           </div>
-          <div class="ur-kpi" style="background:rgba(110,231,183,0.08);border-color:rgba(110,231,183,0.3)">
-            <div class="ur-kpi-lbl">นำกลับ</div>
-            <div class="ur-kpi-val" style="color:#6EE7B7">${totalBack.toLocaleString()}</div>
-            <div class="ur-kpi-sub">หน่วยรวม</div>
+          <div class="ur-kpi" style="background:rgba(110,231,183,0.08);border-color:rgba(110,231,183,0.4)">
+            <div class="ur-kpi-lbl">↩ นำกลับ</div>
+            <div class="ur-kpi-val" style="color:#6EE7B7">${kpiBack.toLocaleString()}</div>
+            <div class="ur-kpi-sub">${kpiOut>0?((kpiBack/kpiOut*100).toFixed(1)+'%'):'-'}</div>
           </div>
-          <div class="ur-kpi" style="background:rgba(157,139,237,0.08);border-color:rgba(157,139,237,0.3)">
-            <div class="ur-kpi-lbl">ยอดใช้</div>
-            <div class="ur-kpi-val" style="color:#9D8BED">${totalUsed.toLocaleString()}</div>
-            <div class="ur-kpi-sub">ออก − กลับ</div>
+          <div class="ur-kpi" style="background:rgba(157,139,237,0.08);border-color:rgba(157,139,237,0.4)">
+            <div class="ur-kpi-lbl">✋ รับคืน</div>
+            <div class="ur-kpi-val" style="color:#9D8BED">${kpiReceive.toLocaleString()}</div>
+            <div class="ur-kpi-sub">${kpiOut>0?((kpiReceive/kpiOut*100).toFixed(1)+'%'):'-'}</div>
           </div>
           <div class="ur-kpi" style="background:rgba(252,165,165,0.08);border-color:rgba(252,165,165,0.4)">
-            <div class="ur-kpi-lbl">% ใช้</div>
-            <div class="ur-kpi-val" style="color:${pctUsed>5?'#FCA5A5':'#F0CD7F'}">${pctUsed.toFixed(1)}%</div>
-            <div class="ur-kpi-sub">${totalLost>0?`สูญหาย ${totalLost}`:'ครบ'}</div>
+            <div class="ur-kpi-lbl">⚠ ส่วนต่าง</div>
+            <div class="ur-kpi-val" style="color:${kpiDiff>0?'#FCA5A5':'#6EE7B7'}">${kpiDiff.toLocaleString()}</div>
+            <div class="ur-kpi-sub">ออก − รับคืน</div>
           </div>
         </div>
-      </div>
 
-      <!-- Top items -->
-      <div class="card mb4">
-        <div class="card-header"><span class="card-title">🔝 อันดับการใช้ของในเดือน (Top 15)</span></div>
-        <div class="tbl-wrap"><table style="width:100%;font-size:12px">
-          <thead><tr style="color:#9CA3AF;font-family:'IBM Plex Mono',monospace">
-            <th style="text-align:left;padding:6px">Item</th>
-            <th style="text-align:center">หน่วย</th>
-            <th style="text-align:right">นำออก</th>
-            <th style="text-align:right">นำกลับ</th>
-            <th style="text-align:right">ยอดใช้</th>
-            <th style="text-align:right">% ใช้</th>
-            <th style="text-align:right">สูญหาย</th>
-            <th style="min-width:120px">Bar</th>
-          </tr></thead>
-          <tbody>
-            ${topItems.map(it=>{
-              const pct = it.qty_out>0 ? (it.used/it.qty_out*100) : 0;
-              const barW = (it.used/maxUsed*100);
-              return `<tr style="border-top:1px solid rgba(240,205,127,0.05)">
-                <td style="padding:5px;color:#D1D5DB;font-weight:600">${U.esc(it.name)}</td>
-                <td style="text-align:center;color:#9CA3AF">${U.esc(it.unit)}</td>
-                <td style="text-align:right;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${it.qty_out.toLocaleString()}</td>
-                <td style="text-align:right;color:#6EE7B7;font-family:'IBM Plex Mono',monospace">${it.qty_back.toLocaleString()}</td>
-                <td style="text-align:right;color:#9D8BED;font-weight:700;font-family:'IBM Plex Mono',monospace">${it.used.toLocaleString()}</td>
-                <td style="text-align:right;color:${pct>30?'#FCA5A5':pct>10?'#F0CD7F':'#9CA3AF'};font-family:'IBM Plex Mono',monospace">${pct.toFixed(1)}%</td>
-                <td style="text-align:right;color:${it.lost>0?'#FCA5A5':'#9CA3AF'};font-family:'IBM Plex Mono',monospace">${it.lost.toLocaleString()}</td>
-                <td><div class="ur-bar"><div class="ur-bar-fill" style="width:${barW}%"></div></div></td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table></div>
-      </div>`;
-  },
-
-  // ─── TAB 2: Per Project ───
-  _renderProjectTab(){
-    const allRows = this._aggregateAll();
-    const filtered = this._filterByMonth(allRows, this._month);
-    if(filtered.length===0){
-      return `<div class="card"><div class="empty"><p>ไม่มีข้อมูล</p></div></div>`;
-    }
-    // Group by project
-    const byProject = {};
-    filtered.forEach(r=>{
-      const pid = r.project.id;
-      if(!byProject[pid]){
-        byProject[pid] = {project:r.project, items:[], qty_out:0, qty_back:0, used:0, lost:0};
-      }
-      byProject[pid].items.push(r);
-      byProject[pid].qty_out += r.qty_out;
-      byProject[pid].qty_back += r.qty_back;
-      byProject[pid].used += r.used;
-      byProject[pid].lost += r.lost;
-    });
-    const projectList = Object.values(byProject).sort((a,b)=>b.used-a.used);
-
-    return projectList.map(pg=>{
-      const p = pg.project;
-      const pctUsed = pg.qty_out>0 ? (pg.used/pg.qty_out*100) : 0;
-      // Group items per station within this project
-      const byStation = {};
-      pg.items.forEach(it=>{
-        if(!byStation[it.station_key]){
-          byStation[it.station_key] = {name:it.station_name, items:[]};
-        }
-        byStation[it.station_key].items.push(it);
-      });
-      return `
+        <!-- Chart + Legend -->
         <div class="card mb4">
-          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-            <span class="card-title">
-              <span style="color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${U.esc(p.project_code)}</span>
-              · ${U.esc(p.company_name||'-')}
-              · ${U.fmtD(p.onsite_date)}
-            </span>
-            <div style="display:flex;gap:6px;font-size:11px;align-items:center">
-              <span style="color:#9CA3AF">นำออก:</span>
-              <span style="color:#F0CD7F;font-weight:700;font-family:'IBM Plex Mono',monospace">${pg.qty_out.toLocaleString()}</span>
-              <span style="color:#9CA3AF">· นำกลับ:</span>
-              <span style="color:#6EE7B7;font-weight:700;font-family:'IBM Plex Mono',monospace">${pg.qty_back.toLocaleString()}</span>
-              <span style="color:#9CA3AF">· ใช้:</span>
-              <span style="color:#9D8BED;font-weight:700;font-family:'IBM Plex Mono',monospace">${pg.used.toLocaleString()} (${pctUsed.toFixed(1)}%)</span>
-              ${pg.lost>0?`<span style="color:#9CA3AF">· สูญหาย:</span><span style="color:#FCA5A5;font-weight:700;font-family:'IBM Plex Mono',monospace">${pg.lost.toLocaleString()}</span>`:''}
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <span class="card-title">📊 เปรียบเทียบ ออก/กลับ/รับคืน (Top ${Math.min(12, topItems.length)} items)</span>
+            <div style="display:flex;gap:10px;font-size:10px;align-items:center">
+              <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:11px;height:11px;background:#F0CD7F;border-radius:2px"></span>ออก</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:11px;height:11px;background:#6EE7B7;border-radius:2px"></span>กลับ</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:11px;height:11px;background:#9D8BED;border-radius:2px"></span>รับคืน</span>
             </div>
           </div>
-          ${Object.entries(byStation).map(([sk, sd])=>`
-            <div style="padding:8px 12px;background:rgba(255,255,255,0.02);border-radius:6px;margin:6px;border:1px solid rgba(240,205,127,0.08)">
-              <div style="font-size:11px;color:#F0CD7F;font-family:'IBM Plex Mono',monospace;margin-bottom:6px;font-weight:600">${U.esc(sd.name)}</div>
-              <table style="width:100%;font-size:11px">
-                <thead><tr style="color:#9CA3AF;font-family:'IBM Plex Mono',monospace">
-                  <th style="text-align:left;padding:3px 6px;width:32px">#</th>
-                  <th style="text-align:left">รายการ</th>
-                  <th style="text-align:center;width:60px">หน่วย</th>
-                  <th style="text-align:right;width:70px">ออก</th>
-                  <th style="text-align:right;width:70px">กลับ</th>
-                  <th style="text-align:right;width:70px">ใช้</th>
-                  <th style="text-align:right;width:70px">รับคืน</th>
-                  <th style="text-align:right;width:70px">สูญ</th>
-                </tr></thead>
-                <tbody>
-                  ${sd.items.map(it=>`<tr style="border-top:1px solid rgba(240,205,127,0.05)">
-                    <td style="padding:3px 6px;color:#9CA3AF">${it.item_no}</td>
-                    <td style="color:#D1D5DB">${U.esc(it.item_name)}</td>
-                    <td style="text-align:center;color:#9CA3AF">${U.esc(it.unit)}</td>
-                    <td style="text-align:right;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${it.qty_out.toLocaleString()}</td>
-                    <td style="text-align:right;color:#6EE7B7;font-family:'IBM Plex Mono',monospace">${it.qty_back.toLocaleString()}</td>
-                    <td style="text-align:right;color:#9D8BED;font-weight:700;font-family:'IBM Plex Mono',monospace">${it.used.toLocaleString()}</td>
-                    <td style="text-align:right;color:#6EE7B7;font-family:'IBM Plex Mono',monospace">${it.qty_receive.toLocaleString()}</td>
-                    <td style="text-align:right;color:${it.lost>0?'#FCA5A5':'#9CA3AF'};font-family:'IBM Plex Mono',monospace">${it.lost.toLocaleString()}</td>
-                  </tr>`).join('')}
-                </tbody>
-              </table>
-            </div>
-          `).join('')}
-        </div>`;
-    }).join('');
-  },
+          <div style="padding:10px 14px">
+            ${topItems.map(it=>{
+              const outW = (it.qty_out/maxOut*100).toFixed(1);
+              const backW = (it.qty_back/maxOut*100).toFixed(1);
+              const recW = (it.qty_receive/maxOut*100).toFixed(1);
+              return `<div class="ur-chart-row">
+                <div class="ur-chart-name" title="${U.esc(it.name)} · ${U.esc(it.unit)}">${U.esc(it.name)}</div>
+                <div class="ur-chart-bars">
+                  <div class="ur-chart-out" style="width:${outW}%"></div>
+                  <div class="ur-chart-back" style="width:${backW}%"></div>
+                  <div class="ur-chart-rec" style="width:${recW}%"></div>
+                </div>
+                <div class="ur-chart-val">${it.qty_out.toLocaleString()}/${it.qty_back.toLocaleString()}/${it.qty_receive.toLocaleString()}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
 
-  // ─── TAB 3: Trends ───
-  _renderTrends(){
-    const allRows = this._aggregateAll();
-    if(allRows.length===0){
-      return `<div class="card"><div class="empty"><p>ยังไม่มีข้อมูล</p></div></div>`;
-    }
-    // Group by month
-    const byMonth = {};
-    allRows.forEach(r=>{
-      const m = (r.project.onsite_date||'').substr(0,7);
-      if(!m) return;
-      if(!byMonth[m]){
-        byMonth[m] = {month:m, qty_out:0, qty_back:0, used:0, lost:0, projects:new Set()};
-      }
-      byMonth[m].qty_out += r.qty_out;
-      byMonth[m].qty_back += r.qty_back;
-      byMonth[m].used += r.used;
-      byMonth[m].lost += r.lost;
-      byMonth[m].projects.add(r.project.id);
-    });
-    const monthList = Object.values(byMonth).sort((a,b)=>a.month.localeCompare(b.month));
-    if(monthList.length===0){
-      return `<div class="card"><div class="empty"><p>ไม่มีข้อมูล</p></div></div>`;
-    }
-    const maxOut = Math.max(...monthList.map(m=>m.qty_out), 1);
-
-    return `
-      <div class="card mb4">
-        <div class="card-header"><span class="card-title">📈 แนวโน้มการใช้ของ — ทั้งหมด ${monthList.length} เดือน</span></div>
-        <div style="padding:10px 14px">
-          <table style="width:100%;font-size:12px">
-            <thead><tr style="color:#9CA3AF;font-family:'IBM Plex Mono',monospace;border-bottom:1px solid rgba(240,205,127,0.15)">
-              <th style="text-align:left;padding:6px">เดือน</th>
-              <th style="text-align:center">โปรเจค</th>
+        <!-- Detail Table -->
+        <div class="card">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <span class="card-title">📋 รายการละเอียด (${filtered.length} แถว)</span>
+            <select onchange="Pages.op_usage_report._sortBy=this.value;Pages.op_usage_report.render()" class="ur-no-print" style="padding:4px 10px;font-size:11px;border:1px solid var(--c-line,#E5EAF0);border-radius:6px">
+              <option value="out_desc" ${this._sortBy==='out_desc'?'selected':''}>เรียง: นำออก ↓</option>
+              <option value="diff_desc" ${this._sortBy==='diff_desc'?'selected':''}>เรียง: ส่วนต่าง ↓</option>
+              <option value="name_asc" ${this._sortBy==='name_asc'?'selected':''}>เรียง: ชื่อ Item A→Z</option>
+              <option value="project_asc" ${this._sortBy==='project_asc'?'selected':''}>เรียง: Project A→Z</option>
+            </select>
+          </div>
+          <div class="tbl-wrap"><table style="width:100%;font-size:12px">
+            <thead><tr style="color:#9CA3AF;font-family:'IBM Plex Mono',monospace">
+              <th style="text-align:left;padding:6px">Item</th>
+              <th style="text-align:center">หน่วย</th>
+              <th style="text-align:left">Project</th>
+              <th style="text-align:left">Station</th>
               <th style="text-align:right">นำออก</th>
               <th style="text-align:right">นำกลับ</th>
-              <th style="text-align:right">ยอดใช้</th>
-              <th style="text-align:right">% ใช้</th>
-              <th style="text-align:right">สูญหาย</th>
-              <th style="min-width:160px">Bar (เทียบขนาด)</th>
+              <th style="text-align:right">รับคืน</th>
+              <th style="text-align:right">ส่วนต่าง</th>
             </tr></thead>
             <tbody>
-              ${monthList.map(m=>{
-                const pct = m.qty_out>0?(m.used/m.qty_out*100):0;
-                const [y,mm] = m.month.split('-');
-                const lbl = new Date(parseInt(y), parseInt(mm)-1, 1).toLocaleDateString('th-TH',{month:'short',year:'2-digit'});
-                const barW = m.qty_out/maxOut*100;
+              ${sortedDetail.slice(0, 200).map(r=>{
+                const diffColor = r.diff > 0 ? '#FCA5A5' : (r.diff < 0 ? '#F0CD7F' : '#6EE7B7');
                 return `<tr style="border-top:1px solid rgba(240,205,127,0.05)">
-                  <td style="padding:5px;color:#F0CD7F;font-family:'IBM Plex Mono',monospace;font-weight:600">${lbl}</td>
-                  <td style="text-align:center;color:#9D8BED;font-family:'IBM Plex Mono',monospace">${m.projects.size}</td>
-                  <td style="text-align:right;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${m.qty_out.toLocaleString()}</td>
-                  <td style="text-align:right;color:#6EE7B7;font-family:'IBM Plex Mono',monospace">${m.qty_back.toLocaleString()}</td>
-                  <td style="text-align:right;color:#9D8BED;font-weight:700;font-family:'IBM Plex Mono',monospace">${m.used.toLocaleString()}</td>
-                  <td style="text-align:right;color:${pct>5?'#FCA5A5':'#F0CD7F'};font-family:'IBM Plex Mono',monospace">${pct.toFixed(1)}%</td>
-                  <td style="text-align:right;color:${m.lost>0?'#FCA5A5':'#9CA3AF'};font-family:'IBM Plex Mono',monospace">${m.lost.toLocaleString()}</td>
-                  <td><div class="ur-bar"><div class="ur-bar-fill" style="width:${barW}%"></div></div></td>
+                  <td style="padding:5px;color:#D1D5DB;font-weight:600">${U.esc(r.item_name)}</td>
+                  <td style="text-align:center;color:#9CA3AF">${U.esc(r.unit)}</td>
+                  <td style="color:#F0CD7F;font-family:'IBM Plex Mono',monospace;font-size:11px">${U.esc(r.project.project_code||'-')}</td>
+                  <td style="color:#9CA3AF;font-size:11px">${U.esc(r.station_name)}</td>
+                  <td style="text-align:right;color:#F0CD7F;font-family:'IBM Plex Mono',monospace">${r.qty_out.toLocaleString()}</td>
+                  <td style="text-align:right;color:#6EE7B7;font-family:'IBM Plex Mono',monospace">${r.qty_back.toLocaleString()}</td>
+                  <td style="text-align:right;color:#9D8BED;font-family:'IBM Plex Mono',monospace">${r.qty_receive.toLocaleString()}</td>
+                  <td style="text-align:right;color:${diffColor};font-weight:700;font-family:'IBM Plex Mono',monospace">${r.diff.toLocaleString()}</td>
                 </tr>`;
               }).join('')}
             </tbody>
-          </table>
+          </table></div>
+          ${sortedDetail.length > 200 ? `<div style="padding:6px 14px;font-size:11px;color:#9CA3AF;text-align:center">แสดง 200 แรกจาก ${sortedDetail.length} แถว — ใช้ filter เพื่อกรอง</div>` : ''}
         </div>
-      </div>`;
+      `}
+    `;
   },
 
-  // ─── Export CSV ───
+  _onItemSearch(v){
+    this._itemSearch = v;
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(()=>this.render(), 250);
+  },
+
+  _clearFilters(){
+    this._month = '';
+    this._projectId = '';
+    this._stationKey = '';
+    this._itemSearch = '';
+    this._monthInitialized = true;  // prevent re-init to latest
+    this.render();
+  },
+
   _exportCSV(){
     const allRows = this._aggregateAll();
-    const filtered = this._filterByMonth(allRows, this._month);
-    if(filtered.length===0){U.toast('ไม่มีข้อมูล','danger');return;}
-    const monthLabel = this._month || 'all';
-    const headers = ['Project','บริษัท','วันตรวจ','Station','#','รายการ','หน่วย','นำออก','นำกลับ','ผู้รับคืน','ยอดใช้','สูญหาย'];
+    const filtered = this._filter(allRows);
+    if(filtered.length === 0){U.toast('ไม่มีข้อมูล','danger');return;}
+    const headers = ['Project','บริษัท','วันตรวจ','Station','Item','หน่วย','นำออก','นำกลับ','รับคืน','ส่วนต่าง'];
     const csvRows = [headers.join(',')];
     filtered.forEach(r=>{
       const row = [
@@ -11749,25 +11806,24 @@ Pages.op_usage_report = {
         (r.project.company_name||'').replace(/,/g,';'),
         r.project.onsite_date||'',
         (r.station_name||'').replace(/,/g,';'),
-        r.item_no||'',
         (r.item_name||'').replace(/,/g,';'),
         r.unit||'',
         r.qty_out,
         r.qty_back,
         r.qty_receive,
-        r.used,
-        r.lost
+        r.diff
       ];
       csvRows.push(row.join(','));
     });
+    const tag = [this._month||'all', this._projectId?'P'+this._projectId:'', this._stationKey||''].filter(Boolean).join('_');
     const blob = new Blob(['\uFEFF'+csvRows.join('\n')], {type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `usage_report_${monthLabel}_${new Date().toISOString().substr(0,10)}.csv`;
+    a.download = `usage_report_${tag||'all'}_${new Date().toISOString().substr(0,10)}.csv`;
     document.body.appendChild(a);
     a.click();
     setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);}, 100);
-    U.toast('✅ ดาวน์โหลด CSV แล้ว','success');
+    U.toast(`✅ ดาวน์โหลด CSV (${filtered.length} แถว)`,'success');
   }
 };
