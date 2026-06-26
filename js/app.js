@@ -510,9 +510,20 @@ function buildNav(){
     {page:'config_staff_assessment',icon:'⚙',label:'ตั้งค่าประเมินเจ้าหน้าที่',mod:'config_staff_assessment'}
   ];
   let html='';
+  let pendingSection = null;  // ★ Buffer section header — flush only when a visible item follows
   items.forEach(it=>{
-    if(it.section){html+=`<div class="nav-section">${it.section}</div>`;return;}
-    if(!DB.auth.can('view',it.mod))return;
+    if(it.section){
+      pendingSection = it.section;  // เก็บไว้ก่อน รอ flush เมื่อมี item ที่ user เห็น
+      return;
+    }
+    // ★ ใช้ _modOf เพื่อ consistent กับ Router.navigate
+    const requiredMod = (typeof _modOf === 'function') ? _modOf(it.page) : it.mod;
+    if(!DB.auth.can('view', requiredMod)) return;
+    // มี item visible → flush section header ที่ค้างอยู่
+    if(pendingSection){
+      html += `<div class="nav-section">${pendingSection}</div>`;
+      pendingSection = null;
+    }
     const badgeCount = _getNavBadgeCount(it.page);
     const badge = badgeCount>0 ? `<span class="nav-badge">${badgeCount}</span>` : '';
     html+=`<a class="nav-item" data-page="${it.page}" onclick="Router.navigate('${it.page}')"><span class="icon">${it.icon}</span><span class="nav-label">${it.label}</span>${badge}</a>`;
@@ -6744,11 +6755,18 @@ Pages.config={async render(){
   const tat=DB.config.getTAT(),sla=DB.config.getSLA(),ad=DB.config.getAlertDays();
   const users=DB.auth.listUsers();
   const canEditCfg=DB.auth.can('edit','config');
-  const uRows=users.map(u=>`<tr><td>${u.username}</td><td>${u.name}</td><td>${U.badge(u.role)}</td><td>${u.active?'<span class="badge b-closed">ใช้งาน</span>':'<span class="badge b-danger">ระงับ</span>'}</td><td>
+  const uRows=users.map(u=>{
+    const customBadge = u.use_custom_perm ? ' <span class="badge" style="background:rgba(110,231,183,.15);color:#6EE7B7;font-size:9px;padding:1px 6px;border-radius:8px" title="ใช้สิทธิ์เฉพาะตัว ไม่ตาม Role">🔑 Custom</span>' : '';
+    const spBadge = (Array.isArray(u.station_perms) && u.station_perms.length > 0)
+      ? ` <span class="badge" style="background:rgba(157,139,237,.15);color:#9D8BED;font-size:9px;padding:1px 6px;border-radius:8px" title="เข้าถึงได้เฉพาะ ${u.station_perms.length} Station">🩺 ${u.station_perms.length} Station</span>`
+      : '';
+    return `<tr><td>${u.username}</td><td>${u.name}${customBadge}${spBadge}</td><td>${U.badge(u.role)}</td><td>${u.active?'<span class="badge b-closed">ใช้งาน</span>':'<span class="badge b-danger">ระงับ</span>'}</td><td>
     ${canEditCfg?`<button class="btn btn-out btn-xs" onclick="Pages.config.editUser(${u.id})">แก้ไข</button>`:''}
     ${DB.auth.can('delete','config')&&u.id!==1?`<button class="btn btn-danger btn-xs" onclick="Pages.config.delUser(${u.id})">ลบ</button>`:''}
-  </td></tr>`).join('');
+  </td></tr>`;
+  }).join('');
   const roles=DB.auth.listRoles();
+  const SYSTEM_ROLES = ['admin','sales','operation','lab','xray','report','opd','billing','medical'];
   const rp=roles.map(r=>{
     const mods=Object.entries(MODULES).map(([k,label])=>{
       const m=r.modules[k]||{};
@@ -6764,10 +6782,18 @@ Pages.config={async render(){
       </span>`;
     }).join('');
     const hasQtApprove=!!(r.modules['qt_approve']?.approve);
+    const isSystem = SYSTEM_ROLES.includes(r.role);
+    const roleDisplay = r.label && r.label !== r.role
+      ? `<div class="fw6" style="color:var(--t-bright)">${U.esc(r.label)}</div><div style="font-size:10px;color:var(--t-dim);font-family:'IBM Plex Mono',monospace">${r.role}</div>`
+      : `<span class="fw6" style="color:var(--t-bright)">${r.role}</span>`;
+    const sysBadge = isSystem ? '<span style="display:inline-block;background:rgba(157,139,237,.15);color:#9D8BED;font-size:9px;padding:1px 6px;border-radius:8px;margin-top:3px">🔒 System</span>' : '';
     return`<tr>
-      <td class="fw6" style="color:var(--t-bright)">${r.role}</td>
+      <td>${roleDisplay}${sysBadge}</td>
       <td><div style="display:flex;flex-wrap:wrap;gap:2px">${mods}${hasQtApprove?'<span style="display:inline-flex;align-items:center;gap:4px;margin:2px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:rgba(201,168,76,.12);color:var(--c-gold-lt,#E2C46A);border:1px solid rgba(201,168,76,.25)">🔐 Approve QT</span>':''}</div></td>
-      <td>${canEditCfg?`<button class="btn btn-out btn-xs" onclick="Pages.config.editRole('${r.role}')">แก้ไขสิทธิ์</button>`:''}</td>
+      <td style="white-space:nowrap">
+        ${canEditCfg?`<button class="btn btn-out btn-xs" onclick="Pages.config.editRole('${r.role}')">แก้ไขสิทธิ์</button>`:''}
+        ${canEditCfg && !isSystem?`<button class="btn btn-danger btn-xs" onclick="Pages.config.delRole('${r.role}')" title="ลบ Role">ลบ</button>`:''}
+      </td>
     </tr>`;
   }).join('');
   document.getElementById('content').innerHTML=`<div class="ph"><h2>⚙ Config — ตั้งค่าระบบ</h2></div>
@@ -6781,7 +6807,7 @@ Pages.config={async render(){
       <div class="sr"><span>แจ้งเตือนก่อนครบ Lab/Report</span><span class="fw6">${ad} วัน</span></div>
       <div class="sr"><span>📡 แจ้งเตือน X-Ray (วันหลังออกตรวจ)</span><span class="fw6 t-gold">${DB.config.getXrayAlertDays()} วัน</span></div>
     </div>
-    <div class="card"><div class="card-header"><span class="card-title">🔑 สิทธิ์ตาม Role</span></div>
+    <div class="card"><div class="card-header"><span class="card-title">🔑 สิทธิ์ตาม Role</span>${canEditCfg?`<button class="btn btn-pri btn-sm" onclick="Pages.config.addRole()">+ เพิ่ม Role</button>`:''}</div>
       <div class="tbl-wrap"><table><thead><tr><th>Role</th><th>Module</th><th></th></tr></thead><tbody>${rp}</tbody></table></div>
     </div>
   </div>
@@ -6824,23 +6850,281 @@ editTAT(){
 addUser(){this.editUser(null);},
 editUser(id){
   const u=id?DB.auth.getUser(id):{};
-  // ดึงรายชื่อ Role ทั้งหมดจาก DB (admin, sales, operation, lab, xray, report, opd, billing)
+  // ดึงรายชื่อ Role ทั้งหมดจาก DB
   const allRoles=DB.auth.listRoles().map(r=>r.role);
   const roleLabels={admin:'ผู้ดูแลระบบ (admin)',sales:'ทีมขาย (sales)',operation:'Operation (operation)',lab:'ห้องแล็บ (lab)',xray:'X-Ray (xray)',report:'ทีมทำผล (report)',opd:'OPD (opd)',billing:'การเงิน (billing)'};
   const rOpts=U.sel(allRoles.map(r=>({v:r,l:roleLabels[r]||r})),u.role||'sales');
-  Modal.open(`<div class="fr"><div class="fg"><label class="req">Username</label><input id="eu_un" value="${U.esc(u.username||'')}"/></div>
-    <div class="fg"><label class="${id?'':'req'}">Password${id?' (เว้นว่างถ้าไม่เปลี่ยน)':''}</label><input id="eu_pw" type="password"/></div></div>
-  <div class="fr"><div class="fg"><label class="req">ชื่อ-นามสกุล</label><input id="eu_nm" value="${U.esc(u.name||'')}"/></div>
-    <div class="fg"><label>Role</label><select id="eu_rl">${rOpts}</select></div></div>
-  <div class="fg"><label>สถานะ</label><select id="eu_ac">${U.sel([{v:'true',l:'ใช้งาน'},{v:'false',l:'ระงับ'}],String(u.active!==false))}</select></div>`,
-  id?'แก้ไขผู้ใช้':'เพิ่มผู้ใช้', async () => {
+
+  // ★ Per-user permission override (Option A)
+  const useCustom = !!u.use_custom_perm;
+  const userModules = u.modules || {};
+  const actions = ['view','add','edit','delete'];
+  const actionLabel = {view:'ดู',add:'เพิ่ม',edit:'แก้ไข',delete:'ลบ'};
+  const ckStyle = (checked) => checked
+    ? 'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#059669;color:#fff;font-size:11px;cursor:pointer;border:0;font-family:inherit'
+    : 'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--s-3,#1D2B42);color:var(--t-dim,#4A5D74);font-size:10px;cursor:pointer;border:1.5px solid rgba(255,255,255,.1);font-family:inherit';
+
+  const permGrid = Object.entries(MODULES).map(([k,label])=>{
+    const m = userModules[k] || {};
+    const tds = actions.map(a=>{
+      const id2 = `eu_p_${k}_${a}`;
+      const checked = !!m[a];
+      return `<td style="text-align:center;padding:2px">
+        <button type="button" id="${id2}_btn" role="checkbox" aria-checked="${checked}"
+          onclick="Pages.config._toggleUserPermBtn('${id2}')"
+          style="${ckStyle(checked)}" title="${label} — ${actionLabel[a]}">
+          ${checked?'✓':''}
+        </button>
+        <input type="checkbox" id="${id2}" ${checked?'checked':''} style="display:none"/>
+      </td>`;
+    }).join('');
+    return `<tr><td style="padding:4px 6px;color:#F0CD7F;font-size:11px">${label}</td>${tds}</tr>`;
+  }).join('');
+
+  Modal.open(`
+    <div class="fr">
+      <div class="fg"><label class="req">Username</label><input id="eu_un" value="${U.esc(u.username||'')}"/></div>
+      <div class="fg"><label class="${id?'':'req'}">Password${id?' (เว้นว่างถ้าไม่เปลี่ยน)':''}</label><input id="eu_pw" type="password"/></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="req">ชื่อ-นามสกุล</label><input id="eu_nm" value="${U.esc(u.name||'')}"/></div>
+      <div class="fg"><label>Role</label><select id="eu_rl">${rOpts}</select></div>
+    </div>
+    <div class="fg"><label>สถานะ</label><select id="eu_ac">${U.sel([{v:'true',l:'ใช้งาน'},{v:'false',l:'ระงับ'}],String(u.active!==false))}</select></div>
+
+    <div class="divider"></div>
+
+    <div class="sec-title">🔑 สิทธิ์เฉพาะตัว (Per-User Permission Override)</div>
+    <div style="background:var(--s-2,#172236);border-radius:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.06);margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--t-body,#C2CEDF);font-size:13px">
+        <input type="checkbox" id="eu_custom" ${useCustom?'checked':''} onchange="Pages.config._toggleCustomPerm()" style="width:18px;height:18px;accent-color:#6EE7B7;cursor:pointer"/>
+        <div>
+          <div style="font-weight:600;color:var(--t-bright,#F0F4FA)">🔑 กำหนดสิทธิ์เฉพาะตัวสำหรับ User คนนี้</div>
+          <div style="font-size:11px;color:var(--t-dim,#4A5D74);margin-top:2px">เมื่อเปิด — จะใช้ checkbox ด้านล่างแทนสิทธิ์ของ Role · ปิด — ใช้ตาม Role</div>
+        </div>
+      </label>
+    </div>
+
+    <div id="eu_perm_wrap" style="display:${useCustom?'block':'none'}">
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <button type="button" class="btn btn-out btn-xs" onclick="Pages.config._copyFromRole()" title="ใช้สิทธิ์ของ Role ปัจจุบันเป็น template">📋 Copy from Role</button>
+        <button type="button" class="btn btn-out btn-xs" onclick="Pages.config._fillAllView()" title="ติ๊กสิทธิ์ 'ดู' ทุก Module">✅ Allow All View</button>
+        <button type="button" class="btn btn-out btn-xs" onclick="Pages.config._fillAll()" title="ติ๊กทุกสิทธิ์ทุก Module (เหมือน admin)">✅ Allow All (admin-like)</button>
+        <button type="button" class="btn btn-out btn-xs" onclick="Pages.config._clearAll()" title="ลบสิทธิ์ทั้งหมด">🗑 Clear All</button>
+      </div>
+      <div class="ab info mb4" style="font-size:11px;margin-bottom:8px">🟢 = มีสิทธิ์ · ⭕ = ไม่มีสิทธิ์ · คลิกเพื่อเปลี่ยน</div>
+      <div class="tbl-wrap" style="max-height:360px;overflow-y:auto">
+        <table style="width:100%">
+          <thead><tr style="position:sticky;top:0;background:var(--s-2,#172236);z-index:1">
+            <th style="text-align:left">Module</th>
+            ${actions.map(a=>`<th style="text-align:center;width:50px">${actionLabel[a]}</th>`).join('')}
+          </tr></thead>
+          <tbody>${permGrid}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="sec-title">🩺 สิทธิ์ Checklist Station</div>
+    ${(()=>{
+      const sp = u.station_perms;
+      const useAll = !sp || !Array.isArray(sp) || sp.length===0;
+      // Get all stations from template
+      const tmpls = DB.station_checklist.getTemplates();
+      return `
+      <div style="background:var(--s-2,#172236);border-radius:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.06);margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;color:var(--t-body,#C2CEDF);font-size:13px">
+          <input type="radio" name="eu_sp_mode" value="all" ${useAll?'checked':''} onchange="Pages.config._toggleStationPermMode()" style="accent-color:#6EE7B7;cursor:pointer"/>
+          <div>
+            <div style="font-weight:600;color:var(--t-bright,#F0F4FA)">🩺 เข้าถึงได้ทุก Station (default)</div>
+            <div style="font-size:11px;color:var(--t-dim,#4A5D74)">User เห็น Station ทุกอันใน Checklist Station</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--t-body,#C2CEDF);font-size:13px">
+          <input type="radio" name="eu_sp_mode" value="some" ${!useAll?'checked':''} onchange="Pages.config._toggleStationPermMode()" style="accent-color:#F0CD7F;cursor:pointer"/>
+          <div>
+            <div style="font-weight:600;color:var(--t-bright,#F0F4FA)">🔑 เฉพาะ Station ที่เลือก</div>
+            <div style="font-size:11px;color:var(--t-dim,#4A5D74)">User เห็นเฉพาะ Station ที่ติ๊กไว้ด้านล่าง</div>
+          </div>
+        </label>
+      </div>
+
+      <div id="eu_sp_wrap" style="display:${useAll?'none':'block'};background:rgba(255,255,255,0.02);border-radius:8px;padding:10px;border:1px solid rgba(240,205,127,.15)">
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-out btn-xs" onclick="Pages.config._spSelectAll()">✓ Select All</button>
+          <button type="button" class="btn btn-out btn-xs" onclick="Pages.config._spClear()">🗑 Clear</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${Object.entries(tmpls).map(([k,v])=>{
+            const selected = !useAll && sp.includes(k);
+            return `<button type="button" id="eu_sp_btn_${k}" data-key="${k}" onclick="Pages.config._toggleSpChip('${k}')"
+              style="padding:4px 10px;border-radius:14px;font-size:11px;cursor:pointer;font-family:inherit;${
+                selected
+                  ? 'background:rgba(110,231,183,0.15);color:#6EE7B7;border:1px solid #6EE7B7'
+                  : 'background:rgba(255,255,255,0.04);color:#9CA3AF;border:1px solid rgba(255,255,255,0.1)'
+              }">
+              ${selected?'✓ ':''}${U.esc(v.name)}
+              <input type="checkbox" id="eu_sp_${k}" ${selected?'checked':''} style="display:none"/>
+            </button>`;
+          }).join('')}
+        </div>
+        <div style="font-size:10px;color:#9CA3AF;margin-top:8px">💡 คลิกที่ chip เพื่อ toggle on/off</div>
+      </div>
+      `;
+    })()}
+  `, id?'แก้ไขผู้ใช้':'เพิ่มผู้ใช้', async () => {
     const pw=document.getElementById('eu_pw').value;
     if(!id&&!pw)return U.toast('กรุณาใส่ Password','danger');
-    const d={id:id||undefined,username:document.getElementById('eu_un').value.trim(),name:document.getElementById('eu_nm').value.trim(),role:document.getElementById('eu_rl').value,active:document.getElementById('eu_ac').value==='true'};
+    const d={
+      id:id||undefined,
+      username:document.getElementById('eu_un').value.trim(),
+      name:document.getElementById('eu_nm').value.trim(),
+      role:document.getElementById('eu_rl').value,
+      active:document.getElementById('eu_ac').value==='true',
+      use_custom_perm: document.getElementById('eu_custom').checked
+    };
     if(pw)d.password=pw;else if(id)d.password=u.password;
     if(!d.username||!d.name)return U.toast('กรุณากรอกข้อมูลให้ครบ','danger');
-    DB.auth.saveUser(d);Modal.close();this.render();U.toast(id?'✅ แก้ไขแล้ว':'✅ เพิ่มผู้ใช้แล้ว');
+
+    // ★ Save per-user permission if custom enabled
+    if(d.use_custom_perm){
+      const modules = {};
+      Object.keys(MODULES).forEach(k=>{
+        modules[k] = {};
+        actions.forEach(a=>{
+          modules[k][a] = document.getElementById(`eu_p_${k}_${a}`)?.checked || false;
+        });
+      });
+      d.modules = modules;
+    } else {
+      // เก็บ modules เดิมไว้ (เผื่อ user toggle off แล้ว toggle on อีก)
+      d.modules = userModules;
+    }
+
+    // ★ Save station_perms
+    const spMode = document.querySelector('input[name="eu_sp_mode"]:checked')?.value || 'all';
+    if(spMode === 'all'){
+      d.station_perms = [];  // empty = all
+    } else {
+      const tmpls = DB.station_checklist.getTemplates();
+      d.station_perms = Object.keys(tmpls).filter(k => document.getElementById(`eu_sp_${k}`)?.checked);
+      if(d.station_perms.length === 0){
+        return U.toast('กรุณาเลือก Station อย่างน้อย 1 อัน หรือเลือก "ทุก Station"','danger');
+      }
+    }
+
+    DB.auth.saveUser(d);
+    Modal.close();
+    this.render();
+
+    // ★ Auto-refresh nav ถ้าแก้ user ของตัวเอง
+    const sess = DB.auth.session();
+    if(sess && sess.userId === d.id && typeof buildNav === 'function'){
+      buildNav();
+      U.toast('✅ แก้ไขแล้ว + รีเฟรช nav','success');
+    } else {
+      U.toast(id?'✅ แก้ไขแล้ว':'✅ เพิ่มผู้ใช้แล้ว','success');
+    }
   });
+},
+
+// ─── Per-User Permission helpers ───
+_toggleUserPermBtn(id){
+  const cb = document.getElementById(id);
+  const btn = document.getElementById(id+'_btn');
+  if(!cb||!btn) return;
+  cb.checked = !cb.checked;
+  const checked = cb.checked;
+  btn.setAttribute('aria-checked', checked);
+  btn.style.cssText = checked
+    ? 'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#059669;color:#fff;font-size:11px;cursor:pointer;border:0;font-family:inherit'
+    : 'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--s-3,#1D2B42);color:var(--t-dim,#4A5D74);font-size:10px;cursor:pointer;border:1.5px solid rgba(255,255,255,.1);font-family:inherit';
+  btn.textContent = checked?'✓':'';
+},
+_toggleCustomPerm(){
+  const checked = document.getElementById('eu_custom').checked;
+  const wrap = document.getElementById('eu_perm_wrap');
+  if(wrap) wrap.style.display = checked ? 'block' : 'none';
+},
+_copyFromRole(){
+  const role = document.getElementById('eu_rl').value;
+  const rp = DB.auth.getRolePermission(role);
+  if(!rp || !rp.modules){U.toast('ไม่พบ permission ของ role นี้','danger');return;}
+  const actions = ['view','add','edit','delete'];
+  Object.keys(MODULES).forEach(k=>{
+    const m = rp.modules[k] || {};
+    actions.forEach(a=>{
+      const cb = document.getElementById(`eu_p_${k}_${a}`);
+      const btn = document.getElementById(`eu_p_${k}_${a}_btn`);
+      if(!cb||!btn) return;
+      cb.checked = !!m[a];
+      btn.setAttribute('aria-checked', !!m[a]);
+      btn.style.cssText = m[a]
+        ? 'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#059669;color:#fff;font-size:11px;cursor:pointer;border:0;font-family:inherit'
+        : 'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--s-3,#1D2B42);color:var(--t-dim,#4A5D74);font-size:10px;cursor:pointer;border:1.5px solid rgba(255,255,255,.1);font-family:inherit';
+      btn.textContent = m[a]?'✓':'';
+    });
+  });
+  U.toast(`📋 Copy สิทธิ์จาก role "${role}" แล้ว`,'success');
+},
+_fillAllView(){this._fillBulk(['view']);U.toast('✅ Allow All View แล้ว','success');},
+_fillAll(){this._fillBulk(['view','add','edit','delete']);U.toast('✅ Allow All แล้ว (admin-like)','success');},
+_clearAll(){this._fillBulk([], true);U.toast('🗑 ลบสิทธิ์ทั้งหมดแล้ว');},
+_fillBulk(allowedActions, clear){
+  const actions = ['view','add','edit','delete'];
+  Object.keys(MODULES).forEach(k=>{
+    actions.forEach(a=>{
+      const cb = document.getElementById(`eu_p_${k}_${a}`);
+      const btn = document.getElementById(`eu_p_${k}_${a}_btn`);
+      if(!cb||!btn) return;
+      const set = clear ? false : allowedActions.includes(a);
+      cb.checked = set;
+      btn.setAttribute('aria-checked', set);
+      btn.style.cssText = set
+        ? 'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#059669;color:#fff;font-size:11px;cursor:pointer;border:0;font-family:inherit'
+        : 'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--s-3,#1D2B42);color:var(--t-dim,#4A5D74);font-size:10px;cursor:pointer;border:1.5px solid rgba(255,255,255,.1);font-family:inherit';
+      btn.textContent = set?'✓':'';
+    });
+  });
+},
+
+// ─── Station Permission helpers ───
+_toggleStationPermMode(){
+  const mode = document.querySelector('input[name="eu_sp_mode"]:checked')?.value || 'all';
+  const wrap = document.getElementById('eu_sp_wrap');
+  if(wrap) wrap.style.display = mode === 'all' ? 'none' : 'block';
+},
+_toggleSpChip(k){
+  const cb = document.getElementById('eu_sp_'+k);
+  const btn = document.getElementById('eu_sp_btn_'+k);
+  if(!cb||!btn) return;
+  cb.checked = !cb.checked;
+  const checked = cb.checked;
+  const tmpls = DB.station_checklist.getTemplates();
+  const name = (tmpls[k]||{}).name || k;
+  btn.style.cssText = `padding:4px 10px;border-radius:14px;font-size:11px;cursor:pointer;font-family:inherit;${
+    checked
+      ? 'background:rgba(110,231,183,0.15);color:#6EE7B7;border:1px solid #6EE7B7'
+      : 'background:rgba(255,255,255,0.04);color:#9CA3AF;border:1px solid rgba(255,255,255,0.1)'
+  }`;
+  btn.innerHTML = `${checked?'✓ ':''}${U.esc(name)}<input type="checkbox" id="eu_sp_${k}" ${checked?'checked':''} style="display:none"/>`;
+},
+_spSelectAll(){
+  const tmpls = DB.station_checklist.getTemplates();
+  Object.keys(tmpls).forEach(k=>{
+    const cb = document.getElementById('eu_sp_'+k);
+    if(cb && !cb.checked) this._toggleSpChip(k);
+  });
+  U.toast('✓ Select All Stations แล้ว','success');
+},
+_spClear(){
+  const tmpls = DB.station_checklist.getTemplates();
+  Object.keys(tmpls).forEach(k=>{
+    const cb = document.getElementById('eu_sp_'+k);
+    if(cb && cb.checked) this._toggleSpChip(k);
+  });
+  U.toast('🗑 Clear all stations แล้ว');
 },
 delUser(id){if(U.confirm('ลบผู้ใช้นี้?')){DB.auth.deleteUser(id);this.render();U.toast('✅ ลบแล้ว');}},
 async editRole(role){
@@ -6930,6 +7214,71 @@ async editRole(role){
       U.toast('✅ บันทึกสิทธิ์แล้ว','success');
     }
   },true);
+},
+
+// ─── Add new Role ───
+addRole(){
+  const existingRoles = DB.auth.listRoles().map(r=>r.role);
+  const rOpts = existingRoles.map(r=>`<option value="${r}">${r}</option>`).join('');
+  Modal.open(`
+    <div class="ab info mb4" style="font-size:11px">
+      ⓘ สร้าง Role ใหม่ — หลังบันทึกแล้วสามารถกดปุ่ม "แก้ไขสิทธิ์" เพื่อกำหนดสิทธิ์เพิ่มเติม
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label class="req">Role Key</label>
+        <input id="ar_role" placeholder="เช่น manager, supervisor" style="font-family:'IBM Plex Mono',monospace"/>
+        <div style="font-size:10px;color:var(--t-dim,#4A5D74);margin-top:3px">ใช้ภาษาอังกฤษ ตัวเล็ก ใช้ใน DB · เปลี่ยนภายหลังไม่ได้</div>
+      </div>
+      <div class="fg">
+        <label>ชื่อภาษาไทย (Label)</label>
+        <input id="ar_label" placeholder="เช่น ผู้จัดการ"/>
+        <div style="font-size:10px;color:var(--t-dim,#4A5D74);margin-top:3px">ใช้แสดงใน UI · ปล่อยว่างจะใช้ key แทน</div>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Copy permissions from (optional)</label>
+      <select id="ar_copy_from">
+        <option value="">— เริ่มจากค่าว่าง (no permission) —</option>
+        ${rOpts}
+      </select>
+      <div style="font-size:10px;color:var(--t-dim,#4A5D74);margin-top:3px">คัดลอกสิทธิ์มาจาก Role อื่นเป็น template</div>
+    </div>
+  `, '+ เพิ่ม Role ใหม่', async () => {
+    const role = document.getElementById('ar_role').value.trim().toLowerCase();
+    const label = document.getElementById('ar_label').value.trim();
+    const copyFrom = document.getElementById('ar_copy_from').value;
+    if(!role) return U.toast('กรุณาใส่ Role Key','danger');
+    if(!/^[a-z_][a-z0-9_]*$/i.test(role)) return U.toast('Role Key ต้องเป็นภาษาอังกฤษ (a-z, 0-9, _) ขึ้นต้นด้วยตัวอักษรหรือ _','danger');
+    if(DB.auth.listRoles().some(r=>r.role===role)) return U.toast(`Role "${role}" มีอยู่แล้ว`,'danger');
+    // Build initial modules (copy from existing role if specified)
+    let modules = {};
+    if(copyFrom){
+      const src = DB.auth.getRolePermission(copyFrom);
+      if(src && src.modules) modules = JSON.parse(JSON.stringify(src.modules));
+    }
+    DB.auth.saveRolePermission({role, label: label || role, modules});
+    Modal.close();
+    this.render();
+    U.toast(`✅ สร้าง Role "${role}" แล้ว · คลิก "แก้ไขสิทธิ์" เพื่อกำหนดสิทธิ์`,'success');
+  });
+},
+
+// ─── Delete Role ───
+delRole(role){
+  if(['admin','sales','operation','lab','xray','report','opd','billing','medical'].includes(role)){
+    return U.toast('ไม่สามารถลบ Role ระบบได้','danger');
+  }
+  // Check if any user is using this role
+  const usersInRole = DB.auth.listUsers().filter(u=>u.role===role);
+  if(usersInRole.length > 0){
+    return U.toast(`ไม่สามารถลบ — มี ${usersInRole.length} user ใช้ Role นี้อยู่`,'danger');
+  }
+  if(!confirm(`ลบ Role "${role}"?\n\nการลบนี้ไม่สามารถยกเลิกได้`)) return;
+  const rows = DB._get('auth_db','role_permissions').filter(r=>r.role!==role);
+  DB._set('auth_db','role_permissions',rows);
+  this.render();
+  U.toast(`✅ ลบ Role "${role}" แล้ว`,'success');
 },
 _toggleRoleBtn(id){
   const cb=document.getElementById(id);
@@ -7281,15 +7630,57 @@ Pages.op_station_checklist = {
           ? '<span class="badge" style="background:rgba(252,211,77,.15);color:#FCD34D">⏳ บันทึกร่างแล้ว</span>'
           : '<span class="badge b-pending">⏳ รอดำเนินการ</span>';
       const c = ck || {};
+
+      // ★ Aggregate per-station signatures — count + last signer
+      const aggSigner = (role) => {
+        const byKey = role+'_by';
+        const dateKey = role+'_date';
+        const stations = c.stations || {};
+        let lastName = '', lastDate = '', count = 0;
+        Object.values(stations).forEach(s => {
+          if(s && s.signatures && s.signatures[byKey]){
+            count++;
+            const d = s.signatures[dateKey] || '';
+            if(!lastDate || d > lastDate){
+              lastName = s.signatures[byKey];
+              lastDate = d;
+            }
+          }
+        });
+        return {name: lastName, date: lastDate, count};
+      };
+      const aggPrep = aggSigner('prep');
+      const aggVerify = aggSigner('verify');
+      const aggReturn = aggSigner('return');
+      const aggReceive = aggSigner('receive');
+
+      // Aggregated signerCell — adds count badge
+      const aggCell = (agg, gradColor) => {
+        if(!agg.name || agg.count === 0){
+          return `<div class="opck-sign-empty" title="ยังไม่ลงชื่อใน Station ใด">○</div>`;
+        }
+        const grad = gradColor === 'gold'
+          ? 'linear-gradient(135deg,#F0CD7F,#BA7517);color:#0F1729'
+          : 'linear-gradient(135deg,#3C3489,#1F1A4D);color:#F0CD7F';
+        const tooltip = `ลงชื่อแล้ว ${agg.count} Station — ล่าสุด: ${agg.name}${agg.date?' • '+fmtSignFull(agg.date):''}`;
+        return `<div class="opck-sign-cell" title="${U.esc(tooltip)}">
+          <div style="position:relative;display:inline-block">
+            <div class="opck-sign-avatar" style="background:${grad}">${initial(agg.name)}</div>
+            <div style="position:absolute;top:-4px;right:-6px;background:#6EE7B7;color:#0F1729;font-size:8px;font-weight:700;padding:0 4px;border-radius:8px;font-family:'IBM Plex Mono',monospace;min-width:14px;text-align:center">${agg.count}</div>
+          </div>
+          ${agg.date?`<div class="opck-sign-date">${fmtSignD(agg.date)}</div>`:''}
+        </div>`;
+      };
+
       return `<tr>
         <td class="fw6 mono" style="color:var(--c-gold-lt,#E2C46A)">${U.esc(p.project_code||'-')}</td>
         <td class="fw6">${U.esc(p.company_name||'-')}</td>
         <td>${U.fmtD(p.onsite_date)}</td>
         <td style="text-align:right">${(p.headcount||0).toLocaleString()}</td>
-        <td style="text-align:center">${signerCell(c.prep_by, c.prep_date, 'gold')}</td>
-        <td style="text-align:center">${signerCell(c.verify_by, c.verify_date, 'purple')}</td>
-        <td style="text-align:center">${signerCell(c.return_by, c.return_date, 'purple')}</td>
-        <td style="text-align:center">${signerCell(c.receive_by, c.receive_date, 'gold')}</td>
+        <td style="text-align:center">${aggCell(aggPrep, 'gold')}</td>
+        <td style="text-align:center">${aggCell(aggVerify, 'purple')}</td>
+        <td style="text-align:center">${aggCell(aggReturn, 'purple')}</td>
+        <td style="text-align:center">${aggCell(aggReceive, 'gold')}</td>
         <td>${statusBadge}</td>
         <td style="white-space:nowrap">
           ${canEdit?`<button class="btn ${isComplete?'btn-out':'btn-pri'} btn-xs" onclick="Pages.op_station_checklist.openChecklist(${p.id})">📋 Checklist</button>`:''}
@@ -7339,22 +7730,94 @@ Pages.op_station_checklist = {
   openChecklist(pid){
     const p = DB.sales.getProject(pid);
     if(!p){U.toast('ไม่พบ Project','danger');return;}
-    const templates = DB.station_checklist.getTemplates();
+    const filteredTemplates = this._getFilteredTemplates();
+    if(Object.keys(filteredTemplates).length === 0){
+      U.toast('⛔ ไม่มี Station ที่คุณมีสิทธิ์เข้าถึง','danger');
+      return;
+    }
+
     const saved = DB.station_checklist.getForProject(pid) || {};
-    this._activeTab = Object.keys(templates)[0];
+    this._activeTab = Object.keys(filteredTemplates)[0];
     this._pid = pid;
     this._draft = JSON.parse(JSON.stringify(saved.stations||{})); // working copy
+    // ★ NEW: _meta เก็บแค่ field ที่เป็น global — per-station data อยู่ใน this._draft[key]
     this._meta = {
-      n_stations: saved.n_stations||'',
-      n_people: saved.n_people||p.headcount||'',
-      check_time: saved.check_time||'',
-      prep_by: saved.prep_by||'', prep_date: saved.prep_date||'',
-      verify_by: saved.verify_by||'', verify_date: saved.verify_date||'',
-      director: saved.director||'', director_date: saved.director_date||'',
-      return_by: saved.return_by||'', return_date: saved.return_date||'',
-      receive_by: saved.receive_by||'', receive_date: saved.receive_date||''
+      n_people: saved.n_people || p.headcount || ''
+      // n_stations → ย้ายไป this._draft[key].n_stations (per station)
+      // signatures (prep_by, etc.) → ย้ายไป this._draft[key].signatures (per station)
+      // check_time → ลบทิ้ง (ตามที่ user ขอ)
     };
-    this._renderModal(p, templates);
+    this._renderModal(p, filteredTemplates);
+  },
+
+  // ★ Keyword mapping: station_key → JO station_name keywords
+  _STATION_JO_KEYWORDS: {
+    reg: ['ลงทะเบียน'],
+    vs: ['ซักประวัติ', 'V/S', 'vital sign', 'วัดความดัน'],
+    wh: ['น้ำหนัก', 'ส่วนสูง', 'ชั่งน้ำหนัก'],
+    blood: ['เจาะเลือด', 'blood'],
+    urine: ['ปัสสาวะ', 'urine'],
+    stool: ['อุจจาระ', 'stool'],
+    eye_cbd: ['ตาคอม', 'ตาบอดสี', 'ตาคอมพิวเตอร์'],
+    eye_occ: ['ตาอาชีว'],
+    hear: ['ได้ยิน', 'หู'],
+    lung: ['ปอด', 'เป่าปอด', 'สมรรถภาพปอด'],
+    muscle: ['กล้ามเนื้อ'],
+    ekg: ['EKG', 'คลื่นหัวใจ'],
+    doctor: ['แพทย์'],
+    vaccine: ['วัคซีน', 'ฉีดวัคซีน'],
+    equip: ['ครุภัณฑ์'],
+    sweat: ['ซับเหงื่อ']
+  },
+
+  // ★ Lookup staff_count รวม จาก JO ของ project นี้ตาม station key
+  _getJOStationCount(stationKey){
+    const keywords = this._STATION_JO_KEYWORDS[stationKey] || [];
+    if(keywords.length === 0) return 0;
+    const jos = DB.operation.listJobOrders().filter(j => j.project_id === this._pid);
+    let total = 0;
+    jos.forEach(jo => {
+      const stations = DB.operation.listStations(jo.id);
+      stations.forEach(s => {
+        const joName = (s.station_name||'').toLowerCase();
+        const matched = keywords.some(kw => joName.includes(kw.toLowerCase()));
+        if(matched){
+          total += parseInt(s.staff_count) || 0;
+        }
+      });
+    });
+    return total;
+  },
+
+  // ★ Lookup exam_count (จำนวนตรวจ) รวม จาก JO ของ project นี้ตาม station key
+  _getJOExamCount(stationKey){
+    const keywords = this._STATION_JO_KEYWORDS[stationKey] || [];
+    if(keywords.length === 0) return 0;
+    const jos = DB.operation.listJobOrders().filter(j => j.project_id === this._pid);
+    let total = 0;
+    jos.forEach(jo => {
+      const stations = DB.operation.listStations(jo.id);
+      stations.forEach(s => {
+        const joName = (s.station_name||'').toLowerCase();
+        const matched = keywords.some(kw => joName.includes(kw.toLowerCase()));
+        if(matched){
+          total += parseInt(s.exam_count) || 0;
+        }
+      });
+    });
+    return total;
+  },
+
+  // ★ Helper: filter templates by user.station_perms (admin sees all)
+  _getFilteredTemplates(){
+    const templates = DB.station_checklist.getTemplates();
+    const sess = DB.auth.session();
+    if(!sess) return templates;
+    if(sess.role === 'admin') return templates;
+    const user = DB.auth.getUser(sess.userId);
+    const sp = user && Array.isArray(user.station_perms) ? user.station_perms : null;
+    if(!sp || sp.length === 0) return templates;  // empty = all
+    return Object.fromEntries(Object.entries(templates).filter(([k])=>sp.includes(k)));
   },
 
   _renderModal(p, templates){
@@ -7380,6 +7843,27 @@ Pages.op_station_checklist = {
     }).join('');
 
     const m = this._meta;
+    // ★ Per-station signatures + n_stations + n_people + notes
+    const curDraft = this._draft[this._activeTab] || {};
+    const sigs = curDraft.signatures || {};
+    // Auto-fill n_stations จาก JO ถ้ายังว่าง
+    let curNStations = curDraft.n_stations;
+    if(curNStations === undefined || curNStations === ''){
+      const joCount = this._getJOStationCount(this._activeTab);
+      if(joCount > 0) curNStations = joCount;
+    }
+    if(curNStations === undefined) curNStations = '';
+    // ★ Auto-fill n_people per-station จาก JO exam_count (fallback = project.headcount)
+    let curNPeople = curDraft.n_people;
+    if(curNPeople === undefined || curNPeople === ''){
+      const joExam = this._getJOExamCount(this._activeTab);
+      if(joExam > 0) curNPeople = joExam;
+      else curNPeople = p.headcount || '';
+    }
+    if(curNPeople === undefined) curNPeople = '';
+    // ★ Notes per station
+    const curNotes = curDraft.notes || '';
+
     Modal.open(`
       <div style="padding:10px 14px;background:var(--s-2,#172236);border-radius:0;border-bottom:1px solid rgba(255,255,255,.08)">
         <div style="font-family:'IBM Plex Mono',monospace;color:#F0CD7F;font-size:11.5px;font-weight:600">${U.esc(p.project_code)}</div>
@@ -7389,10 +7873,15 @@ Pages.op_station_checklist = {
       <div id="opck_tabs" style="display:flex;gap:3px;padding:9px 12px;background:var(--s-2,#172236);border-bottom:1px solid rgba(255,255,255,.08);overflow-x:auto;flex-wrap:wrap">${tabs}</div>
       <div style="padding:14px 18px">
         <div style="font-size:12px;color:#F0CD7F;margin-bottom:9px;font-weight:600">📋 แบบฟอร์ม ${cur.form_code} · ${cur.name} · ${cur.items.length} รายการ</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:12px">
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">จำนวนจุด</label><input id="opck_n_stations" type="number" value="${m.n_stations}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">ผู้เข้ารับบริการ</label><input id="opck_n_people" type="number" value="${m.n_people}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
-          <div><label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">เวลาตรวจ</label><input id="opck_check_time" type="time" value="${m.check_time}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:12px">
+          <div>
+            <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">จำนวนจุด <span style="font-size:9px;color:#9CA3AF;font-weight:400">(เฉพาะ Station นี้ · auto จาก JO)</span></label>
+            <input id="opck_n_stations" type="number" value="${curNStations}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/>
+          </div>
+          <div>
+            <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">ผู้เข้ารับบริการ <span style="font-size:9px;color:#9CA3AF;font-weight:400">(เฉพาะ Station นี้ · auto จาก JO.จำนวนตรวจ)</span></label>
+            <input id="opck_n_people" type="number" value="${curNPeople}" style="width:100%;padding:7px 10px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit"/>
+          </div>
         </div>
         <table id="opck_items_tbl" style="width:100%;font-size:12px;border-collapse:collapse">
           <thead><tr style="background:var(--s-2,#172236)">
@@ -7406,12 +7895,21 @@ Pages.op_station_checklist = {
           </tr></thead>
           <tbody>${itemRows}</tbody>
         </table>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
-          ${this._renderSignCard('prep', 'ผู้จัดเตรียม', '📝', m)}
-          ${this._renderSignCard('verify', 'ผู้ตรวจสอบ', '✓', m)}
-          ${this._renderSignCard('director', 'Director', '👔', m)}
-          ${this._renderSignCard('return', 'ผู้นำกลับ', '↩️', m)}
-          ${this._renderSignCard('receive', 'ผู้รับคืน', '✋', m)}
+
+        <!-- ★ Notes textarea for this station -->
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
+          <label style="display:block;font-size:11.5px;color:#FFFFFF;margin-bottom:4px;font-weight:600">📝 หมายเหตุ Station: ${cur.name} <span style="font-size:9px;color:#9CA3AF;font-weight:400">(แยกตาม Station)</span></label>
+          <textarea id="opck_notes" rows="3" placeholder="เช่น อุปกรณ์ชำรุด · ขาดของ · ปัญหาที่พบ..." style="width:100%;padding:8px 11px;background:var(--s-3,#1D2B42);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#FFFFFF;font-size:12px;font-family:inherit;resize:vertical;min-height:60px">${U.esc(curNotes)}</textarea>
+        </div>
+
+        <div style="margin-top:14px;padding:8px 12px;background:rgba(240,205,127,0.06);border:1px solid rgba(240,205,127,0.2);border-radius:5px">
+          <div style="font-size:11px;color:#F0CD7F;font-weight:600;font-family:'IBM Plex Mono',monospace">🖊 ลงชื่อสำหรับ Station: ${cur.name} <span style="font-size:9px;color:#9CA3AF;font-weight:400">(แยกตาม Station · เปลี่ยน tab จะแสดงลายเซ็นของ tab นั้น)</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">
+          ${this._renderSignCard('prep', 'ผู้จัดเตรียม', '📝', sigs)}
+          ${this._renderSignCard('verify', 'ผู้ตรวจสอบ', '✓', sigs)}
+          ${this._renderSignCard('return', 'ผู้นำกลับ', '↩️', sigs)}
+          ${this._renderSignCard('receive', 'ผู้รับคืน', '✋', sigs)}
         </div>
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">${U.recordedByField((DB.station_checklist.getForProject(this._pid)||{}).recorded_by, 'opck_rb')}</div>
       </div>
@@ -7427,19 +7925,18 @@ Pages.op_station_checklist = {
     const templates = DB.station_checklist.getTemplates();
     const cur = templates[this._activeTab];
     if(!cur) return;
-    if(!this._draft[this._activeTab]) this._draft[this._activeTab]={items:[]};
-    this._draft[this._activeTab].items = cur.items.map((it,idx)=>{
+    const key = this._activeTab;
+    if(!this._draft[key]) this._draft[key]={items:[]};
+    this._draft[key].items = cur.items.map((it,idx)=>{
       const find = (f)=>{const el=tbl.querySelector(`[data-it="${idx}"][data-f="${f}"]`);return el?el.value:'';};
       return {qty_out:find('qty_out'),qty_back:find('qty_back'),qty_receive:find('qty_receive'),note:find('note')};
     });
-    // ★ Preserve signer fields from this._meta (set by _sign) — only overwrite editable inputs
+    // ★ n_stations + n_people + notes เป็น per-station
     const getV=(id)=>document.getElementById(id)?.value||'';
-    this._meta = {
-      ...this._meta,  // ← preserve prep_by/_date, verify_by/_date, etc.
-      n_stations: getV('opck_n_stations'),
-      n_people: getV('opck_n_people'),
-      check_time: getV('opck_check_time')
-    };
+    this._draft[key].n_stations = getV('opck_n_stations');
+    this._draft[key].n_people = getV('opck_n_people');
+    this._draft[key].notes = getV('opck_notes');
+    // signatures already in this._draft[key].signatures (set by _sign)
   },
 
   // ─── Click-to-Sign helpers ───
@@ -7454,20 +7951,53 @@ Pages.op_station_checklist = {
       }).replace(' ', ' · ');
     } catch { return '-'; }
   },
-  _renderSignCard(role, label, icon, m){
-    // Special case: 'director' stores as `director` (not `director_by`) for backward compat
-    const byKey = role === 'director' ? 'director' : role+'_by';
+  // ★ Helper: ตรวจสอบสิทธิ์ลงชื่อ
+  //   prep + receive  = lab + admin
+  //   verify + return = operation + admin
+  _canSignRole(role){
+    const sess = DB.auth.session();
+    if(!sess) return false;
+    if(sess.role === 'admin') return true;
+    if(role === 'prep' || role === 'receive'){
+      return sess.role === 'lab';
+    }
+    if(role === 'verify' || role === 'return'){
+      return sess.role === 'operation';
+    }
+    return false;  // unknown role
+  },
+
+  _renderSignCard(role, label, icon, sigs){
+    // sigs = signatures object ของ tab ปัจจุบัน (this._draft[activeTab].signatures)
+    const byKey = role+'_by';
     const dateKey = role+'_date';
-    const name = m[byKey] || '';
-    const dt = m[dateKey] || '';
+    const name = (sigs && sigs[byKey]) || '';
+    const dt = (sigs && sigs[dateKey]) || '';
     const sess = DB.auth.session();
     const isAdmin = sess && sess.role === 'admin';
+    const canSign = this._canSignRole(role);
+    // Role badge label
+    const ROLE_LABELS = {
+      prep: '[Lab]',
+      verify: '[Operation]',
+      return: '[Operation]',
+      receive: '[Lab]'
+    };
+    const ROLE_COLORS = {
+      prep: '#9D8BED',
+      verify: '#6EE7B7',
+      return: '#6EE7B7',
+      receive: '#9D8BED'
+    };
+    const roleBadge = ROLE_LABELS[role] || '';
+    const roleColor = ROLE_COLORS[role] || '#9D8BED';
+    const restrictedRoleName = role==='prep'||role==='receive' ? 'Lab' : (role==='verify'||role==='return' ? 'Operation' : '');
 
     if(name){
       // Signed state
       return `
         <div style="background:rgba(110,231,183,0.08);border:1px solid rgba(110,231,183,0.4);border-radius:6px;padding:10px;position:relative">
-          <div style="font-size:10px;color:#6EE7B7;font-weight:600;margin-bottom:4px;font-family:'IBM Plex Mono',monospace">${icon} ${label}</div>
+          <div style="font-size:10px;color:#6EE7B7;font-weight:600;margin-bottom:4px;font-family:'IBM Plex Mono',monospace">${icon} ${label}${roleBadge?` <span style="color:${roleColor};font-size:9px">${roleBadge}</span>`:''}</div>
           <div style="color:#F0CD7F;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700">${U.esc(name)}</div>
           <div style="color:#9CA3AF;font-size:10px;margin-top:3px;display:flex;align-items:center;gap:4px">
             <span>${this._fmtSignDT(dt)}</span>
@@ -7475,11 +8005,19 @@ Pages.op_station_checklist = {
           </div>
           ${isAdmin?`<button onclick="Pages.op_station_checklist._unsign('${role}')" title="ยกเลิกลายเซ็น (admin)" style="position:absolute;top:6px;right:6px;background:rgba(252,165,165,0.15);border:1px solid rgba(252,165,165,0.3);color:#FCA5A5;font-size:10px;padding:2px 6px;border-radius:3px;cursor:pointer">↺</button>`:''}
         </div>`;
+    } else if(!canSign){
+      // Empty + cannot sign
+      return `
+        <div style="background:rgba(252,165,165,0.04);border:1px solid rgba(252,165,165,0.25);border-radius:6px;padding:10px;opacity:.85">
+          <div style="font-size:10px;color:#FCA5A5;font-weight:600;margin-bottom:6px;font-family:'IBM Plex Mono',monospace">${icon} ${label} <span style="color:${roleColor};font-size:9px">${roleBadge}</span> 🔒</div>
+          <div style="padding:8px 12px;border:1px solid rgba(252,165,165,0.3);color:#FCA5A5;border-radius:4px;font-size:10px;text-align:center;font-weight:500">🔒 เฉพาะ ${restrictedRoleName} role</div>
+          <div style="font-size:9px;color:#9CA3AF;margin-top:4px;text-align:center">ผู้ใช้ปัจจุบันไม่มีสิทธิ์ลงชื่อช่องนี้</div>
+        </div>`;
     } else {
-      // Empty state — show "ลงชื่อ" button
+      // Empty + can sign — show "ลงชื่อ" button
       return `
         <div style="background:rgba(255,255,255,0.02);border:1px dashed rgba(240,205,127,0.3);border-radius:6px;padding:10px">
-          <div style="font-size:10px;color:#9CA3AF;font-weight:600;margin-bottom:6px;font-family:'IBM Plex Mono',monospace">${icon} ${label}</div>
+          <div style="font-size:10px;color:#9CA3AF;font-weight:600;margin-bottom:6px;font-family:'IBM Plex Mono',monospace">${icon} ${label}${roleBadge?` <span style="color:${roleColor};font-size:9px">${roleBadge}</span>`:''}</div>
           <button onclick="Pages.op_station_checklist._sign('${role}')" style="width:100%;padding:8px 12px;background:transparent;border:1px dashed #F0CD7F;color:#F0CD7F;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">✋ ลงชื่อ</button>
           <div style="font-size:9px;color:#9CA3AF;margin-top:4px;text-align:center">บันทึกอัตโนมัติ — เปลี่ยนไม่ได้</div>
         </div>`;
@@ -7488,40 +8026,54 @@ Pages.op_station_checklist = {
   _sign(role){
     const sess = DB.auth.session();
     if(!sess){U.toast('กรุณา login ก่อน','danger');return;}
-    if(!confirm(`ลงชื่อในฐานะ "${sess.name}" สำหรับขั้นตอน "${role}"?\n\nการลงชื่อจะบันทึก:\n• ชื่อ: ${sess.name}\n• วันเวลา: ${new Date().toLocaleString('th-TH')}\n\n(ไม่สามารถแก้ไขได้ — admin เท่านั้นที่ยกเลิกได้)`)) return;
+    // ★ Role restriction: prep + receive = lab + admin เท่านั้น
+    if(!this._canSignRole(role)){
+      U.toast('🔒 ลงชื่อช่องนี้ได้เฉพาะ Lab role เท่านั้น','danger');
+      return;
+    }
+    const templates = DB.station_checklist.getTemplates();
+    const stationName = (templates[this._activeTab]||{}).name || this._activeTab;
+    if(!confirm(`ลงชื่อในฐานะ "${sess.name}" สำหรับขั้นตอน "${role}"\nที่ Station "${stationName}"?\n\nการลงชื่อจะบันทึก:\n• ชื่อ: ${sess.name}\n• วันเวลา: ${new Date().toLocaleString('th-TH')}\n\n(ไม่สามารถแก้ไขได้ — admin เท่านั้นที่ยกเลิกได้)`)) return;
     // Capture current state of items + non-signer fields first
     this._captureCurrentTab();
-    // Then set the signer (director special case: stored as `director`, not `director_by`)
-    if(!this._meta) this._meta = {};
-    const byKey = role === 'director' ? 'director' : role+'_by';
-    this._meta[byKey] = sess.name + (sess.username && sess.username !== sess.name ? ` (${sess.username})` : '');
-    this._meta[role+'_date'] = new Date().toISOString();
+    // ★ Per-station signatures — เก็บใน this._draft[activeTab].signatures
+    const key = this._activeTab;
+    if(!this._draft[key]) this._draft[key] = {items: []};
+    if(!this._draft[key].signatures) this._draft[key].signatures = {};
+    const byKey = role+'_by';
+    this._draft[key].signatures[byKey] = sess.name + (sess.username && sess.username !== sess.name ? ` (${sess.username})` : '');
+    this._draft[key].signatures[role+'_date'] = new Date().toISOString();
     // Re-render modal
     const p = DB.sales.getProject(this._pid);
-    const templates = DB.station_checklist.getTemplates();
-    this._renderModal(p, templates);
-    U.toast('✅ ลงชื่อแล้ว','success');
+    const tmpls = this._getFilteredTemplates();
+    this._renderModal(p, tmpls);
+    U.toast(`✅ ลงชื่อแล้ว — Station "${stationName}"`,'success');
   },
   _unsign(role){
     const sess = DB.auth.session();
     if(!sess || sess.role !== 'admin'){U.toast('admin เท่านั้น','danger');return;}
-    if(!confirm(`ยกเลิกลายเซ็นของขั้นตอน "${role}"?\n\nลายเซ็นจะถูกลบและสามารถลงชื่อใหม่ได้`)) return;
-    this._captureCurrentTab();
-    if(!this._meta) this._meta = {};
-    const byKey = role === 'director' ? 'director' : role+'_by';
-    this._meta[byKey] = '';
-    this._meta[role+'_date'] = '';
-    const p = DB.sales.getProject(this._pid);
     const templates = DB.station_checklist.getTemplates();
-    this._renderModal(p, templates);
-    U.toast('↺ ยกเลิกลายเซ็นแล้ว');
+    const stationName = (templates[this._activeTab]||{}).name || this._activeTab;
+    if(!confirm(`ยกเลิกลายเซ็นของขั้นตอน "${role}"\nที่ Station "${stationName}"?\n\nลายเซ็นจะถูกลบและสามารถลงชื่อใหม่ได้`)) return;
+    this._captureCurrentTab();
+    // ★ Per-station signatures
+    const key = this._activeTab;
+    if(this._draft[key] && this._draft[key].signatures){
+      const byKey = role+'_by';
+      delete this._draft[key].signatures[byKey];
+      delete this._draft[key].signatures[role+'_date'];
+    }
+    const p = DB.sales.getProject(this._pid);
+    const tmpls = this._getFilteredTemplates();
+    this._renderModal(p, tmpls);
+    U.toast(`↺ ยกเลิกลายเซ็นแล้ว — Station "${stationName}"`);
   },
 
   _switchTab(key){
     this._captureCurrentTab();
     this._activeTab = key;
     const p = DB.sales.getProject(this._pid);
-    const templates = DB.station_checklist.getTemplates();
+    const templates = this._getFilteredTemplates();
     this._renderModal(p, templates);
   },
 
@@ -7546,8 +8098,23 @@ Pages.op_station_checklist = {
     if(!ck||!ck.stations){U.toast('ยังไม่มีข้อมูล Checklist','warning');return;}
     const templates = DB.station_checklist.getTemplates();
     const w = window.open('','_blank');
+
+    // ★ Format datetime helper for PDF
+    const fmtDT = iso => {
+      if(!iso) return '__/__/__ __:__';
+      try {
+        const d = new Date(iso);
+        if(isNaN(d.getTime())) return iso;
+        return d.toLocaleString('th-TH', {
+          day:'numeric', month:'short', year:'2-digit',
+          hour:'2-digit', minute:'2-digit'
+        });
+      } catch { return iso; }
+    };
+
     const stationSections = Object.entries(templates).map(([k,v])=>{
       const d = ck.stations[k]||{};
+      const sigs = d.signatures || {};
       const rows = v.items.map((it,idx)=>{
         const di = (d.items&&d.items[idx])||{};
         return `<tr>
@@ -7560,12 +8127,33 @@ Pages.op_station_checklist = {
           <td>${di.note||'-'}</td>
         </tr>`;
       }).join('');
+      // ★ Per-station signatures inside each station section (no Director)
+      const hasAnySig = sigs.prep_by || sigs.verify_by || sigs.return_by || sigs.receive_by;
+      const sigSection = hasAnySig ? `
+        <div class="sigs-mini">
+          <div><strong>ผู้จัดเตรียม:</strong> ${sigs.prep_by||'_______'} <small>(${fmtDT(sigs.prep_date)})</small></div>
+          <div><strong>ผู้ตรวจสอบ:</strong> ${sigs.verify_by||'_______'} <small>(${fmtDT(sigs.verify_date)})</small></div>
+          <div><strong>ผู้นำกลับ:</strong> ${sigs.return_by||'_______'} <small>(${fmtDT(sigs.return_date)})</small></div>
+          <div><strong>ผู้รับคืน:</strong> ${sigs.receive_by||'_______'} <small>(${fmtDT(sigs.receive_date)})</small></div>
+        </div>` : `
+        <div class="sigs-mini" style="opacity:.5">
+          <div>ผู้จัดเตรียม: _______</div>
+          <div>ผู้ตรวจสอบ: _______</div>
+          <div>ผู้นำกลับ: _______</div>
+          <div>ผู้รับคืน: _______</div>
+        </div>`;
+      // จำนวนจุด + ผู้เข้ารับบริการ + notes per-station
+      const nStations = d.n_stations || '-';
+      const nPeople = d.n_people || '-';
+      const notesSection = d.notes ? `<div class="notes-section"><strong>📝 หมายเหตุ:</strong> ${U.esc(d.notes)}</div>` : '';
       return `<div class="station-page">
-        <h3>${v.form_code} · ${v.name}</h3>
+        <h3>${v.form_code} · ${v.name} <span style="font-size:10px;color:#666;font-weight:400">(จำนวนจุด: ${nStations} · ผู้เข้ารับบริการ: ${nPeople} ราย)</span></h3>
         <table class="ck-tbl">
           <thead><tr><th>No.</th><th>รายการ</th><th>นำออก</th><th>หน่วย</th><th>นำกลับ</th><th>รับคืน</th><th>หมายเหตุ</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
+        ${notesSection}
+        ${sigSection}
       </div>`;
     }).join('');
     w.document.write(`<!DOCTYPE html><html><head><title>Checklist Station — ${p.project_code}</title>
@@ -7579,39 +8167,18 @@ Pages.op_station_checklist = {
       .ck-tbl th,.ck-tbl td{border:1px solid #333;padding:3px 5px}
       .ck-tbl th{background:#eee;font-weight:600}
       .station-page{page-break-inside:avoid;margin-bottom:12px}
-      .sigs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px;font-size:10px}
-      .sigs div{padding:4px 0;border-bottom:1px solid #333}
+      .sigs-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px;font-size:9px;border-top:1px dashed #999;padding-top:6px}
+      .sigs-mini div{padding:2px 4px}
+      .sigs-mini small{display:block;color:#666;font-size:8px}
+      .notes-section{margin-top:6px;padding:5px 8px;background:#f9f5e6;border:1px solid #d4af37;border-radius:3px;font-size:10px;color:#333}
       @media print { .no-print{display:none} }
     </style></head><body>
       <h1>📋 Checklist Station 2026 — ${p.project_code}</h1>
       <div class="info">
         <div><strong>บริษัท:</strong> ${p.company_name}</div>
         <div><strong>วันที่ตรวจ:</strong> ${U.fmtD(p.onsite_date)}</div>
-        <div><strong>จำนวนจุด:</strong> ${ck.n_stations||'-'}</div>
-        <div><strong>ผู้รับบริการ:</strong> ${ck.n_people||p.headcount||'-'} ราย</div>
       </div>
       ${stationSections}
-      ${(()=>{
-        // Format datetime helper for PDF
-        const fmtDT = iso => {
-          if(!iso) return '__/__/__ __:__';
-          try {
-            const d = new Date(iso);
-            if(isNaN(d.getTime())) return iso; // fallback for old date-only strings
-            return d.toLocaleString('th-TH', {
-              day:'numeric', month:'short', year:'2-digit',
-              hour:'2-digit', minute:'2-digit'
-            });
-          } catch { return iso; }
-        };
-        return `<div class="sigs">
-        <div><strong>ผู้จัดเตรียม:</strong> ${ck.prep_by||'_________________'} (${fmtDT(ck.prep_date)})</div>
-        <div><strong>ผู้ตรวจสอบ:</strong> ${ck.verify_by||'_________________'} (${fmtDT(ck.verify_date)})</div>
-        <div><strong>Director:</strong> ${ck.director||'_________________'} (${fmtDT(ck.director_date)})</div>
-        <div><strong>ผู้นำกลับ:</strong> ${ck.return_by||'_________________'} (${fmtDT(ck.return_date)})</div>
-        <div><strong>ผู้รับคืน:</strong> ${ck.receive_by||'_________________'} (${fmtDT(ck.receive_date)})</div>
-      </div>`;
-      })()}
       <button class="no-print" onclick="window.print()" style="position:fixed;top:10px;right:10px;padding:8px 14px;background:#0E9F6E;color:white;border:none;border-radius:6px;font-size:13px;cursor:pointer">🖨 พิมพ์</button>
     </body></html>`);
     w.document.close();
